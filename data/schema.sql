@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS competencia (
 CREATE TABLE IF NOT EXISTS categoria (
     idCategoria INT NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(45) NOT NULL,
-    PRIMARY KEY (idCompetencia)
+    PRIMARY KEY (idCategoria)
 );
 
 -- Tabla inscripcion
