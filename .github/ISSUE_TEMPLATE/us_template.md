@@ -1,3 +1,10 @@
+---
+name: Historia de Usuario
+about: Crear una historia de Usuario
+title: '[US] - '
+labels: task
+assignees: ''
+---
 ### US -XXX : Título,
 
 **Descripción técnica breve**
