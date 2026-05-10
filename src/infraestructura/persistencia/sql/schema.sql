@@ -1,3 +1,4 @@
+BEGIN TRANSACTION;
 -- Creacion de esquema de base de datos
 create schema if not exists appbasquet;
 -- Tabla usuario
@@ -126,3 +127,4 @@ CREATE TABLE IF NOT EXISTS jugadorPartido (
     FOREIGN KEY (idPartido) REFERENCES partido (idPartido) ON DELETE RESTRICT ON UPDATE RESTRICT,
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE RESTRICT ON UPDATE RESTRICT
 );
+COMMIT;
