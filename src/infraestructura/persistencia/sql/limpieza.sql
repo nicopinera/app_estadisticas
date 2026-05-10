@@ -1,7 +1,7 @@
 BEGIN TRANSACTION;
 -- Limpieza de tabla usuario
-DELETE FROM usuarios
-WHERE nombre = 'juan';
+DELETE FROM usuario
+WHERE nombre = 'juan salvatierra';
 -- Limpieza tabla club
 DELETE FROM club
 WHERE nombre = 'Atenas';

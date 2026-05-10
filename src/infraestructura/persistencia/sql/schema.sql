@@ -1,19 +1,17 @@
 BEGIN TRANSACTION;
 -- Creacion de esquema de base de datos
-create schema if not exists appbasquet;
+-- create schema if not exists appbasquet;
 -- Tabla usuario
 CREATE TABLE IF NOT EXISTS usuario (
-    idUsuario integer AUTOINCREMENT NOT NULL,
+    idUsuario integer PRIMARY KEY AUTOINCREMENT,
     nombre text NOT NULL,
     email text NOT NULL UNIQUE,
-    contrasenia text NOT NULL,
-    PRIMARY KEY (idUsuario)
+    contrasenia text NOT NULL
 );
 -- Tabla Club
 CREATE TABLE IF NOT EXISTS club (
-    idCLub integer NOT NULL AUTOINCREMENT,
-    nombre text NOT NULL,
-    PRIMARY KEY (idClub)
+    idCLub integer PRIMARY KEY AUTOINCREMENT,
+    nombre text NOT NULL
 );
 -- Tabla usuarioClub
 CREATE TABLE IF NOT EXISTS usuarioClub (
@@ -26,12 +24,11 @@ CREATE TABLE IF NOT EXISTS usuarioClub (
 );
 -- Tabla jugador
 CREATE TABLE IF NOT EXISTS jugador (
-    idJugador integer NOT NULL AUTOINCREMENT,
+    idJugador integer PRIMARY KEY AUTOINCREMENT,
     nombre text NOT NULL,
     apellido text NOT NULL,
     dni integer null UNIQUE,
-    anioNacimiento integer NULL,
-    PRIMARY KEY (idJugador)
+    anioNacimiento integer NULL
 );
 -- JugadorClub
 CREATE TABLE IF NOT EXISTS jugadorClub (
@@ -45,35 +42,31 @@ CREATE TABLE IF NOT EXISTS jugadorClub (
 );
 -- Tabla competencia
 CREATE TABLE IF NOT EXISTS competencia (
-    idCompetencia integer NOT NULL AUTOINCREMENT,
+    idCompetencia integer PRIMARY KEY AUTOINCREMENT,
     nombre text NOT NULL,
     anio integer NOT NULL CHECK(anio > 1900),
-    tipo text NULL,
-    PRIMARY KEY (idCompetencia)
+    tipo text NULL
 );
 -- Tabla categoria
 CREATE TABLE IF NOT EXISTS categoria (
-    idCategoria integer NOT NULL AUTOINCREMENT,
-    nombre text NOT NULL,
-    PRIMARY KEY (idCategoria)
+    idCategoria integer PRIMARY KEY AUTOINCREMENT,
+    nombre text NOT NULL
 );
 -- Tabla inscripcion
 CREATE TABLE IF NOT EXISTS inscripcion (
-    idInscripcion integer NOT NULL AUTOINCREMENT,
+    idInscripcion integer PRIMARY KEY AUTOINCREMENT,
     idClub integer NOT NULL,
     idCategoria integer NOT NULL,
     idCompetencia integer NOT NULL,
-    PRIMARY KEY (idInscripcion),
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE,
     FOREIGN KEY (idCategoria) REFERENCES categoria (idCategoria),
     FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE
 );
 -- Tabla Lista de buena Fe
 CREATE TABLE IF NOT EXISTS listaBuenaFe (
-    idListaBuenaFe integer NOT NULL AUTOINCREMENT,
+    idListaBuenaFe integer PRIMARY KEY AUTOINCREMENT,
     fechaPresentacion text NOT NULL,
     idInscripcion integer NOT NULL UNIQUE,
-    PRIMARY KEY (idListaBuenaFe),
     FOREIGN KEY (idInscripcion) REFERENCES inscripcion (idInscripcion) ON DELETE CASCADE
 );
 -- Tabla Jugador Lista Buena Fe
@@ -86,13 +79,12 @@ CREATE TABLE IF NOT EXISTS jugadorListaBuenaFe (
 );
 -- Tabla Partido
 CREATE TABLE IF NOT EXISTS partido (
-    idPartido integer NOT NULL AUTOINCREMENT,
+    idPartido integer PRIMARY KEY AUTOINCREMENT,
     fecha text NOT NULL,
     estadio text NULL,
     idCompetencia integer NOT NULL,
     idClubLocal integer NOT NULL,
     idClubVisitante integer NOT NULL,
-    PRIMARY KEY (idPartido),
     FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia),
     FOREIGN KEY (idClubLocal) REFERENCES club (idClub),
     FOREIGN KEY (idClubVisitante) REFERENCES club (idClub)

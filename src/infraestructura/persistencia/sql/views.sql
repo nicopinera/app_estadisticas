@@ -60,7 +60,19 @@ SELECT j.nombre || ' ' || j.apellido AS nombre_completo,
     SUM(jp.taponesRecibidos) AS total_tapones_recibidos,
     SUM(jp.faltasCometidas) AS total_faltas_cometidas,
     SUM(jp.faltasRecibidas) AS total_faltas_recibidas,
-    FROM jugadorPartido jp
+    CASE
+        WHEN SUM(jp.T2L) > 0 THEN ROUND(CAST(SUM(jp.T2C) AS REAL) / SUM(jp.T2L) * 100, 1)
+        ELSE 0.0
+    END AS porcentaje_t2,
+    CASE
+        WHEN SUM(jp.T3L) > 0 THEN ROUND(CAST(SUM(jp.T3C) AS REAL) / SUM(jp.T3L) * 100, 1)
+        ELSE 0.0
+    END AS porcentaje_t3,
+    CASE
+        WHEN SUM(jp.T1L) > 0 THEN ROUND(CAST(SUM(jp.T1C) AS REAL) / SUM(jp.T1L) * 100, 1)
+        ELSE 0.0
+    END AS porcentaje_t1
+FROM jugadorPartido jp
     INNER JOIN jugador j ON jp.idJugador = j.idJugador
     INNER JOIN partido p ON jp.idPartido = p.idPartido
     INNER JOIN competencia comp ON p.idCompetencia = comp.idCompetencia

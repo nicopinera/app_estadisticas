@@ -3,8 +3,7 @@ BEGIN TRANSACTION;
 -- 1 Usuario
 INSERT INTO usuario (nombre, email, contrasenia)
 VALUES (
-        'juan',
-        'salvatierra',
+        'juan salvatierra',
         'juan.salvatierra@gmail.com',
         'contrasenia1234'
     );
