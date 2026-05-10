@@ -14,7 +14,7 @@ def db_conexion():
 
 def test_database_schema(db_conexion):
     tablas_esperadas={"usuario","club","usuarioClub","jugador","jugadorClub","competencia",
-                      "inscripcion","listaBuenaFe","jugadorListaBuenaFe","partido","jugadorPartido"}
+                      "inscripcion","listaBuenaFe","jugadorListaBuenaFe","partido","jugadorPartido","categoria"}
     
     cursor = db_conexion.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -44,3 +44,4 @@ def test_check_constraints(db_conexion):
     with pytest.raises(sqlite3.IntegrityError) as excinfo:
         db_cursor.execute("INSERT INTO jugadorPartido (idJugador,idPartido,idClub,minutosJugados,T2C, T2L, T3C) VALUES (?, ?, ?,?,?,?,?)", (1,1,1,20,-20, -10, -30))
     assert "CHECK constraint failed" in str(excinfo.value)
+    

@@ -19,10 +19,17 @@ class SQLIteManager:
     
     def inicializar_schema(self):
         try:
+            # 1. Cargamos las tablas (schema.sql)
             with open(self.schema_path,'r',encoding='utf-8') as archivo_sql:
                 schema = archivo_sql.read()
             self.conexion.executescript(schema)
-            print("Script de creacion de schema ejecutado")
+            
+            # 2. Cargamos las vistas (views.sql) - si es que hay
+            with open(self.views_path,'r',encoding='utf-8') as archivo_vistas:
+                vistas = archivo_vistas.read()
+            self.conexion.executescript(vistas)
+            
+            print("Script de creacion de schema y vistas ejecutado")
         except sqlite3.Error as e:
             print(f"Error al crear la DB: {e}")
     
