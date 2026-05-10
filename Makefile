@@ -8,4 +8,4 @@ instalar_dependencias_l:
 
 run_test:
 	@echo "Ejecutando test..."
-	pytest --cov
+	pytest -v
