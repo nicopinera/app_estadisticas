@@ -7,5 +7,5 @@ instalar_dependencias_l:
 	@echo "Instalando dependencias para linux..."
 
 run_test:
-	@echo "Ejecutando test..."
-	pytest -v
+	@echo "Ejecutando test...";
+	pytest -v --cov=src --cov-report=html
