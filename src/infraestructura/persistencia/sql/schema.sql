@@ -94,7 +94,9 @@ CREATE TABLE IF NOT EXISTS jugadorPartido (
     idJugador integer NOT NULL,
     idPartido integer NOT NULL,
     idClub integer NOT NULL,
-    minutosJugados integer NOT NULL DEFAULT 0 CHECK(minutosJugados >= 0),
+    minutosJugados integer NOT NULL DEFAULT 0 CHECK(
+        minutosJugados BETWEEN 0 AND 48
+    ),
     puntos integer NOT NULL DEFAULT 0 CHECK(puntos >= 0),
     T2C integer NOT NULL DEFAULT 0 CHECK(T2C >= 0),
     T2L integer NOT NULL DEFAULT 0 CHECK(T2L >= 0),
