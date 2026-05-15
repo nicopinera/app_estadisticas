@@ -22,4 +22,4 @@ jobs:
           if [-f requerimientos.txt ]; then python3 -m pip install -r requerimientos.txt; fi
 
       - name: Ejecutar pytest
-        run: pytest
+        run: pytest --cov=src --cov-report=html
