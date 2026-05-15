@@ -57,6 +57,6 @@ class SQLIteManager:
             with open(self.limpieza_path,'r',encoding='utf-8') as archivo_sql:
                 schema = archivo_sql.read()
             self.conexion.executescript(schema)
-            print("Script de seed ejecutado")
+            print("Script de limpieza ejecutado")
         except sqlite3.Error as e:
-            print(f"Error al crear seed: {e}")
+            print(f"Error al ejecutar la limpieza: {e}")
