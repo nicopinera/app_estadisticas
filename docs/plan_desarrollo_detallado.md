@@ -147,7 +147,7 @@ Cada US de ahora en adelante debería contener:
 - **Capa de Infraestructura:**
   - **Clase `SQLiteManager`** (`src/infrastructure/persistence/database_manager.py`):
     - Administra la conexión SQLite (`sqlite3.Connection`).
-    - `connect()`: Activa `PRAGMA foreign_keys = ON`, configura `row_factory = sqlite3.Row`. Implementado para retornar la conexión activa si ya existe.
+    - `connect()`: Activa `PRAGMA foreign_keys = ON`, configura `row_factory = sqlite3.Row`. Implementado para retornar la conexóin activa si ya existe.
     - `initialize_schema()`: Ejecuta `schema.sql` y `views.sql` con `executescript()` en una sola llamada atómica.
   - **Implementaciones Concretas** (`src/infrastructure/persistence/`):
     - `SQLiteUserRepository`, `SQLiteClubRepository`, `SQLitePlayerRepository`, `SQLiteGameRepository`.
