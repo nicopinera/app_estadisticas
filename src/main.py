@@ -1,8 +1,8 @@
-from infraestructura.persistencia.database_manager import SQLIteManager
+from infraestructura.persistencia.database_manager import SQLiteManager
 import config.rutas as r
 
 def main():
-    pruebaSQL = SQLIteManager(r.DB_FILE,r.SCHEMA_SQL,r.VISTA_SQL,r.SEED_SQL,r.CLEAR_SQL)
+    pruebaSQL = SQLiteManager(r.DB_FILE,r.SCHEMA_SQL,r.VISTA_SQL,r.SEED_SQL,r.CLEAR_SQL)
     conexion_test = None
     try:
         conexion_test = pruebaSQL.connect()

@@ -1,10 +1,10 @@
 import sqlite3, pytest
 import config.rutas as r
-from infraestructura.persistencia.database_manager import SQLIteManager
+from infraestructura.persistencia.database_manager import SQLiteManager
 
 @pytest.fixture
 def db_conexion():
-    manager = SQLIteManager(
+    manager = SQLiteManager(
         db_path=":memory:", 
         schema_path=r.SCHEMA_SQL,
         views_path=r.VISTA_SQL,

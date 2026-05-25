@@ -1,7 +1,7 @@
 import config.rutas as r
 import sqlite3
 
-class SQLIteManager:
+class SQLiteManager:
     def __init__(self,db_path,schema_path,views_path,seed_path=None,limpieza_path=None):
         self.db_path = db_path
         self.schema_path = schema_path
