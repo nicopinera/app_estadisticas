@@ -1,9 +1,14 @@
 BEGIN TRANSACTION;
+DROP VIEW IF EXISTS v_partidos_resumen;
+DROP VIEW IF EXISTS v_boxscore_completo;
+DROP VIEW IF EXISTS v_jugador_totales_temporada;
+DROP VIEW IF EXISTS v_listas_detalle;
 -- Creacion de Vistas
 -- Vista 1: Une partido con clubes y competencia (reemplaza IDs por nombres).
-create VIEW v_partidos_resumen AS
+create VIEW IF NOT EXISTS v_partidos_resumen AS
 SELECT p.fecha,
     p.estadio,
+    p.idPartido,
     c.nombre AS competencia,
     cl.nombre as clubLocal,
     cv.nombre as clubVisitante
@@ -12,7 +17,7 @@ FROM partido AS p
     INNER JOIN club AS cl ON p.idClubLocal = cl.idCLub
     INNER JOIN club AS cv ON p.idClubVisitante = cv.idClub;
 -- Vista 2: Une jugadorPartido con jugador y club (fuente para Pandas).
-create VIEW v_boxscore_completo AS
+create VIEW IF NOT EXISTS v_boxscore_completo AS
 SELECT part.idPartido AS idPartido,
     part.idJugador AS idJugador,
     part.idClub AS idClub,
