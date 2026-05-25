@@ -3,13 +3,15 @@ name: Python test
 on: pull_request
 
 jobs:
-  test:
+  test_linux:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Llevar el código a la máquina virtual
       - name: Descargar Codigo
         uses: actions/checkout@v4
 
+      # 2. Configurar Python
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
@@ -20,6 +22,29 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install -r requerimientos.txt
           python -m pip install pytest pytest-cov
+
+      - name: Ejecutar pytest
+        run: pytest --cov=src --cov-report=html
+  test_windows:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Llevar el código a la máquina virtual
+      - name: Descargar Codigo
+        uses: actions/checkout@v4
+
+      # 2. Configurar Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar Dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requerimientos.txt
+          pip install pytest pytest-cov
 
       - name: Ejecutar pytest
         run: pytest --cov=src --cov-report=html
