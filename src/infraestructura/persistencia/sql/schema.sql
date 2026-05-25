@@ -1,4 +1,16 @@
 BEGIN TRANSACTION;
+DROP TABLE IF EXISTS jugadorPartido;
+DROP TABLE IF EXISTS partido;
+DROP TABLE IF EXISTS jugadorListaBuenaFe;
+DROP TABLE IF EXISTS listaBuenaFe;
+DROP TABLE IF EXISTS inscripcion;
+DROP TABLE IF EXISTS jugadorClub;
+DROP TABLE IF EXISTS categoria;
+DROP TABLE IF EXISTS competencia;
+DROP TABLE IF EXISTS jugador;
+DROP TABLE IF EXISTS usuarioClub;
+DROP TABLE IF EXISTS club;
+DROP TABLE IF EXISTS usuario;
 -- Creacion de esquema de base de datos
 -- create schema if not exists appbasquet;
 -- Tabla usuario
