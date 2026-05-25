@@ -5,7 +5,7 @@ INSERT INTO usuario (nombre, email, contrasenia)
 VALUES (
         'juan salvatierra',
         'juan.salvatierra@gmail.com',
-        'contrasenia1234'
+        '$2b$10$CwTycUXWue0Thq9StjUM0uJ8s6mG1fK0O9Yx8uWb1x1o1t4bm/FKa'
     );
 -- 2 Clubes
 INSERT INTO club (nombre)
