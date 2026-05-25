@@ -1,4 +1,3 @@
-import config.rutas as r  
 import sqlite3
 from infraestructura.logger import get_logger
 
@@ -13,7 +12,7 @@ class SQLiteManager:
         self.conexion = None
     
     def connect(self):
-        if self.conexion == None:
+        if self.conexion is None:
             self.conexion = sqlite3.connect(self.db_path)
             self.conexion.execute("PRAGMA foreign_keys = ON;") # Activo las claves foraneas
             self.conexion.row_factory = sqlite3.Row # Habilito acceso por nombre de columnas
@@ -45,13 +44,13 @@ class SQLiteManager:
             logger.error(f'Error al cargar seed de datos: {e}')
     
     def get_connection(self):
-        if self.conexion != None:
+        if self.conexion is not None:
             return self.conexion
         else:
             return None
     
     def close_connection(self):
-        if self.conexion != None:
+        if self.conexion is not None:
             self.conexion.close()
             self.conexion = None
     

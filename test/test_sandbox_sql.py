@@ -1,4 +1,5 @@
-import sqlite3, pytest
+import sqlite3
+import pytest
 import config.rutas as r
 from infraestructura.persistencia.database_manager import SQLiteManager
 
@@ -25,9 +26,7 @@ def test_select(db_conexion):
     cursor = db_conexion.cursor()
     cursor.execute("SELECT * FROM v_partidos_resumen")
     partidos = cursor.fetchall()
-    for p in partidos:
-        print(f"🏀 {p['fecha']}: {p['clubLocal']} vs {p['clubVisitante']} (Torneo: {p['competencia']})")
-    assert partidos != None
+    assert partidos is not None
 
 def test_insert(db_conexion):
     db_conexion.row_factory = sqlite3.Row

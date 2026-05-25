@@ -1,4 +1,5 @@
-import sqlite3,pytest
+import sqlite3
+import pytest
 import config.rutas as ruta
 from infraestructura.persistencia.database_manager import SQLiteManager
 
@@ -43,7 +44,7 @@ def test_referential_integrity(db_conexion):
     # Intentar insertar un producto con una categoría que NO existe (id: 999)
     # Debe lanzar un sqlite3.IntegrityError
     db_cursor = db_conexion.cursor()
-    with pytest.raises(sqlite3.IntegrityError) as excinfo:
+    with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
             "INSERT INTO listaBuenaFe (fechaPresentacion, idInscripcion) VALUES (?, ?)", 
             ("2026-03-21", 1)
@@ -53,10 +54,10 @@ def test_check_constraints(db_conexion):
     db_cursor = db_conexion.cursor()
     db_cursor.execute("PRAGMA foreign_keys = OFF;")
     # 1. Probar puntos negativos
-    with pytest.raises(sqlite3.IntegrityError) as excinfo:
+    with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute("INSERT INTO jugadorPartido (idJugador,idPartido,idClub,minutosJugados,T2C, T2L, T3C) VALUES (?, ?, ?,?,?,?,?)", (1,1,1,20,-20, -10, -30))
 
-    with pytest.raises(sqlite3.IntegrityError) as excinfo:
+    with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute("INSERT INTO jugadorPartido (idJugador,idPartido,idClub,minutosJugados) VALUES (?, ?, ?, ?)", (1,1,1,49))
 
 def test_close_connection_cierra_la_conexion():
