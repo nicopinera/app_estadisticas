@@ -48,7 +48,11 @@ CREATE TABLE IF NOT EXISTS jugadorClub (
     idClub integer NOT NULL,
     fechaDesde text NOT NULL,
     fechaHasta text NULL,
-    PRIMARY KEY (idJugador, idClub),
+    PRIMARY KEY (idJugador, idClub, fechaDesde),
+    CHECK (
+        fechaHasta IS NULL
+        OR fechaHasta >= fechaDesde
+    ),
     FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE,
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE
 );
@@ -97,6 +101,7 @@ CREATE TABLE IF NOT EXISTS partido (
     idCompetencia integer NOT NULL,
     idClubLocal integer NOT NULL,
     idClubVisitante integer NOT NULL,
+    CHECK(idClubLocal != idClubVisitante),
     FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE,
     FOREIGN KEY (idClubLocal) REFERENCES club (idClub) ON DELETE CASCADE,
     FOREIGN KEY (idClubVisitante) REFERENCES club (idClub) ON DELETE CASCADE
