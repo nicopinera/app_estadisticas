@@ -1,4 +1,5 @@
 import sqlite3
+
 from infraestructura.logger import get_logger
 
 logger = get_logger(__name__)

@@ -1,6 +1,6 @@
-from infraestructura.persistencia.database_manager import SQLiteManager
-from infraestructura.logger import get_logger
 import config.rutas as r
+from infraestructura.logger import get_logger
+from infraestructura.persistencia.database_manager import SQLiteManager
 
 logger = get_logger(__name__)
 

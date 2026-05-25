@@ -1,5 +1,7 @@
 import sqlite3
+
 import pytest
+
 import config.rutas as ruta
 from infraestructura.persistencia.database_manager import SQLiteManager
 
@@ -78,13 +80,17 @@ def test_check_constraints(db_conexion):
     # 1. Probar puntos negativos
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            "INSERT INTO jugadorPartido (idJugador,idPartido,idClub,minutosJugados,T2C, T2L, T3C) VALUES (?, ?, ?,?,?,?,?)",
+            """INSERT INTO jugadorPartido 
+            (idJugador,idPartido,idClub,minutosJugados,T2C, T2L, T3C)
+            VALUES (?, ?, ?,?,?,?,?)""",
             (1, 1, 1, 20, -20, -10, -30),
         )
 
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            "INSERT INTO jugadorPartido (idJugador,idPartido,idClub,minutosJugados) VALUES (?, ?, ?, ?)",
+            """INSERT INTO jugadorPartido 
+            (idJugador,idPartido,idClub,minutosJugados) 
+            VALUES (?, ?, ?, ?)""",
             (1, 1, 1, 49),
         )
 
@@ -141,7 +147,8 @@ def test_division_by_zero_devuelve_cero_en_vistas():
 
     cursor = conexion.cursor()
     cursor.execute(
-        "INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) VALUES (?, ?, ?, ?)",
+        """INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) 
+        VALUES (?, ?, ?, ?)""",
         ("Jugador", "Cero", 99999999, 2000),
     )
     id_jugador = cursor.lastrowid
@@ -184,7 +191,9 @@ def test_division_by_zero_devuelve_cero_en_vistas():
     )
 
     cursor.execute(
-        "SELECT porcentaje_t2, porcentaje_t3, porcentaje_t1 FROM v_jugador_totales_temporada WHERE nombre_completo = ?",
+        """SELECT porcentaje_t2, porcentaje_t3, porcentaje_t1 
+        FROM v_jugador_totales_temporada 
+        WHERE nombre_completo = ?""",
         ("Jugador Cero",),
     )
     porcentaje_t2, porcentaje_t3, porcentaje_t1 = cursor.fetchone()

@@ -1,5 +1,7 @@
 import sqlite3
+
 import pytest
+
 import config.rutas as r
 from infraestructura.persistencia.database_manager import SQLiteManager
 
