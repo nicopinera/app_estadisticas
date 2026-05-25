@@ -13,7 +13,10 @@ FROM partido AS p
     INNER JOIN club AS cv ON p.idClubVisitante = cv.idClub;
 -- Vista 2: Une jugadorPartido con jugador y club (fuente para Pandas).
 create VIEW v_boxscore_completo AS
-SELECT j.nombre || ' ' || j.apellido as nombre_completo,
+SELECT part.idPartido AS idPartido,
+    part.idJugador AS idJugador,
+    part.idClub AS idClub,
+    j.nombre || ' ' || j.apellido as nombre_completo,
     c.nombre as club,
     part.minutosJugados,
     part.puntos,
