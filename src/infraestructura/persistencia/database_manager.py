@@ -1,6 +1,8 @@
-import config.rutas as r
+import config.rutas as r  
 import sqlite3
+from infraestructura.logger import get_logger
 
+logger = get_logger(__name__)
 class SQLiteManager:
     def __init__(self,db_path,schema_path,views_path,seed_path=None,limpieza_path=None):
         self.db_path = db_path
@@ -29,18 +31,18 @@ class SQLiteManager:
                 vistas = archivo_vistas.read()
             self.conexion.executescript(vistas)
             
-            print("Script de creacion de schema y vistas ejecutado")
-        except sqlite3.Error as e:
-            print(f"Error al crear la DB: {e}")
+            logger.info('Esquema de db y vistas creado correctamente')
+        except (sqlite3.Error,FileNotFoundError,OSError) as e:
+            logger.error(f"Error al crear la vistas o la db: {e}")
     
     def cargar_seed(self):
         try:
             with open(self.seed_path,'r',encoding='utf-8') as archivo_sql:
                 schema = archivo_sql.read()
             self.conexion.executescript(schema)
-            print("Script de seed ejecutado")
-        except sqlite3.Error as e:
-            print(f"Error al crear seed: {e}")
+            logger.info('Seed de datos cargado correctamente')
+        except (sqlite3.Error,TypeError) as e:
+            logger.error(f'Error al cargar seed de datos: {e}')
     
     def get_connection(self):
         if self.conexion != None:
@@ -51,12 +53,13 @@ class SQLiteManager:
     def close_connection(self):
         if self.conexion != None:
             self.conexion.close()
+            self.conexion = None
     
     def limpieza(self):
         try:
             with open(self.limpieza_path,'r',encoding='utf-8') as archivo_sql:
                 schema = archivo_sql.read()
             self.conexion.executescript(schema)
-            print("Script de limpieza ejecutado")
+            logger.info('Limpieza correcta')
         except sqlite3.Error as e:
-            print(f"Error al ejecutar la limpieza: {e}")
+            logger.error(f'Error al limpiar base de datos: {e}')
