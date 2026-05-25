@@ -85,9 +85,9 @@ CREATE TABLE IF NOT EXISTS partido (
     idCompetencia integer NOT NULL,
     idClubLocal integer NOT NULL,
     idClubVisitante integer NOT NULL,
-    FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia),
-    FOREIGN KEY (idClubLocal) REFERENCES club (idClub),
-    FOREIGN KEY (idClubVisitante) REFERENCES club (idClub)
+    FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE,
+    FOREIGN KEY (idClubLocal) REFERENCES club (idClub) ON DELETE CASCADE,
+    FOREIGN KEY (idClubVisitante) REFERENCES club (idClub) ON DELETE CASCADE
 );
 -- Tabla jugador Partido
 CREATE TABLE IF NOT EXISTS jugadorPartido (
