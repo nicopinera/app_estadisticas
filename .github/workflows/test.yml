@@ -23,8 +23,20 @@ jobs:
           python3 -m pip install -r requerimientos.txt
           python -m pip install pytest pytest-cov
 
-      - name: Ejecutar pytest
-        run: pytest --cov=src --cov-report=html
+      - name: Ejecutar pytest y guardar salida
+        # Guardamos la salida de pytest en un archivo para poder subirla como artifact.
+        # Usamos `set -o pipefail` para que el paso falle si pytest falla,
+        # pero el archivo seguirá existiendo y podrá subirse en el paso `if: always()`.
+        run: |
+          set -o pipefail
+          pytest --cov=src --cov-report=html 2>&1 | tee test_output.txt
+
+      - name: Subir artefacto de logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: test_output.txt
   test_windows:
     runs-on: windows-latest
 
@@ -46,5 +58,17 @@ jobs:
           pip install -r requerimientos.txt
           pip install pytest pytest-cov
 
-      - name: Ejecutar pytest
-        run: pytest --cov=src --cov-report=html
+      - name: Ejecutar pytest y guardar salida
+        # En Windows usamos PowerShell; redirigimos salida y la guardamos con Tee-Object.
+        # `exit $LASTEXITCODE` asegura que el paso devuelva el código de pytest.
+        shell: pwsh
+        run: |
+          pytest --cov=src --cov-report=html 2>&1 | Tee-Object -FilePath test_output.txt
+          exit $LASTEXITCODE
+
+      - name: Subir artefacto de logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-windows
+          path: test_output.txt
