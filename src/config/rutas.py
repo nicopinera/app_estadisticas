@@ -7,3 +7,5 @@ SEED_SQL = os.path.join(RUTA_SRC,'infraestructura','persistencia','sql','seed.sq
 CLEAR_SQL = os.path.join(RUTA_SRC,'infraestructura','persistencia','sql','limpieza.sql')
 RUTA_RAIZ = os.path.dirname(RUTA_SRC)
 DB_FILE = os.path.join(RUTA_RAIZ,'estadisticas.db')
+LOG_DIR = os.path.join(RUTA_RAIZ,'logs')
+APP_LOG_FILE = os.path.join(LOG_DIR, "app.log")
