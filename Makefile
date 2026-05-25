@@ -9,3 +9,10 @@ instalar_dependencias_l:
 run_test:
 	@echo "Ejecutando test...";
 	pytest -v --cov=src --cov-report=html
+
+run_linter_ruf:
+	ruff check --select E --select I
+
+corregir_linter:
+	ruff check --fix --select E --select I . && ruff format .
+	ruff check .
