@@ -208,3 +208,4 @@ __marimo__/
 *.bak
 *.db
 reportes_cobertura/
+logs/
