@@ -18,7 +18,7 @@ jobs:
       - name: Instalar Dependencias
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install pytest
+          python3 -m pip install -r requerimientos.txt
           python -m pip install pytest pytest-cov
 
       - name: Ejecutar pytest
