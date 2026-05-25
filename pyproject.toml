@@ -1,8 +1,9 @@
+[tool.ruff]
 line-length = 88
 
-[lint]
+[tool.ruff.lint]
 select = ["E501", "I"]
 
-[format]
+[tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 72
