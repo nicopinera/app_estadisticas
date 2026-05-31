@@ -43,4 +43,3 @@ class SQLiteJugadorRepository:
     def get_by_dni(self, dni: int) -> Optional[Jugador]:
         # Lógica real: SELECT * FROM jugador WHERE dni = ...
         pass
-```
