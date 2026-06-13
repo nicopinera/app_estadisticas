@@ -209,3 +209,4 @@ __marimo__/
 *.db
 reportes_cobertura/
 logs/
+*.db
