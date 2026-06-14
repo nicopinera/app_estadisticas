@@ -6,40 +6,53 @@ DROP VIEW IF EXISTS v_listas_detalle;
 -- Creacion de Vistas
 -- Vista 1: Une partido con clubes y competencia (reemplaza IDs por nombres).
 create VIEW IF NOT EXISTS v_partidos_resumen AS
-SELECT p.fecha,
-    p.estadio,
-    p.idPartido,
+SELECT p.fecha as fecha_partido,
+    p.estadio as estadio,
+    p.idPartido as id_partido,
     c.nombre AS competencia,
-    cl.nombre as clubLocal,
-    cv.nombre as clubVisitante
+    cl.nombre as club_local,
+    cv.nombre as club_visitantes
 FROM partido AS p
     INNER JOIN competencia AS c ON p.idCompetencia = c.idCompetencia
     INNER JOIN club AS cl ON p.idClubLocal = cl.idCLub
     INNER JOIN club AS cv ON p.idClubVisitante = cv.idClub;
 -- Vista 2: Une jugadorPartido con jugador y club (fuente para Pandas).
 create VIEW IF NOT EXISTS v_boxscore_completo AS
-SELECT part.idPartido AS idPartido,
-    part.idJugador AS idJugador,
-    part.idClub AS idClub,
+SELECT part.idPartido AS id_partido,
+    part.idJugador AS id_jugador,
+    part.idClub AS id_club,
     j.nombre || ' ' || j.apellido as nombre_completo,
     c.nombre as club,
-    part.minutosJugados,
-    part.puntos,
-    part.T2C,
-    part.T2L,
-    part.T3C,
-    part.T3L,
-    part.T1C,
-    part.T1L,
-    part.rebotesDef,
-    part.rebotesOf,
-    part.asistencias,
-    part.recuperos,
-    part.perdidas,
-    part.taponesRecibidos,
-    part.taponesRealizados,
-    part.faltasRecibidas,
-    part.faltasCometidas
+    part.minutosJugados as minutos_jugados,
+    part.puntos as puntos,
+    part.T2C as t2c,
+    part.T2L as t2l,
+    part.T3C as t3c,
+    part.T3L as t3l,
+    part.T1C as t1c,
+    part.T1L as t1l,
+    part.rebotesDef as rebotes_defensivos,
+    part.rebotesOf as rebotes_ofensivos,
+    (part.rebotesOf + part.rebotesDef) as rebotes_totales,
+    part.asistencias as asistencias,
+    part.recuperos as recuperos,
+    part.perdidas as perdidas,
+    part.taponesRecibidos as tapones_recibidos,
+    part.taponesRealizados as tapones_realizados,
+    part.faltasRecibidas as faltas_recibidas,
+    part.faltasCometidas as faltas_cometidas,
+    CASE
+        WHEN part.T2L > 0 THEN ROUND(CAST(part.T2C AS REAL) / part.T2L * 100, 1)
+        ELSE 0.0
+    END AS porcentaje_t2,
+    CASE
+        WHEN part.T3L > 0 THEN ROUND(CAST(part.T3C AS REAL) / part.T3L * 100, 1)
+        ELSE 0.0
+    END AS porcentaje_t3,
+    CASE
+        WHEN part.T1L > 0 THEN ROUND(CAST(part.T1C AS REAL) / part.T1L * 100, 1)
+        ELSE 0.0
+    END AS porcentaje_t1
 FROM jugadorPartido AS part
     INNER JOIN jugador AS j ON part.idJugador = j.idJugador
     INNER JOIN club AS c ON part.idClub = c.idClub;
