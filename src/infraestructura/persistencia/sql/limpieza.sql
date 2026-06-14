@@ -1,60 +1,45 @@
 BEGIN TRANSACTION;
--- Limpieza de tabla usuario
-DELETE FROM usuario
-WHERE nombre = 'juan salvatierra';
--- Limpieza tabla partido
-DELETE FROM partido
-WHERE fecha = '2026-05-21';
-DELETE FROM partido
-WHERE fecha = '2026-06-20';
+
+-- 1. Borrar datos de tablas con restricciones RESTRICT o relaciones de muchos a muchos
+-- Borrar estadísticas de jugadores (Restricción RESTRICT)
+DELETE FROM jugadorPartido;
+
+-- Borrar relación Jugador-Lista de buena fe
+DELETE FROM jugadorListaBuenaFe;
+
+-- Borrar Listas de buena fe
+DELETE FROM listaBuenaFe;
+
+-- Borrar Inscripciones
+DELETE FROM inscripcion;
+
+-- 2. Borrar datos de tablas base con filtros específicos del SEED
+-- Borrar partidos
+DELETE FROM partido WHERE fecha IN ('2026-05-21', '2026-06-20');
+
+-- Borrar categorías
+DELETE FROM categoria WHERE nombre = 'U21';
+
+-- Borrar competencias
+DELETE FROM competencia WHERE nombre = 'PROVINCIAL U21';
+
+-- Borrar clubes
+DELETE FROM club WHERE nombre IN ('Atenas', 'Universitario');
+
+-- Borrar jugadores
+DELETE FROM jugador 
+WHERE (nombre = 'pepe' AND apellido = 'argento')
+   OR (nombre = 'antonio' AND apellido = 'argentinito')
+   OR (nombre = 'Pepa' AND apellido = 'arrigoni')
+   OR (nombre = 'Gabriel' AND apellido = 'batistuta')
+   OR (nombre = 'LEONEL ANDRES' AND apellido = 'messi')
+   OR (nombre = 'Sergio' AND apellido = 'aguero')
+   OR (nombre = 'Julian' AND apellido = 'alvarez')
+   OR (nombre = 'cristian' AND apellido = 'romero')
+   OR (nombre = 'Nico' AND apellido = 'otamendi')
+   OR (nombre = 'nahuel' AND apellido = 'molina');
+
+-- Borrar usuarios
+DELETE FROM usuario WHERE nombre = 'juan salvatierra';
+
 COMMIT;
--- Limpieza tabla club
-DELETE FROM club
-WHERE nombre = 'Atenas';
-DELETE FROM club
-WHERE nombre = 'Universitario';
--- Limpieza tabla Jugadores
-DELETE FROM jugador
-WHERE (
-        nombre = 'pepe'
-        and apellido = 'argento'
-    )
-    OR (
-        nombre = 'antonio'
-        and apellido = 'argentinito'
-    )
-    OR (
-        nombre = 'Gabriel'
-        and apellido = 'batistuta'
-    )
-    OR (
-        nombre = 'LEONEL ANDRES'
-        and apellido = 'messi'
-    )
-    OR (
-        nombre = 'Pepa'
-        and apellido = 'arrigoni'
-    )
-    OR (
-        nombre = 'Sergio'
-        and apellido = 'aguero'
-    )
-    OR (
-        nombre = 'Julian'
-        and apellido = 'alvarez'
-    )
-    OR (
-        nombre = 'cristian'
-        and apellido = 'romero'
-    )
-    OR (
-        nombre = 'Nico'
-        and apellido = 'otamendi'
-    )
-    OR (
-        nombre = 'nahuel'
-        and apellido = 'molina'
-    );
--- Limpieza tabla competencia
-DELETE FROM competencia
-WHERE nombre = 'PROVINCIAL U21';
