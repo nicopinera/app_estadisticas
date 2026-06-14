@@ -36,4 +36,116 @@ INSERT INTO partido (
     )
 VALUES ('2026-05-21', 'Cancha Atenas', 1, 1, 2),
     ('2026-06-20', 'Cancha Universitario', 1, 2, 1);
+-- categoria
+INSERT into categoria (nombre)
+VALUES('U21');
+--INSCRIPCION A COMPETENCIA
+INSERT INTO inscripcion (idCLub, idCategoria, idCompetencia)
+VALUES (1, 1, 1),
+    (2, 1, 1);
+-- LISTAS DE BUENA FE
+INSERT INTO listaBuenaFe (fechaPresentacion, idInscripcion)
+VALUES (datetime('now'), 1),
+    (datetime('now'), 2);
+-- LISTAS DE BUENA FE JUGADOR
+INSERT INTO jugadorListaBuenaFe (idJugador, idListaBuenaFe)
+VALUES (1, 1),
+    (2, 1),
+    (3, 1),
+    (4, 1),
+    (5, 1),
+    (6, 2),
+    (7, 2),
+    (8, 2),
+    (9, 2),
+    (10, 2);
+-- 3 JugadorPartido
+INSERT INTO jugadorPartido (
+        idJugador,
+        idPartido,
+        idClub,
+        minutosJugados,
+        puntos,
+        T2C,
+        T2L,
+        T3C,
+        T3L,
+        T1C,
+        T1L,
+        rebotesDef,
+        rebotesOf,
+        asistencias,
+        recuperos,
+        perdidas,
+        taponesRecibidos,
+        taponesRealizados,
+        faltasCometidas,
+        faltasRecibidas
+    )
+VALUES (
+        1,
+        1,
+        1,
+        20,
+        10,
+        2,
+        5,
+        2,
+        5,
+        0,
+        4,
+        10,
+        2,
+        3,
+        2,
+        5,
+        1,
+        5,
+        2,
+        3
+    ),
+    (
+        6,
+        1,
+        2,
+        12.4,
+        3,
+        0,
+        8,
+        0,
+        12,
+        3,
+        8,
+        2,
+        3,
+        5,
+        3,
+        5,
+        1,
+        5,
+        2,
+        3
+    ),
+    (
+        2,
+        2,
+        1,
+        36,
+        10,
+        2,
+        5,
+        2,
+        5,
+        0,
+        4,
+        10,
+        2,
+        3,
+        2,
+        5,
+        1,
+        5,
+        2,
+        3
+    );
 COMMIT;
