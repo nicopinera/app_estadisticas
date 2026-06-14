@@ -12,6 +12,8 @@ def main():
     )
     conexion_test = pruebaSQL.connect()  # Genero conexion a DB
     pruebaSQL.inicializar_schema()  # Inicio db
+    pruebaSQL.cargar_seed()
+    # pruebaSQL.limpieza()
     pruebaSQL.close_connection()  # Cierro conexion con DB
     del conexion_test
     logger.info("Fin de programa")
