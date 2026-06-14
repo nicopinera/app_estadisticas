@@ -210,3 +210,4 @@ __marimo__/
 reportes_cobertura/
 logs/
 *.db
+.vscode/
