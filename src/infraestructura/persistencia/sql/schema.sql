@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS usuarioClub (
     idClub integer NOT NULL,
     rolEntrenador text NULL,
     PRIMARY KEY (idUsuario, idClub),
-    FOREIGN KEY (idUsuario) REFERENCES usuario (idUsuario) ON DELETE CASCADE,
-    FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE
+    FOREIGN KEY (idUsuario) REFERENCES usuario (idUsuario) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
 );
 -- Tabla jugador
 CREATE TABLE IF NOT EXISTS jugador (
@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS jugadorClub (
         fechaHasta IS NULL
         OR fechaHasta >= fechaDesde
     ),
-    FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE,
-    FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE
+    FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
 );
 -- Tabla competencia
 CREATE TABLE IF NOT EXISTS competencia (
@@ -74,24 +74,24 @@ CREATE TABLE IF NOT EXISTS inscripcion (
     idClub integer NOT NULL,
     idCategoria integer NOT NULL,
     idCompetencia integer NOT NULL,
-    FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE,
-    FOREIGN KEY (idCategoria) REFERENCES categoria (idCategoria),
-    FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE
+    FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idCategoria) REFERENCES categoria (idCategoria) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE on UPDATE CASCADE
 );
 -- Tabla Lista de buena Fe
 CREATE TABLE IF NOT EXISTS listaBuenaFe (
     idListaBuenaFe integer PRIMARY KEY AUTOINCREMENT,
     fechaPresentacion text NOT NULL,
     idInscripcion integer NOT NULL UNIQUE,
-    FOREIGN KEY (idInscripcion) REFERENCES inscripcion (idInscripcion) ON DELETE CASCADE
+    FOREIGN KEY (idInscripcion) REFERENCES inscripcion (idInscripcion) ON DELETE CASCADE on UPDATE CASCADE
 );
 -- Tabla Jugador Lista Buena Fe
 CREATE TABLE IF NOT EXISTS jugadorListaBuenaFe (
     idJugador integer NOT NULL,
     idListaBuenaFe integer NOT NULL,
     PRIMARY KEY (idJugador, idListaBuenaFe),
-    FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE,
-    FOREIGN KEY (idListaBuenaFe) REFERENCES listaBuenaFe (idListaBuenaFe) ON DELETE CASCADE
+    FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idListaBuenaFe) REFERENCES listaBuenaFe (idListaBuenaFe) ON DELETE CASCADE on UPDATE CASCADE
 );
 -- Tabla Partido
 CREATE TABLE IF NOT EXISTS partido (
@@ -102,9 +102,9 @@ CREATE TABLE IF NOT EXISTS partido (
     idClubLocal integer NOT NULL,
     idClubVisitante integer NOT NULL,
     CHECK(idClubLocal != idClubVisitante),
-    FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE,
-    FOREIGN KEY (idClubLocal) REFERENCES club (idClub) ON DELETE CASCADE,
-    FOREIGN KEY (idClubVisitante) REFERENCES club (idClub) ON DELETE CASCADE
+    FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idClubLocal) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE,
+    FOREIGN KEY (idClubVisitante) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
 );
 -- Tabla jugador Partido
 CREATE TABLE IF NOT EXISTS jugadorPartido (
