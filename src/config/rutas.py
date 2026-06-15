@@ -1,3 +1,10 @@
+"""Módulo de configuración de rutas del proyecto.
+
+Define las rutas absolutas a los archivos SQL, la base de datos y los logs,
+derivándolas dinámicamente desde la ubicación de este archivo para que el
+proyecto funcione independientemente del directorio de instalación.
+"""
+
 import os
 
 RUTA_SRC = os.path.dirname(os.path.dirname(__file__))
