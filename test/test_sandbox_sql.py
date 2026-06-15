@@ -1,7 +1,5 @@
 import sqlite3
-
 import pytest
-
 import config.rutas as r
 from infraestructura.persistencia.database_manager import SQLiteManager
 
@@ -38,10 +36,12 @@ def test_insert(db_conexion):
     db_conexion.row_factory = sqlite3.Row
     cursor = db_conexion.cursor()
 
-    cursor.execute("""
-        INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) 
+    cursor.execute(
+        """
+        INSERT INTO jugador (nombre, apellido, dni, anioNacimiento)
         VALUES ('Facundo', 'Campazzo', 36123456, 1991)
-    """)
+    """
+    )
     db_conexion.commit()  # Guardamos los cambios
 
     # Comprobamos que se guardó

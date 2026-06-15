@@ -7,7 +7,7 @@ DROP VIEW IF EXISTS v_listas_detalle;
 
 -- Vista 1: Resumen de partidos para UI y Pandas
 CREATE VIEW IF NOT EXISTS v_partidos_resumen AS
-SELECT 
+SELECT
     p.idPartido AS id_partido,
     p.fecha AS fecha_partido,
     p.estadio,
@@ -22,7 +22,7 @@ FROM partido AS p
 
 -- Vista 2: Boxscore detallado (fuente principal para Pandas)
 CREATE VIEW IF NOT EXISTS v_boxscore_completo AS
-SELECT 
+SELECT
     part.idPartido AS id_partido,
     part.idJugador AS id_jugador,
     part.idClub AS id_club,
@@ -52,7 +52,7 @@ FROM jugadorPartido AS part
 
 -- Vista 3: Acumulados por temporada
 CREATE VIEW IF NOT EXISTS v_jugador_totales_temporada AS
-SELECT 
+SELECT
     j.nombre || ' ' || j.apellido AS nombre_jugador,
     comp.anio AS anio_competencia,
     COUNT(jp.idPartido) AS partidos_jugados,
@@ -84,7 +84,7 @@ GROUP BY j.idJugador, comp.anio;
 
 -- Vista 4: Detalle de inscripciones y listas
 CREATE VIEW IF NOT EXISTS v_listas_detalle AS
-SELECT 
+SELECT
     i.idInscripcion AS id_inscripcion,
     cl.nombre AS nombre_club,
     cat.nombre AS nombre_categoria,

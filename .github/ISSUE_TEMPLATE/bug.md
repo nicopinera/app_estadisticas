@@ -60,10 +60,10 @@ Si tienes una idea de dónde está el fallo o cómo arreglarlo.
 
 <!-- Secuencia mínima y exacta para ver el error -->
 
-1. 
-2. 
-3. 
-4. 
+1.
+2.
+3.
+4.
 
 ---
 

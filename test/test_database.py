@@ -78,7 +78,7 @@ def test_check_constraints(db_conexion):
     # 1. Probar puntos negativos
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            """INSERT INTO jugadorPartido 
+            """INSERT INTO jugadorPartido
             (idJugador,idPartido,idClub,minutosJugados,T2C, T2L, T3C)
             VALUES (?, ?, ?,?,?,?,?)""",
             (1, 1, 1, 20, -20, -10, -30),
@@ -86,8 +86,8 @@ def test_check_constraints(db_conexion):
 
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            """INSERT INTO jugadorPartido 
-            (idJugador,idPartido,idClub,minutosJugados) 
+            """INSERT INTO jugadorPartido
+            (idJugador,idPartido,idClub,minutosJugados)
             VALUES (?, ?, ?, ?)""",
             (1, 1, 1, 49),
         )
@@ -145,7 +145,7 @@ def test_division_by_zero_devuelve_cero_en_vistas():
 
     cursor = conexion.cursor()
     cursor.execute(
-        """INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) 
+        """INSERT INTO jugador (nombre, apellido, dni, anioNacimiento)
         VALUES (?, ?, ?, ?)""",
         ("Jugador", "Cero", 99999999, 2000),
     )
@@ -189,8 +189,8 @@ def test_division_by_zero_devuelve_cero_en_vistas():
     )
 
     cursor.execute(
-        """SELECT porcentaje_t2, porcentaje_t3, porcentaje_t1 
-        FROM v_jugador_totales_temporada 
+        """SELECT porcentaje_t2, porcentaje_t3, porcentaje_t1
+        FROM v_jugador_totales_temporada
         WHERE nombre_jugador = ?""",
         ("Jugador Cero",),
     )
@@ -207,7 +207,9 @@ def test_business_constraints(db_conexion):
     # Pre-requisitos: Clubes y Competencia
     db_cursor.execute("INSERT INTO club (nombre) VALUES ('Atenas')")
     db_cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")
-    db_cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)")
+    db_cursor.execute(
+        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)"
+    )
 
     # 1. Probar que el local no sea igual al visitante
     with pytest.raises(sqlite3.IntegrityError):
@@ -218,7 +220,9 @@ def test_business_constraints(db_conexion):
 
     # 2. Probar que tiros convertidos no superen a los lanzados (T2C <= T2L)
     # Pre-requisito: Jugador y Partido
-    db_cursor.execute("INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')")
+    db_cursor.execute(
+        "INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')"
+    )
     db_cursor.execute(
         "INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)",
         ("2026-01-01", 1, 1, 2),
@@ -231,7 +235,9 @@ def test_business_constraints(db_conexion):
 
     # 3. Año de competencia > 1900
     with pytest.raises(sqlite3.IntegrityError):
-        db_cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Torneo Prehistórico', 1850)")
+        db_cursor.execute(
+            "INSERT INTO competencia (nombre, anio) VALUES ('Torneo Prehistórico', 1850)"
+        )
 
 
 def test_foreign_key_behavior(db_conexion):
@@ -253,7 +259,9 @@ def test_foreign_key_behavior(db_conexion):
     # 2. RESTRICT: No se puede borrar un club si tiene registros en jugadorPartido
     # Re-insertamos datos necesarios
     cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")  # idClub = 2
-    cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)")  # idCompetencia = 2
+    cursor.execute(
+        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)"
+    )  # idCompetencia = 2
     cursor.execute(
         "INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)",
         ("2026-01-01", 2, 1, 2),  # Local=1, Visitante=2

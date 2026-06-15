@@ -33,7 +33,7 @@ Para garantizar la eficacia en la resolución de incidentes críticos y facilita
   Nivel de Severidad (Severity Level): Clasificación que indica la urgencia o gravedad del evento (ej. INFO, WARN, ERROR). Esto permite un triaje rápido, facilita el filtrado de registros y es vital para la configuración de alertas automatizadas.
 
 - Mensaje Descriptivo: Declaración concisa y explícita que describe la naturaleza de la acción o el fallo ocurrido (por ejemplo: "Fallo de conexión a la base de datos principal").
-  
+
 ***Contexto y Metadatos Extendidos***
 Además de la información básica, es fundamental incluir datos contextuales que permitan reconstruir el estado del entorno al momento del suceso:
 
@@ -48,15 +48,15 @@ Además de la información básica, es fundamental incluir datos contextuales qu
 El proyecto implementa un sistema de registro de eventos (logging) estructurado y persistente, diseñado para auditar las operaciones del backend, monitorear el flujo de la aplicación y facilitar la depuración técnica.
 Arquitectura y Configuración
 1. Archivo logger.py (Configuración Central)
-Este módulo centraliza la configuración del logger raíz de la aplicación, garantizando que cualquier componente del sistema herede parámetros estandarizados de registro. 
-A. Gestión de Directorios: Implementa la función crear_carpeta_logs(), la cual asegura la existencia del directorio de destino antes de inicializar los registros.  
-B. Rotación de Archivos: Para prevenir el agotamiento del espacio en almacenamiento, emplea la clase *RotatingFileHandler*. El sistema está configurado para archivar el registro actual (app.log) al alcanzar un tamaño máximo de 10 MB (maxBytes=10_000_000), manteniendo un historial máximo de 5 archivos de respaldo (backupCount=5) antes de eliminar los registros más antiguos.  
-C. Estructura de Metadatos: Se define un formato estricto mediante la clase *logging.Formatter*. Cada línea de registro captura: marca de tiempo exacta *(%(asctime)s)*, nombre del módulo emisor *(%(name)s)*, nivel de severidad *(%(levelname)s)* y el mensaje descriptivo del evento *(%(message)s)*.  
-D. Niveles de Severidad: El manejador de archivos (handler) restringe la escritura a eventos con nivel INFO o superior, filtrando el exceso de información en entornos de producción.  
+Este módulo centraliza la configuración del logger raíz de la aplicación, garantizando que cualquier componente del sistema herede parámetros estandarizados de registro.
+A. Gestión de Directorios: Implementa la función crear_carpeta_logs(), la cual asegura la existencia del directorio de destino antes de inicializar los registros.
+B. Rotación de Archivos: Para prevenir el agotamiento del espacio en almacenamiento, emplea la clase *RotatingFileHandler*. El sistema está configurado para archivar el registro actual (app.log) al alcanzar un tamaño máximo de 10 MB (maxBytes=10_000_000), manteniendo un historial máximo de 5 archivos de respaldo (backupCount=5) antes de eliminar los registros más antiguos.
+C. Estructura de Metadatos: Se define un formato estricto mediante la clase *logging.Formatter*. Cada línea de registro captura: marca de tiempo exacta *(%(asctime)s)*, nombre del módulo emisor *(%(name)s)*, nivel de severidad *(%(levelname)s)* y el mensaje descriptivo del evento *(%(message)s)*.
+D. Niveles de Severidad: El manejador de archivos (handler) restringe la escritura a eventos con nivel INFO o superior, filtrando el exceso de información en entornos de producción.
 2. Archivo rutas.py (Definición de Ubicaciones)
-Este módulo centraliza y abstrae la estructura de directorios del proyecto.Define las constantes *LOG_DIR* y *APP_LOG_FILE*, determinando que el historial de eventos se almacene físicamente en una carpeta denominada logs ubicada en la raíz del proyecto.  
+Este módulo centraliza y abstrae la estructura de directorios del proyecto.Define las constantes *LOG_DIR* y *APP_LOG_FILE*, determinando que el historial de eventos se almacene físicamente en una carpeta denominada logs ubicada en la raíz del proyecto.
 3. Archivo database_manager.py (Implementación)
-Este módulo ilustra la aplicación del sistema de auditoría dentro de las operaciones transaccionales y de persistencia de datos.  
+Este módulo ilustra la aplicación del sistema de auditoría dentro de las operaciones transaccionales y de persistencia de datos.
 
 - Identificación Dinámica: Instancia el registro utilizando *get_logger(__name__)*. Esta directiva asegura que cada entrada en el archivo de logs refleje automáticamente el nombre del archivo subyacente, facilitando la trazabilidad del código.
 

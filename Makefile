@@ -16,3 +16,8 @@ run_linter_ruf:
 corregir_linter:
 	ruff check --fix --select E --select I . && ruff format .
 	ruff check .
+
+pre_commit:
+	pip install pre-commit
+	pre-commit
+	pre-commit run --all-files

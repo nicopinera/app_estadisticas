@@ -27,7 +27,7 @@ DELETE FROM competencia WHERE nombre = 'PROVINCIAL U21';
 DELETE FROM club WHERE nombre IN ('Atenas', 'Universitario');
 
 -- Borrar jugadores
-DELETE FROM jugador 
+DELETE FROM jugador
 WHERE (nombre = 'pepe' AND apellido = 'argento')
    OR (nombre = 'antonio' AND apellido = 'argentinito')
    OR (nombre = 'Pepa' AND apellido = 'arrigoni')

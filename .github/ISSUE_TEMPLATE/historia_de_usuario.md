@@ -98,10 +98,10 @@ assignees: ""
 
 <!-- Cada AC debe ser verificable objetivamente. Usa la numeración AC1, AC2… -->
 
-- [ ] **AC1.** 
-- [ ] **AC2.** 
-- [ ] **AC3.** 
-- [ ] **AC4.** 
+- [ ] **AC1.**
+- [ ] **AC2.**
+- [ ] **AC3.**
+- [ ] **AC4.**
 
 ---
 
@@ -109,8 +109,8 @@ assignees: ""
 
 <!-- Solo si aplican reglas del dominio específicas a esta historia. Eliminar sección si no aplica. -->
 
-- 
-- 
+-
+-
 
 ---
 
@@ -119,12 +119,12 @@ assignees: ""
 <!-- Describe los tests requeridos para que esta US pueda considerarse Hecha -->
 
 **Unitarios**
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
 
 **Integración**
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
 
 ---
 
