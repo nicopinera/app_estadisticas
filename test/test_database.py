@@ -216,29 +216,29 @@ def test_business_constraints(db_conexion):
     # 1. Probar que el local no sea igual al visitante
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            "INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)",
+            """INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)""",
             ("2026-01-01", 1, 1, 1),  # ID local == ID visitante
         )
 
     # 2. Probar que tiros convertidos no superen a los lanzados (T2C <= T2L)
     # Pre-requisito: Jugador y Partido
     db_cursor.execute(
-        "INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')"
+        """INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')"""
     )
     db_cursor.execute(
-        "INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)",
+        """INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)""",
         ("2026-01-01", 1, 1, 2),
     )
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            "INSERT INTO jugadorPartido (idJugador, idPartido, idClub, T2C, T2L) VALUES (?, ?, ?, ?, ?)",
+            """INSERT INTO jugadorPartido (idJugador, idPartido, idClub, T2C, T2L) VALUES (?, ?, ?, ?, ?)""",
             (1, 1, 1, 10, 5),  # 10 convertidos, 5 lanzados (IMPOSIBLE)
         )
 
     # 3. Año de competencia > 1900
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
-            "INSERT INTO competencia (nombre, anio) VALUES ('Torneo Prehistórico', 1850)"
+            """INSERT INTO competencia (nombre, anio) VALUES ('Torneo Prehistórico', 1850)"""
         )
 
 
@@ -262,15 +262,15 @@ def test_foreign_key_behavior(db_conexion):
     # Re-insertamos datos necesarios
     cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")  # idClub = 2
     cursor.execute(
-        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)"
+        """INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)"""
     )  # idCompetencia = 2
     cursor.execute(
-        "INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)",
+        """INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?)""",
         ("2026-01-01", 2, 1, 2),  # Local=1, Visitante=2
     )
     cursor.execute("INSERT INTO jugador (nombre, apellido) VALUES ('John', 'Doe')")
     cursor.execute(
-        "INSERT INTO jugadorPartido (idJugador, idPartido, idClub, puntos) VALUES (1, 1, 1, 10)"
+        """INSERT INTO jugadorPartido (idJugador, idPartido, idClub, puntos) VALUES (1, 1, 1, 10)"""
     )
 
     # Intentar borrar el club (debe fallar por el RESTRICT en jugadorPartido)
