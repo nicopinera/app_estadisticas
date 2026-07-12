@@ -21,7 +21,66 @@ def db_conexion():
     return conexion
 
 
+def test_schema_sql_ejecuta_sin_errores():
+    """
+    Testea que se ejecute el schema en una DB vacia sin generar excepciones
+    """
+    conexion = sqlite3.connect(":memory:")
+    conexion.execute("PRAGMA foreign_keys = ON;")
+    with open(ruta.SCHEMA_SQL, "r", encoding="utf-8") as f:
+        conexion.executescript(f.read())
+    conexion.close()
+
+
+def test_view_sql_ejecuta_sin_errores():
+    """
+    Testea que se ejecute el view en una DB vacia sin generar excepciones
+    """
+    conexion = sqlite3.connect(":memory:")
+    conexion.execute("PRAGMA foreign_keys = ON;")
+    with open(ruta.SCHEMA_SQL, "r", encoding="utf-8") as f:
+        conexion.executescript(f.read())
+    with open(ruta.VISTA_SQL, "r", encoding="utf-8") as f:
+        conexion.executescript(f.read())
+    conexion.close()
+
+
+# test/test_database.py
+
+
+def test_schema_sql_ejecuta_sin_errores():
+    """Smoke test: schema.sql se aplica en DB vacía sin excepciones."""
+    conexion = sqlite3.connect(":memory:")
+    conexion.execute("PRAGMA foreign_keys = ON;")
+    with open(ruta.SCHEMA_SQL, "r", encoding="utf-8") as f:
+        conexion.executescript(f.read())
+    conexion.close()
+
+
+def test_views_sql_ejecuta_sin_errores():
+    """Smoke test: views.sql se aplica luego del schema sin excepciones."""
+    conexion = sqlite3.connect(":memory:")
+    with open(ruta.SCHEMA_SQL, "r", encoding="utf-8") as f:
+        conexion.executescript(f.read())
+    with open(ruta.VISTA_SQL, "r", encoding="utf-8") as f:
+        conexion.executescript(f.read())
+    conexion.close()
+
+
+def test_seed_sql_ejecuta_sin_errores():
+    """Smoke test: seed.sql se aplica luego del schema+vistas sin excepciones."""
+    manager = SQLiteManager(":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL)
+    manager.connect()
+    manager.inicializar_schema()
+    manager.cargar_seed()
+    manager.close_connection()
+
+
 def test_database_schema(db_conexion):
+    """
+    Test destinado a verificar que se creen las tablas especificadas en en schenma
+    """
+
     tablas_esperadas = {
         "usuario",
         "club",
@@ -47,6 +106,10 @@ def test_database_schema(db_conexion):
 
 
 def test_database_schema_view(db_conexion):
+    """
+    Test destinado a verificar que se generen las vistas especificadas en el archivo sql
+    """
+
     vistas_esperadas = {
         "v_jugador_totales_temporada",
         "v_listas_detalle",
@@ -64,7 +127,7 @@ def test_database_schema_view(db_conexion):
 
 
 def test_referential_integrity(db_conexion):
-    # Intentar insertar un producto con una categoría que NO existe (id: 999)
+    # Intentar insertar un registro con una categoría que NO existe (id: 999)
     # Debe lanzar un sqlite3.IntegrityError
     db_cursor = db_conexion.cursor()
     with pytest.raises(sqlite3.IntegrityError):
@@ -75,9 +138,13 @@ def test_referential_integrity(db_conexion):
 
 
 def test_check_constraints(db_conexion):
+    """
+    Test destinado a verificar que se cumplan los CHECK definidos en la DB
+    """
+
     db_cursor = db_conexion.cursor()
     db_cursor.execute("PRAGMA foreign_keys = OFF;")
-    
+
     # 1. Probar puntos negativos
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
@@ -89,6 +156,7 @@ def test_check_constraints(db_conexion):
             (1, 1, 1, 20, -20, -10, -30),
         )
 
+    # 2. Probar insertar registros incompletos
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
             """
@@ -101,6 +169,10 @@ def test_check_constraints(db_conexion):
 
 
 def test_close_connection_cierra_la_conexion():
+    """
+    Test para verificar el cierre correcto de conexion
+    """
+
     manager = SQLiteManager(":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL)
     conexion = manager.connect()
 
@@ -111,6 +183,10 @@ def test_close_connection_cierra_la_conexion():
 
 
 def test_limpieza_elimina_datos_de_seed():
+    """
+    Test que verifica la limpieza correcta de los datos seed
+    """
+
     manager = SQLiteManager(
         ":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL, ruta.CLEAR_SQL
     )
@@ -174,9 +250,26 @@ def test_division_by_zero_devuelve_cero_en_vistas():
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            id_jugador, id_partido, id_club, 
-            10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-            0, 0, 0, 0, 0, 0, 0
+            id_jugador,
+            id_partido,
+            id_club,
+            10,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
         ),
     )
 
@@ -209,7 +302,7 @@ def test_business_constraints(db_conexion):
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
             """
-            INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) 
+            INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
             VALUES (?, ?, ?, ?)
             """,
             ("2026-01-01", 1, 1, 1),  # ID local == ID visitante
@@ -222,7 +315,7 @@ def test_business_constraints(db_conexion):
     )
     db_cursor.execute(
         """
-        INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) 
+        INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
         VALUES (?, ?, ?, ?)
         """,
         ("2026-01-01", 1, 1, 2),
@@ -230,7 +323,7 @@ def test_business_constraints(db_conexion):
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
             """
-            INSERT INTO jugadorPartido (idJugador, idPartido, idClub, T2C, T2L) 
+            INSERT INTO jugadorPartido (idJugador, idPartido, idClub, T2C, T2L)
             VALUES (?, ?, ?, ?, ?)
             """,
             (1, 1, 1, 10, 5),  # 10 convertidos, 5 lanzados (IMPOSIBLE)
@@ -240,7 +333,7 @@ def test_business_constraints(db_conexion):
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
             """
-            INSERT INTO competencia (nombre, anio) 
+            INSERT INTO competencia (nombre, anio)
             VALUES ('Torneo Prehistórico', 1850)
             """
         )
@@ -270,7 +363,7 @@ def test_foreign_key_behavior(db_conexion):
     )  # idCompetencia = 2
     cursor.execute(
         """
-        INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante) 
+        INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
         VALUES (?, ?, ?, ?)
         """,
         ("2026-01-01", 2, 1, 2),  # Local=1, Visitante=2
@@ -278,7 +371,7 @@ def test_foreign_key_behavior(db_conexion):
     cursor.execute("INSERT INTO jugador (nombre, apellido) VALUES ('John', 'Doe')")
     cursor.execute(
         """
-        INSERT INTO jugadorPartido (idJugador, idPartido, idClub, puntos) 
+        INSERT INTO jugadorPartido (idJugador, idPartido, idClub, puntos)
         VALUES (1, 1, 1, 10)
         """
     )
