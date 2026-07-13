@@ -3,16 +3,16 @@ from dataclasses import dataclass
 
 @dataclass
 class Jugador:
-    idjugador: int | None = None
     nombre: str
     apellido: str
     dni: int
     anioNacimiento: int
+    idJugador: int | None = None
 
 
 @dataclass
 class JugadorClub:
-    idJugador: int | None = None
-    idClub: int | None = None
     fechaDesde: str
     fechaHasta: str | None
+    idJugador: int | None = None
+    idClub: int | None = None
