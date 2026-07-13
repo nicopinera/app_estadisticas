@@ -10,9 +10,9 @@ class JuegoRepositorio(ABC):
         pass
 
     @abstractmethod
-    def buscar_por_id():
+    def buscar_por_id(self):
         pass
 
     @abstractmethod
-    def guardar_boxscore():
+    def guardar_boxscore(self):
         pass
