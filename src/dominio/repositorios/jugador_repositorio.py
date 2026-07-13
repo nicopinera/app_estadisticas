@@ -24,15 +24,15 @@ class JugadorRepositorio(ABC):
     @abstractmethod
     def guardar(
         self, nombre: str, apellido: str, dni: int, anioNacimiento: int
-    ) -> None:
+    ) -> Jugador:
         pass
 
     @abstractmethod
-    def link_to_club(self, id_jugador: int, id_club: int) -> None:
+    def link_to_club(self, id_jugador: int, id_club: int, fechaDesde: str) -> None:
         "Vincula un jugador con un club, verificando link con otro club"
         pass
 
     @abstractmethod
-    def club_activo(self, id_jugador: int, id_club: int) -> Club | None:
+    def club_activo(self, id_jugador: int) -> Club | None:
         "Devuelve el club activo de un jugador"
         pass

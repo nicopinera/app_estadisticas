@@ -16,13 +16,13 @@ class ClubRepositorio(ABC):
         pass
 
     @abstractmethod
-    def buscar_por_nombre(self, nombre: int) -> list[Club]:
+    def buscar_por_nombre(self, nombre: str) -> list[Club]:
         "Busca un club por nombre"
         pass
 
     @abstractmethod
-    def guardar(self, nombre: str) -> None:
-        "Guarda un Club"
+    def guardar(self, nombre: str) -> Club:
+        "Guarda un Club, si es None, hay un error"
         pass
 
     @abstractmethod
