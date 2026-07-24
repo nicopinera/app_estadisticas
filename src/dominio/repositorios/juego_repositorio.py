@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from entidades.partido import Partido, JugadorPartido
+
+from entidades.partido import JugadorPartido, Partido
 
 
 class JuegoRepositorio(ABC):
