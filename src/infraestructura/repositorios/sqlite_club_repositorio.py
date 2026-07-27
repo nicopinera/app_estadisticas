@@ -21,12 +21,12 @@ class SqliteClubRepositorio(ClubRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        query = "SELECT c.* FROM Club c JOIN UsuarioClub uc ON c.idClub = uc.idClub WHERE uc.idUsuario = ?"
+        query = "SELECT c.* FROM Club c JOIN UsuarioClub uc ON c.idClub = uc.idClub WHERE uc.idUsuario = ?"  # noqa: E501
         cursor.execute(query, (id_usuario,))
         rows = cursor.fetchall()
-        if row is None:
-            return None
-        return [self._row_to_entity(row) for row in row]
+        if not rows:
+            return []
+        return [self._row_to_entity(r) for r in rows]
 
     def buscar_por_id(self, id_club: int) -> Club:
         conexion = self.conexion.obtener_conexion()
@@ -56,7 +56,6 @@ class SqliteClubRepositorio(ClubRepositorio):
         id_club = None
 
         if id_club is None:
-
             query = "INSERT INTO Club (nombre) VALUES (?)"
             cursor.execute(query, (nombre,))
             conexion.commit()
@@ -66,7 +65,7 @@ class SqliteClubRepositorio(ClubRepositorio):
             query = "UPDATE Club SET nombre = ? WHERE idClub = ?"
             cursor.execute(query, (nombre, id_club))
             conexion.commit()
-            
+
         return Club(idClub=id_club, nombre=nombre)
 
     def link_user_to_club(self, idUsuario: int, idClub: int, rol: str) -> UsuarioClub:
@@ -78,7 +77,3 @@ class SqliteClubRepositorio(ClubRepositorio):
         conexion.commit()
 
         return UsuarioClub(idUsuario=idUsuario, idClub=idClub, rol=rol)
-
-    
-
-    
