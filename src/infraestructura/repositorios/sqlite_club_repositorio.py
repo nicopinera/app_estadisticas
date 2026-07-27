@@ -1,9 +1,10 @@
 import sqlite3
 from typing import Optional
 
+from infraestructura.persistencia.sqlite_conexion import SqliteConexion
+
 from dominio.entidades.club import Club, UsuarioClub
 from dominio.repositorios.club_repositorio import ClubRepositorio
-from infraestructura.persistencia.sqlite_conexion import SqliteConexion
 
 
 class SqliteClubRepositorio(ClubRepositorio):

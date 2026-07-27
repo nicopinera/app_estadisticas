@@ -1,11 +1,12 @@
 import sqlite3
 from typing import Optional
 
-
 from app_estadisticas.src.dominio.entidades import jugador
 from app_estadisticas.src.dominio.entidades.partido import JugadorPartido
-from dominio.repositorios.juego_repositorio import JuegoRepositorio 
 from Infraestructura.persistencia.sqlite_conexion import SqliteConexion
+
+from dominio.repositorios.juego_repositorio import JuegoRepositorio
+
 
 class SqliteJuegoRepositorio(JuegoRepositorio):
     def __init__(self, conexion: SqliteConexion) -> None:
