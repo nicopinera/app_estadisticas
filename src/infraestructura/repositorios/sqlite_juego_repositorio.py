@@ -2,7 +2,8 @@ import sqlite3
 from typing import Optional
 
 from infraestructura.persistencia.sqlite_conexion import SqliteConexion
-from dominio.entidades.partido import Partido, JugadorPartido
+
+from dominio.entidades.partido import JugadorPartido, Partido
 from dominio.repositorios.juego_repositorio import JuegoRepositorio
 
 
@@ -53,8 +54,15 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        query = "INSERT INTO Juego (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?, ?)"
-        cursor.execute(query, (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante))
+        
+        query = (
+            "INSERT INTO Juego "
+            "(fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) "
+            "VALUES (?, ?, ?, ?, ?)"
+        )
+        cursor.execute(
+            query, (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante), 
+            )
         conexion.commit()
 
         id_juego = cursor.lastrowid
@@ -94,7 +102,13 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        query = "INSERT INTO JugadorPartido (idJugador, idJuego, idClub, minutosJugados, puntos, t2c, t2l, t3c, t3l, t1c, t1l, rebotesDef, rebotesOf, asistencias, recuperos, perdidas, taponesRecibidos, taponesRealizados, faltasRecibidas, FaltasCometidas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        query = (
+            "INSERT INTO JugadorPartido ("
+            "idPartido, idJugador, minutosJugados, puntos, t2c, t2l, t3c, t3l, "
+            "t1c, t1l, rebotesDef, rebotesOf, asistencias, recuperos, perdidas, "
+            "taponesRecibidos, taponesRealizados, faltasRecibidas, FaltasCometidas"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )
         cursor.execute(
             query,
             (

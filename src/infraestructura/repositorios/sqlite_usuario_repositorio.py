@@ -1,10 +1,10 @@
 import sqlite3
 from typing import Optional
 
-from dominio.repositorios.usuario_repositorio import UsuarioRepositorio
 from infraestructura.persistencia.sqlite_conexion import SqliteConexion
 
 from dominio.entidades.usuario import Usuario
+from dominio.repositorios.usuario_repositorio import UsuarioRepositorio
 
 # importacion de la clase SqliteConexion para poder conectarse a la base de datos sqlite y la realizar operaciones CRUD  # noqa: E501
 # en la tabla Usuarios, tambien se importa UsuarioRepositorio para la implementacion

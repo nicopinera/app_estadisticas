@@ -2,6 +2,7 @@ import sqlite3
 from typing import Optional
 
 from infraestructura.persistencia.sqlite_conexion import SqliteConexion
+
 from dominio.entidades.club import Club
 from dominio.entidades.jugador import Jugador, JugadorClub
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
@@ -73,7 +74,10 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        query = "INSERT INTO Jugador (nombre, apellido, dni, anioNacimiento) VALUES (?, ?, ?, ?)"
+        query = (
+            "INSERT INTO Jugador (nombre, apellido, dni, anioNacimiento) "
+            "VALUES (?, ?, ?, ?)"
+        )
         cursor.execute(query, (nombre, apellido, dni, anioNacimiento))
         conexion.commit()
 
@@ -90,8 +94,12 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
     def link_to_club(self, id_jugador: int, id_club: int, fechaDesde: str) -> None:
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
+
         
-        query = "INSERT INTO JugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
+        query = (
+            "INSERT INTO JugadorClub (idJugador, idClub, fechaDesde) "
+            "VALUES (?, ?, ?)"
+        )
         cursor.execute(query, (id_jugador, id_club, fechaDesde))
         conexion.commit()
 
