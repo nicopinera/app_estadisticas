@@ -95,10 +95,8 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        
         query = (
-            "INSERT INTO JugadorClub (idJugador, idClub, fechaDesde) "
-            "VALUES (?, ?, ?)"
+            "INSERT INTO JugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
         )
         cursor.execute(query, (id_jugador, id_club, fechaDesde))
         conexion.commit()
@@ -106,7 +104,7 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
     def club_activo(self, id_jugador: int) -> Club | None:
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
-        
+
         query = (
             "SELECT c.* FROM Club c "
             "JOIN JugadorClub jc ON c.idClub = jc.idClub "
@@ -114,10 +112,10 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
         )
         cursor.execute(query, (id_jugador,))
         row = cursor.fetchone()
-        
+
         if row is None:
             return None
-            
+
         return Club(
             nombre=row["nombre"],
             idClub=row["idClub"],

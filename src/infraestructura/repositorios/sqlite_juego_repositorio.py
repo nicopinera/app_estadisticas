@@ -18,7 +18,7 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
             idCompetencia=row["idCompetencia"],
             idClubLocal=row["idClubLocal"],
             idClubVisitante=row["idClubVisitante"],
-            idPartido=row["idJuego"]
+            idPartido=row["idJuego"],
         )
 
     def buscar_por_club(self, id_club: int) -> list[Partido]:
@@ -54,15 +54,15 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        
         query = (
             "INSERT INTO Juego "
             "(fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) "
             "VALUES (?, ?, ?, ?, ?)"
         )
         cursor.execute(
-            query, (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante), 
-            )
+            query,
+            (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante),
+        )
         conexion.commit()
 
         id_juego = cursor.lastrowid
@@ -73,7 +73,7 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
             idCompetencia=idCompetencia,
             idClubLocal=idClubLocal,
             idClubVisitante=idClubVisitante,
-            idPartido=id_juego
+            idPartido=id_juego,
         )
 
     def guardar_boxscore(
