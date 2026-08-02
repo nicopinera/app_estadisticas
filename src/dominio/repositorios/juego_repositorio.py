@@ -17,38 +17,9 @@ class JuegoRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_partido(
-        self,
-        fecha: str,
-        estadio: str,
-        idCompetencia: int,
-        idClubLocal: int,
-        idClubVisitante: int,
-    ) -> Partido:
+    def guardar_partido(self, partido: Partido) -> Partido:
         pass
 
     @abstractmethod
-    def guardar_boxscore(
-        self,
-        idJugador: int,
-        idPartido: int,
-        idClub: int,
-        minutosJugados: int,
-        puntos: int,
-        t2c: int,
-        t2l: int,
-        t3c: int,
-        t3l: int,
-        t1c: int,
-        t1l: int,
-        rebotesDef: int,
-        rebotesOf: int,
-        asistencias: int,
-        recuperos: int,
-        perdidas: int,
-        taponesRecibidos: int,
-        taponesRealizados: int,
-        faltasRecibidas: int,
-        FaltasCometidas: int,
-    ) -> JugadorPartido:
+    def guardar_boxscore(self, boxscore: JugadorPartido) -> JugadorPartido:
         pass
