@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS usuario (
 -- Tabla Club
 CREATE TABLE IF NOT EXISTS club (
     idCLub integer PRIMARY KEY AUTOINCREMENT,
-    nombre text NOT NULL
+    nombre text NOT NULL UNIQUE
 );
 -- Tabla usuarioClub
 CREATE TABLE IF NOT EXISTS usuarioClub (

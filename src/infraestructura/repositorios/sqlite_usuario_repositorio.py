@@ -10,7 +10,7 @@ from dominio.repositorios.usuario_repositorio import UsuarioRepositorio
 
 
 class SqliteUsuarioRepositorio(UsuarioRepositorio):
-    def __init__(self, conexion: Connection) -> None:
+    def __init__(self, conexion: Connection):
         self.conexion = conexion
         # en este caso Implementa la interfaz UsuarioRepositorio y se encarga de realizar  # noqa: E501
         # operaciones CRUD(Create, Read, Update, Delete) en la tabla Usuarios de la base de datos sqlite  # noqa: E501
