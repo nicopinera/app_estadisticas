@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from entidades.usuario import Usuario
+from dominio.entidades.usuario import Usuario
 
 
 class UsuarioRepositorio(ABC):
@@ -15,5 +15,5 @@ class UsuarioRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar(self, nombre: str, email: str, pw: str) -> None:
+    def guardar(self, nombre: str, email: str, pw: str):
         pass

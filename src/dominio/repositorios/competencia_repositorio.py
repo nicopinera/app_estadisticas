@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from entidades.competencia import (
+from dominio.entidades.competencia import (
     Categoria,
     Competencia,
     Inscripcion,

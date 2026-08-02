@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from entidades.club import Club, UsuarioClub
+from dominio.entidades.club import Club, UsuarioClub
 
 
 class ClubRepositorio(ABC):

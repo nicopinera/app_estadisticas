@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from entidades.club import Club
-from entidades.jugador import Jugador, JugadorClub
+from dominio.entidades.club import Club
+from dominio.entidades.jugador import Jugador, JugadorClub
 
 
 class JugadorRepositorio(ABC):
