@@ -19,8 +19,8 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         return Usuario(
             nombre=row["nombre"],
             email=row["email"],
-            pw=row["pw"],
-            id=row["id_usuario"],
+            pw=row["contrasenia"],
+            idUsuario=row["idUsuario"],
             # esta funcion toma una fila de la tabla Usuarios de la base de datos y la convierte en una instancia,  # noqa: E501
             # que es una entidad del dominio de la aplicacion, en este caso un objeto de la clase Usuario  # noqa: E501
         )
@@ -31,13 +31,12 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         # conexion = self.conexion.obtener_conexion()  # con este conectamos a la BD
         cursor = self.conexion.cursor()  # con este cursor ejecutamos las consultas SQL
 
-        query = "SELECT * FROM usuario WHERE id_usuario = ?"  # esto sirve para buscar un usuario por su ID  # noqa: E501
+        query = "SELECT * FROM usuario WHERE idUsuario = ?"  # esto sirve para buscar un usuario por su ID  # noqa: E501
         cursor.execute(
             query, (id,)
         )  # ejecutamos la consulta SQL con el ID del usuario que queremos buscar
-        row = (
-            cursor.fetchone()
-        )  # acá saca la primer coincidencia que encuentra en la BD
+        row = cursor.fetchone()
+        # acá saca la primer coincidencia que encuentra en la BD
 
         if row is None:  # si no encuentra nada en la BD, retorna None
             return None
@@ -45,11 +44,10 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         # si encuentra un usuario, lo convierte en una entidad y lo retorna
         return self._row_to_entity(row)
 
-    def encontrar_por_mail(self, email: str) -> Optional[Usuario]:
-        conexion = self.conexion.obtener_conexion()
-        cursor = conexion.cursor()
+    def encontrar_por_mail(self, email: str) -> Usuario | None:
+        cursor = self.conexion.cursor()
 
-        query = "Select * from Usuarios where email = ?"  # Funcion para buscar un determinado Usuario por su direccion de mail  # noqa: E501
+        query = "SELECT * FROM usuario WHERE email = ?"  # Funcion para buscar un determinado Usuario por su direccion de mail  # noqa: E501
         cursor.execute(query, (email,))
 
         row = cursor.fetchone()
@@ -59,9 +57,16 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
 
         return self._row_to_entity(row)
 
-    def guardar(self, nombre: str, email: str, pw: str) -> None:
+    def guardar(self, nombre: str, email: str, pw: str):
+        if not isinstance(nombre, str):
+            raise TypeError("nombre debe ser un string")
+        if not isinstance(email, str):
+            raise TypeError("email debe ser un string")
+        if not isinstance(pw, str):
+            raise TypeError("contraseña tiene que ser un string")
+
         cursor = self.conexion.cursor()
-        query = "INSERT INTO Usuarios (email, nombre, pw) VALUES (?, ?, ?)"
+        query = "INSERT INTO usuario (email, nombre, contrasenia) VALUES (?, ?, ?)"
         cursor.execute(query, (email, nombre, pw))
         self.conexion.commit()
 
