@@ -1,4 +1,6 @@
-# Diagrama de clases
+# Diagrama Utiles
+
+## Diagrama de clases
 
 ```mermaid
 classDiagram
@@ -193,4 +195,56 @@ namespace Infraestructura.Persistencia{
         + limpieza()
     }
 }
+```
+
+## Diagrama Patron repositorio
+
+```mermaid
+flowchart LR
+    db[(estadisticas.db)]
+    dbManager["SQLiteManager"]
+    repoUsuario["SqliteUsuarioRepositorio"]
+    repoJugador["SquliteJugadorRepositorio"]
+    repoJuego["SqliteJuegoRepositorio"]
+    repoClub["SqliteClubRepositorio"]
+    repoCompetencias["SQL Repositorio Competencia"]
+    U[(USUARIO)]
+    C[(CLUB)]
+    UC[(USUARIOCLUB)]
+    J[(JUGADOR)]
+    JC[(JUGADORCLUB)]
+    COM[(COMPETENCIA)]
+    CAT[(CATEGORIA)]
+    I[(INSCRIPCION)]
+    LBF[(LISTABUENAFE)]
+    JLBF[(JUGADORLISTABUENAFE)]
+    P[(PARTIDO)]
+    JP[(JUGADORPARTIDO)]
+
+    subgraph conexion
+    db-->|"Genera una conexion <br> a la base de datos"|dbManager
+    end
+
+    subgraph Repositorios
+    dbManager -->|"Conexion Unica"| repoUsuario
+    dbManager -->|"Conexion Unica"| repoJugador
+    dbManager -->|"Conexion Unica"| repoJuego
+    dbManager -->|"Conexion Unica"| repoClub
+    dbManager -->|"Conexion Unica"| repoCompetencias
+    end
+
+    subgraph EntidadesDB
+    repoUsuario -->|"Maneja"|U
+    repoClub -->|"Maneja"|C
+    repoClub -->|"Maneja"|UC
+    repoCompetencias -->|"Maneja"|COM
+    repoCompetencias -->|"Maneja"|CAT
+    repoCompetencias -->|"Maneja"|I
+    repoCompetencias -->|"Maneja"|LBF
+    repoCompetencias -->|"Maneja"|JLBF
+    repoJuego -->|"Maneja"|P
+    repoJuego -->|"Maneja"|JP
+    repoJugador -->|"Maneja"|J
+    repoJugador -->|"Maneja"|JC
+    end
 ```
