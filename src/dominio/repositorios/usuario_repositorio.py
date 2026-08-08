@@ -15,5 +15,5 @@ class UsuarioRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar(self, nombre: str, email: str, pw: str) -> Usuario:
+    def guardar(self, us_aux: Usuario) -> Usuario:
         pass

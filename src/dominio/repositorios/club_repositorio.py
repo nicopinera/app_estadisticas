@@ -22,11 +22,11 @@ class ClubRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar(self, nombre: str) -> Club:
+    def guardar(self, club: Club) -> Club:
         "Guarda un Club, si es None, hay un error"
         pass
 
     @abstractmethod
-    def link_user_to_club(self, idUsuario: int, idClub: int, rol: str) -> UsuarioClub:
+    def link_user_to_club(self, us_club: UsuarioClub) -> UsuarioClub:
         "Linkea un usuario a un club especifico"
         pass

@@ -18,18 +18,16 @@ class JugadorRepositorio(ABC):
         pass
 
     @abstractmethod
-    def buscar_por_club(self, idClub: int) -> list[JugadorClub]:
+    def buscar_por_club(self, idClub: int) -> list[Jugador]:
         "Busca todos los jugadores de un club"
         pass
 
     @abstractmethod
-    def guardar(
-        self, nombre: str, apellido: str, dni: int, anioNacimiento: int
-    ) -> Jugador:
+    def guardar(self, jugador: Jugador) -> Jugador:
         pass
 
     @abstractmethod
-    def link_to_club(self, id_jugador: int, id_club: int, fechaDesde: str) -> None:
+    def link_to_club(self, jc: JugadorClub) -> JugadorClub:
         "Vincula un jugador con un club, verificando link con otro club"
         pass
 
