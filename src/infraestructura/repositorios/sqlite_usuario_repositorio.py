@@ -55,18 +55,22 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
 
         return self._row_to_entity(row)
 
-    def guardar(self, nombre: str, email: str, pw: str):
-        if not isinstance(nombre, str):
+    def guardar(self, us_aux: Usuario) -> Usuario:
+        if not isinstance(us_aux.nombre, str):
             raise TypeError("nombre debe ser un string")
-        if not isinstance(email, str):
+        if not isinstance(us_aux.email, str):
             raise TypeError("email debe ser un string")
-        if not isinstance(pw, str):
+        if not isinstance(us_aux.pw, str):
             raise TypeError("contraseña tiene que ser un string")
 
         cursor = self.conexion.cursor()
         query = "INSERT INTO usuario (email, nombre, contrasenia) VALUES (?, ?, ?)"
-        cursor.execute(query, (email, nombre, pw))
+        cursor.execute(query, (us_aux.email, us_aux.nombre, us_aux.pw))
         self.conexion.commit()
+        idUsuario = cursor.lastrowid
+        return Usuario(
+            nombre=us_aux.nombre, email=us_aux.email, pw=us_aux.pw, idUsuario=idUsuario
+        )
 
     # Estos comentarios son de ayuda propia para poder entender que significa cada parte del codigo,  # noqa: E501
     # que hace cada funcion y como poder implementar las logica de negocio

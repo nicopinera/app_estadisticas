@@ -21,7 +21,7 @@ class SqliteClubRepositorio(ClubRepositorio):
             rol=row["rolEntrenador"],
         )
 
-    def buscar_por_id_usuario(self, id_usuario: int) -> Club | None:
+    def buscar_por_id_usuario(self, id_usuario: int) -> list[Club] | None:
         cursor = self.conexion.cursor()
 
         query = """
@@ -56,7 +56,7 @@ class SqliteClubRepositorio(ClubRepositorio):
         query = "SELECT * FROM club WHERE nombre LIKE ?;"
         cursor.execute(query, (f"%{nombre}%",))
         rows = cursor.fetchall()
-        if rows is None:
+        if not rows:
             return None
         resultados = []
         for r in rows:
@@ -64,28 +64,29 @@ class SqliteClubRepositorio(ClubRepositorio):
             resultados.append(aux)
         return resultados
 
-    def guardar(self, nombre: str) -> Club:
+    def guardar(self, club: Club) -> Club:
         cursor = self.conexion.cursor()
-        id_club = None
 
         try:
-            query = "INSERT INTO Club (nombre) VALUES (?);"
-            cursor.execute(query, (nombre,))
+            query = "INSERT INTO club (nombre) VALUES (?);"
+            cursor.execute(query, (club.nombre,))
             self.conexion.commit()
             id_club = cursor.lastrowid
-            return Club(idClub=id_club, nombre=nombre)
+            return Club(idClub=id_club, nombre=club.nombre)
         except sqlite3.Error:
             return None
 
-    def link_user_to_club(self, idUsuario: int, idClub: int, rol: str) -> UsuarioClub:
+    def link_user_to_club(self, us_club: UsuarioClub) -> UsuarioClub:
         cursor = self.conexion.cursor()
         # Funcion para linkear un usuario a un club especifico
         try:
             query = """
-            INSERT INTO usuarioClub (idUsuario, idClub, rol) VALUES (?, ?, ?);
+            INSERT INTO usuarioClub (idUsuario, idClub, rolEntrenador) VALUES (?, ?, ?);
             """
-            cursor.execute(query, (idUsuario, idClub, rol))
+            cursor.execute(query, (us_club.idUsuario, us_club.idClub, us_club.rol))
             self.conexion.commit()
-            return UsuarioClub(idUsuario=idUsuario, idClub=idClub, rol=rol)
+            return UsuarioClub(
+                idUsuario=us_club.idUsuario, idClub=us_club.idClub, rol=us_club.rol
+            )
         except sqlite3.Error:
             return None

@@ -21,7 +21,7 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
     def buscar_por_club(self, id_club: int) -> list[Partido] | None:
         cursor = self.conexion.cursor()
 
-        query = "SELECT * FROM Juego WHERE idClubLocal = ? OR idClubVisitante = ?"
+        query = "SELECT * FROM partido WHERE idClubLocal = ? OR idClubVisitante = ?"
         cursor.execute(query, (id_club, id_club))
         rows = cursor.fetchall()
         if not rows:
@@ -29,7 +29,7 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
         return [self._row_to_entity(row) for row in rows]
 
     def buscar_por_id(self, idPartido: int) -> Partido:
-        cursor = conexion.cursor()
+        cursor = self.conexion.cursor()
 
         query = "SELECT * FROM Juego WHERE idJuego = ?"
         cursor.execute(query, (idPartido,))
@@ -49,11 +49,7 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = self.conexion.cursor()
 
-        query = (
-            "INSERT INTO Juego "
-            "(fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) "
-            "VALUES (?, ?, ?, ?, ?)"
-        )
+        query = "INSERT INTO Juego (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?, ?)"
         cursor.execute(
             query,
             (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante),
