@@ -1,7 +1,4 @@
 import sqlite3
-from typing import Optional
-
-from infraestructura.persistencia.sqlite_conexion import SqliteConexion
 
 from dominio.entidades.club import Club
 from dominio.entidades.jugador import Jugador, JugadorClub
@@ -9,7 +6,7 @@ from dominio.repositorios.jugador_repositorio import JugadorRepositorio
 
 
 class SquliteJugadorRepositorio(JugadorRepositorio):
-    def __init__(self, conexion: SqliteConexion) -> None:
+    def __init__(self, conexion: sqlite3.Connection):
         self.conexion = conexion
 
     def _row_to_entity(self, row: sqlite3.Row) -> Jugador:
@@ -22,8 +19,7 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
         )
 
     def buscar_por_id(self, id_jugador: int) -> Jugador | None:
-        conexion = self.conexion.obtener_conexion()
-        cursor = conexion.cursor()
+        cursor = self.conexion.cursor()
 
         query = "SELECT * FROM Jugador WHERE id_jugador = ?"
         cursor.execute(query, (id_jugador,))
@@ -71,16 +67,14 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
     def guardar(
         self, nombre: str, apellido: str, dni: int, anioNacimiento: int
     ) -> Jugador:
-        conexion = self.conexion.obtener_conexion()
-        cursor = conexion.cursor()
+        cursor = self.conexion.cursor()
 
         query = (
             "INSERT INTO Jugador (nombre, apellido, dni, anioNacimiento) "
             "VALUES (?, ?, ?, ?)"
         )
         cursor.execute(query, (nombre, apellido, dni, anioNacimiento))
-        conexion.commit()
-
+        self.conexion.commit()
         id_jugador = cursor.lastrowid
 
         return Jugador(
@@ -99,11 +93,10 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
             "INSERT INTO JugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
         )
         cursor.execute(query, (id_jugador, id_club, fechaDesde))
-        conexion.commit()
+        self.conexion.commit()
 
     def club_activo(self, id_jugador: int) -> Club | None:
-        conexion = self.conexion.obtener_conexion()
-        cursor = conexion.cursor()
+        cursor = self.conexion.cursor()
 
         query = (
             "SELECT c.* FROM Club c "

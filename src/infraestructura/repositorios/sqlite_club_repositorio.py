@@ -21,7 +21,7 @@ class SqliteClubRepositorio(ClubRepositorio):
             rol=row["rolEntrenador"],
         )
 
-    def buscar_por_id_usuario(self, id_usuario: int) -> list[Club] | None:
+    def buscar_por_id_usuario(self, id_usuario: int) -> Club | None:
         cursor = self.conexion.cursor()
 
         query = """

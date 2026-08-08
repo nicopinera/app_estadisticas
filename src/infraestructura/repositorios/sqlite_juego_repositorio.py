@@ -1,14 +1,11 @@
 import sqlite3
-from typing import Optional
-
-from infraestructura.persistencia.sqlite_conexion import SqliteConexion
 
 from dominio.entidades.partido import JugadorPartido, Partido
 from dominio.repositorios.juego_repositorio import JuegoRepositorio
 
 
 class SqliteJuegoRepositorio(JuegoRepositorio):
-    def __init__(self, conexion: SqliteConexion) -> None:
+    def __init__(self, conexion: sqlite3.Connection):
         self.conexion = conexion
 
     def _row_to_entity(self, row: sqlite3.Row) -> Partido:
@@ -21,19 +18,17 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
             idPartido=row["idJuego"],
         )
 
-    def buscar_por_club(self, id_club: int) -> list[Partido]:
-        conexion = self.conexion.obtener_conexion()
-        cursor = conexion.cursor()
+    def buscar_por_club(self, id_club: int) -> list[Partido] | None:
+        cursor = self.conexion.cursor()
 
         query = "SELECT * FROM Juego WHERE idClubLocal = ? OR idClubVisitante = ?"
         cursor.execute(query, (id_club, id_club))
         rows = cursor.fetchall()
         if not rows:
-            return []
+            return None
         return [self._row_to_entity(row) for row in rows]
 
     def buscar_por_id(self, idPartido: int) -> Partido:
-        conexion = self.conexion.obtener_conexion()
         cursor = conexion.cursor()
 
         query = "SELECT * FROM Juego WHERE idJuego = ?"
@@ -52,7 +47,7 @@ class SqliteJuegoRepositorio(JuegoRepositorio):
         idClubVisitante: int,
     ) -> Partido:
         conexion = self.conexion.obtener_conexion()
-        cursor = conexion.cursor()
+        cursor = self.conexion.cursor()
 
         query = (
             "INSERT INTO Juego "

@@ -1,6 +1,4 @@
 import sqlite3
-from sqlite3 import Connection
-from typing import Optional
 
 from dominio.entidades.usuario import Usuario
 from dominio.repositorios.usuario_repositorio import UsuarioRepositorio
@@ -10,7 +8,7 @@ from dominio.repositorios.usuario_repositorio import UsuarioRepositorio
 
 
 class SqliteUsuarioRepositorio(UsuarioRepositorio):
-    def __init__(self, conexion: Connection):
+    def __init__(self, conexion: sqlite3.Connection):
         self.conexion = conexion
         # en este caso Implementa la interfaz UsuarioRepositorio y se encarga de realizar  # noqa: E501
         # operaciones CRUD(Create, Read, Update, Delete) en la tabla Usuarios de la base de datos sqlite  # noqa: E501
