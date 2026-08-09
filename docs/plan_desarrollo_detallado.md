@@ -79,7 +79,7 @@ Pilares del producto:
 
 1. **Accesibilidad y flexibilidad:** acceso desde cualquier dispositivo — cancha (celular/tablet) o casa (PC/notebook) para análisis más profundo.
 2. **Gestión organizativa completa:** perfil de usuario, club, categorías, competencias y listas de buena fe.
-3. **Ingesta de datos automatizada y manual:** además de la carga manual partido a partido, el  software interpreta automáticamente planillas Excel de Ges Deportivo.
+3. **Ingesta de datos automatizada y manual:** además de la carga manual partido a partido, el software interpreta automáticamente planillas Excel de Ges Deportivo.
 4. **Generación de estadísticas avanzadas:** motor de análisis que entrega resúmenes y estadísticas acumuladas, tradicionales y avanzadas, individuales y de equipo.
 5. **Visualización y toma de decisiones:** comparación de equipos/jugadores, filtros, gráficos claros para identificar tendencias a corto, mediano y largo plazo.
 
@@ -226,49 +226,35 @@ src/
 
 - **`repositorios/`** — implementaciones SQLite de las interfaces de dominio. Cada clase hereda de su interfaz correspondiente (`SqliteJugadorRepositorio(JugadorRepositorio)`).
 - **`persistencia/`** — infraestructura técnica de la base: `database_manager.py` (conexión, inicialización), archivos `.sql` (schema, vistas, seed), migraciones futuras. Sin lógica de negocio.
-- **`analytics/`**  — `formulas.py` (funciones puras sobre DataFrames),
-  `pandas_analytics_service.py`, `chart_generator.py`.
-- **`ingest/`** (a crear) — parser Excel de Ges Deportivo y servicio de ingesta.
-- **`reports/`** (a crear) — generadores de PDF y reportería de CLI (leaderboards).
-- **`ui/`** — subárbol separado por interfaz: `ui/cli/` y `ui/flet/`. Llaman a casos de uso;
-  nunca acceden a la base de datos directamente.
-- **`security/`** (a crear) — hashing de contraseñas, política de credenciales, adaptador de
-  cifrado de DB.
+- **`analytics/`** — `formulas.py` (funciones puras sobre DataFrames), `pandas_analytics_service.py`, `chart_generator.py`.
+- **`ingest/`** parser Excel de Ges Deportivo y servicio de ingesta.
+- **`reports/`** generadores de PDF y reportería de CLI (leaderboards).
+- **`ui/`** — subárbol separado por interfaz: `ui/cli/` y `ui/flet/`. Llaman a casos de uso; nunca acceden a la base de datos directamente.
+- **`security/`** — hashing de contraseñas, política de credenciales, adaptador de cifrado de DB.
 
 ### Data Transfer Objects (DTOs)
 
-Un **DTO** es una clase simple cuya única responsabilidad es transportar datos entre capas — **no
-contiene lógica de negocio**.
+Un **DTO** es una clase simple cuya única responsabilidad es transportar datos entre capas — **no contiene lógica de negocio**.
 
 **¿Por qué se usan?**
 
-- **Desacoplamiento:** la UI no necesita conocer las entidades de dominio, y el dominio no se
-  expone directamente al exterior.
-- **Control de la frontera:** el DTO de entrada valida el formato antes de que el caso de uso lo
-  procese; el DTO de salida define exactamente qué información se devuelve.
-- **Evolución independiente:** se puede cambiar la entidad de dominio sin romper la UI, y
-  viceversa.
+- **Desacoplamiento:** la UI no necesita conocer las entidades de dominio, y el dominio no se expone directamente al exterior.
+- **Control de la frontera:** el DTO de entrada valida el formato antes de que el caso de uso lo procese; el DTO de salida define exactamente qué información se devuelve.
+- **Evolución independiente:** se puede cambiar la entidad de dominio sin romper la UI, y viceversa.
 
-**Patrón de uso:** cada caso de uso recibe un DTO de entrada (datos crudos del usuario) y retorna
-un DTO de salida (datos procesados para mostrar). Las entidades de dominio **nunca salen** de la
-capa de aplicación hacia la UI.
+**Patrón de uso:** cada caso de uso recibe un DTO de entrada (datos crudos del usuario) y retorna un DTO de salida (datos procesados para mostrar). Las entidades de dominio **nunca salen** de la capa de aplicación hacia la UI.
 
 **Ejemplo — registrar un jugador:**
 
-- `RegistrarJugadorInputDTO`: `nombre`, `apellido`, `dni`, `fecha_nacimiento`, `club_id`. Solo
-  datos planos, sin métodos.
+- `RegistrarJugadorInputDTO`: `nombre`, `apellido`, `dni`, `fecha_nacimiento`, `club_id`. Solo datos planos, sin métodos.
 - El caso de uso recibe este DTO, crea la entidad `Jugador` con las reglas de dominio, y persiste.
-- Retorna `JugadorOutputDTO`: `id`, `nombre_completo`, `dni`, `club_nombre`. Solo lo que la
-  CLI/GUI necesita mostrar.
+- Retorna `JugadorOutputDTO`: `id`, `nombre_completo`, `dni`, `club_nombre`. Solo lo que la CLI/GUI necesita mostrar.
 
-Ubicación: `src/aplicacion/dtos/` (a crear). Convención de nombres: `jugador_dto.py` puede
-contener tanto el DTO de entrada como el de salida para esa entidad.
+Ubicación: `src/aplicacion/dtos/`. Convención de nombres: `jugador_dto.py` puede contener tanto el DTO de entrada como el de salida para esa entidad.
 
 ### Gestión de sesión y club activo
 
-La sesión local persistirá en un archivo JSON en `~/.statspro/session.json` (o
-`./data/session.json` en desarrollo). El `SessionManager` (a crear, US-104) es el único
-responsable de leer y escribir este archivo.
+La sesión local persistirá en un archivo JSON en `~/.statspro/session.json` (o `./data/session.json` en desarrollo). El `SessionManager` es el único responsable de leer y escribir este archivo.
 
 **Estructura del archivo de sesión:**
 
@@ -284,41 +270,26 @@ responsable de leer y escribir este archivo.
 2. El usuario ejecuta `stats club select <id>`.
 3. El comando llama a `CambiarClubActivoUseCase`, que verifica que el club pertenezca al usuario.
 4. Si la verificación pasa, el `SessionManager` actualiza `club_activo_id` en el archivo.
-5. Los comandos operativos (cargar partido, listar jugadores) leen `club_activo_id` al inicio; si
-   es `null`, abortan con un mensaje claro.
+5. Los comandos operativos (cargar partido, listar jugadores) leen `club_activo_id` al inicio; si es `null`, abortan con un mensaje claro.
 
-> **¿Por qué club activo y no pasarlo como argumento?** Un DT trabaja siempre en el contexto de
-> un club. Tener el club activo en la sesión evita escribir `--club-id 3` en cada comando — el
-> mismo patrón que usan los IDEs con el "proyecto activo" o las shells con el "directorio
-> actual".
+> **¿Por qué club activo y no pasarlo como argumento?** Un DT trabaja siempre en el contexto de un club. Tener el club activo en la sesión evita escribir `--club-id 3` en cada comando — el mismo patrón que usan los IDEs con el "proyecto activo" o las shells con el "directorio actual".
 
 ### Composition Root: cómo se ensambla la aplicación
 
-El **Composition Root** es el único lugar del sistema donde se instancian todas las dependencias
-y se conectan entre sí. En esta arquitectura, ese lugar será `src/infraestructura/ui/cli/main_cli.py`
-(CLI, a crear) y `src/infraestructura/ui/flet/app.py` (GUI, Hito 4).
+El **Composition Root** es el único lugar del sistema donde se instancian todas las dependencias y se conectan entre sí. En esta arquitectura, ese lugar será `src/infraestructura/ui/cli/main_cli.py` (CLI) y `src/infraestructura/ui/flet/app.py` (GUI, Hito 4).
 
-**¿Por qué es importante?** Porque en todos los demás archivos, las clases reciben sus
-dependencias como argumentos (nunca las crean con instanciación directa). Esto hace el sistema
-testeable: en los tests se pueden pasar repositorios falsos (mocks) sin modificar el código de
-producción.
+**¿Por qué es importante?** Porque en todos los demás archivos, las clases reciben sus dependencias como argumentos (nunca las crean con instanciación directa). Esto hace el sistema
+testeable: en los tests se pueden pasar repositorios falsos (mocks) sin modificar el código de producción.
 
 **Flujo de ensamblaje esperado en `main_cli.py`** (crece con cada US):
 
-1. **US-101/102:** se instancia `SQLiteManager`, se ejecutan las migraciones/inicialización, se
-   crean los repositorios SQLite pasando la conexión.
-2. **US-103/104:** se crean los servicios de aplicación (`SessionManager`) y los casos de uso
-   administrativos, pasando los repositorios.
+1. **US-101/102:** se instancia `SQLiteManager`, se ejecutan las migraciones/inicialización, se crean los repositorios SQLite pasando la conexión.
+2. **US-103/104:** se crean los servicios de aplicación (`SessionManager`) y los casos de uso administrativos, pasando los repositorios.
 3. **US-105/106:** se crean los casos de uso operativos y se registran todos los subcomandos CLI.
-4. **US-107:** se inicializa el `ExecutionContext` antes de despachar cualquier comando y se
-   conecta el logging.
-5. **US-401 (GUI):** mismo patrón en `app.py`, pero las pantallas Flet reciben los casos de uso
-   como dependencias.
+4. **US-107:** se inicializa el `ExecutionContext` antes de despachar cualquier comando y se conecta el logging.
+5. **US-401 (GUI):** mismo patrón en `app.py`, pero las pantallas Flet reciben los casos de uso como dependencias.
 
-**Regla de oro:** si una clase crea sus dependencias con `NombreClase()` dentro de un método que
-no sea el composition root, hay un problema de acoplamiento que debe corregirse. (Ver hallazgo en
-sección 20 sobre `main.py` actual, que todavía no sigue este patrón porque las US de casos de uso
-no se implementaron aún — es esperable en este punto del proyecto.)
+**Regla de oro:** si una clase crea sus dependencias con `NombreClase()` dentro de un método que no sea el composition root, hay un problema de acoplamiento que debe corregirse.
 
 ---
 
@@ -326,21 +297,16 @@ no se implementaron aún — es esperable en este punto del proyecto.)
 
 ### Principios de desarrollo
 
-- **Diseño precede a la implementación:** no se escribe código sin un diseño previo aprobado
-  (ADR).
+- **Diseño precede a la implementación:** no se escribe código sin un diseño previo aprobado (ADR).
 - **Atomicidad:** commits pequeños y lógicos. Formato: `tipo(alcance): descripción`.
-- **Gestión de ramas:** `feature/nombre-tarea`, `hotfix/descripción`, `release/vX.Y` (ver sección
-  15 para el detalle completo).
-- **Higiene del repositorio:** prohibido subir binarios, bases SQLite con datos reales, o
-  archivos temporales.
+- **Gestión de ramas:** `feature/nombre-tarea`, `hotfix/descripción`, `release/vX.Y`.
+- **Higiene del repositorio:** prohibido subir binarios, bases SQLite con datos reales, o archivos temporales.
 
 ### Calidad de código y pruebas
 
 - **Documentación:** estilo Javadoc/Doxygen (docstrings) para módulos y métodos públicos.
-- **Pruebas:** cobertura mínima 80% en lógica de negocio; 95% en componentes críticos (ver
-  Catálogo de Criticidad, sección 14).
-- **Análisis estático:** `ruff` (el proyecto usa `ruff`, no `flake8`/`pylint` como decía el
-  borrador original del PRD — ver hallazgo en sección 20).
+- **Pruebas:** cobertura mínima 80% en lógica de negocio; 95% en componentes críticos (ver Catálogo de Criticidad, sección 14).
+- **Análisis estático:** `ruff`.
 
 ### Gestión de tareas — prioridad y esfuerzo
 
@@ -365,25 +331,25 @@ no se implementaron aún — es esperable en este punto del proyecto.)
 Centraliza las reglas obligatorias del dominio para que desarrollo y testing sean coherentes en
 todas las historias de usuario.
 
-**Identidad y Seguridad**
+**Identidad y Seguridad**:
 
 - Email de usuario único por sistema.
 - Contraseña nunca persistida en texto plano ni en logs.
 - Sesión requiere usuario autenticado y, para comandos operativos, club activo.
 
-**Jugadores, Clubes y Afiliaciones**
+**Jugadores, Clubes y Afiliaciones**:
 
 - DNI de jugador único cuando está informado.
 - Un jugador no puede tener dos vínculos activos superpuestos con el mismo club.
 - Historial de afiliación coherente en fechas: `fecha_hasta >= fecha_desde`.
 
-**Competencias, Inscripciones y Listas**
+**Competencias, Inscripciones y Listas**:
 
 - Una inscripción es única por club + competencia + categoría + temporada.
 - Cada inscripción tiene una única lista de buena fe asociada (1:1).
 - Solo jugadores habilitados en lista pueden figurar en carga oficial de partido.
 
-**Partidos y Estadísticas**
+**Partidos y Estadísticas**:
 
 - Un partido no puede tener el mismo club como local y visitante.
 - Toda carga de partido y boxscore es atómica (todo o nada).
@@ -391,7 +357,7 @@ todas las historias de usuario.
 - Puntos de jugador = T1C + T2C×2 + T3C×3 (coherencia verificada).
 - Minutos por jugador no pueden exceder el máximo reglamentario definido por competencia.
 
-**Analítica y Reporting**
+**Analítica y Reporting**:
 
 - Fórmulas avanzadas deben manejar división por cero y no devolver `NaN`/`inf`.
 - Reportes y dashboards se construyen sobre vistas SQL normalizadas y versionadas.
@@ -411,10 +377,6 @@ todas las historias de usuario.
 | NFR-6 | Offline             | 100% de funcionalidades críticas sin conexión a internet                | Bloqueante |
 | NFR-7 | Cobertura de Tests  | ≥80% no críticos; ≥95% en módulos críticos (ver Catálogo de Criticidad) | Alta       |
 
-> Complementan a los NFR ya descriptos en `contexto_aux/Requerimientos-no-funcionales.md`:
-> usabilidad para usuarios no técnicos, tiempo de carga de partido 10-20 min, disponibilidad
-> offline garantizada, adaptabilidad multiplataforma (celular/tablet/PC).
-
 ---
 
 ## 8. Registro de Decisiones Arquitectónicas (ADR)
@@ -431,18 +393,13 @@ todas las historias de usuario.
 | ADR-008 | Estrategia de Backup       | ⏳ Pendiente | Exportación/restauración de base local y versiones                         | Hito 4          |
 | ADR-009 | Pipeline CI/CD             | ⏳ Pendiente | GitHub Actions para lint, tests y cobertura automáticos                    | US-108          |
 
-Estructura canónica de un ADR (ver `docs/documentacion_app_estadistica/ADR/template_adr.md`):
-Contexto → Decisión → Alternativas Consideradas → Consecuencia (Positivas / Negativas /
-Restricciones). Ninguno de los 9 está escrito todavía — ver sección 20.
+Estructura canónica de un ADR (ver `docs/documentacion_app_estadistica/ADR/template_adr.md`): Contexto → Decisión → Alternativas Consideradas → Consecuencia (Positivas / Negativas / Restricciones). Ninguno de los 9 está escrito todavía.
 
 ---
 
 ## 9. Hito 1 — Núcleo de Datos e Interfaz CLI (v0.1)
 
-**Objetivo del hito:** construir una base técnica funcional por CLI con persistencia robusta,
-autenticación local, casos de uso operativos, validaciones de integridad y un entorno de calidad
-que garantice reproducibilidad desde el primer commit. Sistema funcional por línea de comandos
-con persistencia robusta.
+**Objetivo del hito:** construir una base técnica funcional por CLI con persistencia robusta, autenticación local, casos de uso operativos, validaciones de integridad y un entorno de calidad que garantice reproducibilidad desde el primer commit. Sistema funcional por línea de comandos con persistencia robusta.
 
 **Épicas:** 3 · **Historias:** 8 · **Esfuerzo total estimado:** ~50 días·persona
 
@@ -450,146 +407,67 @@ con persistencia robusta.
 
 #### US-101 — Esquema SQLite, Vistas y Datos Semilla
 
-- **Esfuerzo:** L (6-10 días) · **Prioridad:** Urgente (bloqueante) · **Dependencias:** —
-- **Objetivo Funcional:** habilitar un esquema relacional local verificable y un conjunto de
-  vistas operativas que sirvan de contrato estable para todo el ciclo del producto, garantizando
-  que Pandas y la capa de aplicación consuman datos sin transformaciones ambiguas.
-- **Narrativa:** Como desarrollador, quiero el esquema relacional completo en SQLite, con sus
-  vistas de análisis y datos de prueba, para tener una base verificable sobre la que construir el
-  sistema.
-- **Capa de Dominio / Aplicación:** no aplica directamente (es infraestructura de persistencia
-  pura).
+- **Esfuerzo:** L (6-10 días) · **Prioridad:** Urgente (bloqueante)
+- **Objetivo Funcional:** habilitar un esquema relacional local verificable y un conjunto de vistas operativas que sirvan de contrato estable para todo el ciclo del producto, garantizando que Pandas y la capa de aplicación consuman datos sin transformaciones ambiguas.
+- **Narrativa:** Como desarrollador, quiero el esquema relacional completo en SQLite, con sus vistas de análisis y datos de prueba, para tener una base verificable sobre la que construir el sistema.
 - **Capa de Infraestructura:**
   - **Clase `SQLiteManager`** (`src/infraestructura/persistencia/database_manager.py`):
-    - `connect()` / `conectar()`: retorna una conexión activa con `PRAGMA foreign_keys = ON` y
-      `row_factory = sqlite3.Row`.
-    - `inicializar_schema()` / `inicializar_db()`: ejecuta de forma atómica los scripts
-      `schema.sql`, `views.sql` (y opcionalmente `seed.sql`) usando `executescript()`.
+    - `connect()` / `conectar()`: retorna una conexión activa con `PRAGMA foreign_keys = ON` y `row_factory = sqlite3.Row`.
+    - `inicializar_schema()` / `inicializar_db()`: ejecuta de forma atómica los scripts `schema.sql`, `views.sql` (y opcionalmente `seed.sql`) usando `executescript()`.
   - **Scripts SQL** (`src/infraestructura/persistencia/sql/`):
-    - `schema.sql`: DDL completo — tablas con tipos estrictos, PK, FK, `CHECK` constraints,
-      `CREATE TABLE IF NOT EXISTS` y `DROP TABLE IF EXISTS` en orden inverso de dependencias.
+    - `schema.sql`: DDL completo — tablas con tipos estrictos, PK, FK, `CHECK` constraints, `CREATE TABLE IF NOT EXISTS` y `DROP TABLE IF EXISTS` en orden inverso de dependencias.
     - `views.sql`: las 4 vistas de análisis estadístico.
-    - `seed.sql`: datos de prueba (1 usuario, 2 clubes, 10 jugadores, 1 competencia, ≥2 partidos
-      con boxscore).
+    - `seed.sql`: datos de prueba (1 usuario, 2 clubes, 10 jugadores, 1 competencia, ≥ 2 partidos con boxscore).
 - **Vistas a implementar:**
   1. `v_partidos_resumen`: une partido con clubes y competencia (reemplaza IDs por nombres).
-  2. `v_boxscore_completo`: une `jugadorPartido` con jugador y club (fuente principal para
-     Pandas).
+  2. `v_boxscore_completo`: une `jugadorPartido` con jugador y club (fuente principal para Pandas).
   3. `v_jugador_totales_temporada`: acumulados históricos por jugador y año de competencia.
   4. `v_listas_detalle`: jugadores habilitados por inscripción.
 - **Criterios de Aceptación:**
-  - **AC1.** Schema idempotente: `CREATE TABLE IF NOT EXISTS` en toda la DDL, con `DROP TABLE IF
-EXISTS` en orden inverso de dependencias.
+  - **AC1.** Schema idempotente: `CREATE TABLE IF NOT EXISTS` en toda la DDL, con `DROP TABLE IF EXISTS` en orden inverso de dependencias.
   - **AC2.** FKs activas con reglas `ON DELETE/UPDATE CASCADE` en relaciones críticas.
-  - **AC3.** `CHECK` constraints en métricas numéricas (ej. `puntos >= 0`,
-    `minutosJugados BETWEEN 0 AND 48`) y en integridad lógica (ej. `idClubLocal != idClubVisitante`).
+  - **AC3.** `CHECK` constraints en métricas numéricas (ej. `puntos >= 0`, `minutosJugados BETWEEN 0 AND 48`) y en integridad lógica (ej. `idClubLocal != idClubVisitante`).
   - **AC4.** El campo `dni` en `jugador` es `UNIQUE` pero permite `NULL`.
-  - **AC5.** Las 4 vistas exponen columnas con nombres y tipos estables, documentados; todas las
-    divisiones usan `NULLIF`/`CASE` para nunca fallar por división por cero.
-  - **AC6.** `seed.sql` se ejecuta limpiamente sobre un schema vacío y puebla todas las tablas con
-    datos significativos para las vistas.
-  - **AC7.** Columnas de vistas estables para consumo desde Pandas sin transformaciones
-    adicionales.
+  - **AC5.** Las 4 vistas exponen columnas con nombres y tipos estables, documentados; todas las divisiones usan `NULLIF`/`CASE` para nunca fallar por división por cero.
+  - **AC6.** `seed.sql` se ejecuta limpiamente sobre un schema vacío y puebla todas las tablas con datos significativos para las vistas.
+  - **AC7.** Columnas de vistas estables para consumo desde Pandas sin transformaciones adicionales.
 - **Reglas de Negocio (nivel DB):**
   - `CHECK(idClubLocal != idClubVisitante)` en `partido`.
   - `fechaHasta >= fechaDesde` en historial de afiliaciones.
   - `UNIQUE` en `listaBuenaFe.idInscripcion` (refuerza la relación 1:1).
-- **Entidades/Modelos implicados (tablas):** `usuario`, `club`, `usuarioClub`, `jugador`,
-  `categoria`, `competencia`, `inscripcion`, `listaBuenaFe`, `jugadorListaBuenaFe`, `jugadorClub`,
-  `partido`, `jugadorPartido`.
+- **Entidades/Modelos implicados (tablas):** `usuario`, `club`, `usuarioClub`, `jugador`, `categoria`, `competencia`, `inscripcion`, `listaBuenaFe`, `jugadorListaBuenaFe`, `jugadorClub`, `partido`, `jugadorPartido`.
 - **Testing Mínimo:**
-  - _Integración (`test_database.py`):_ `test_database_schema` (existencia de tablas/vistas),
-    `test_referential_integrity` (FK inexistente → `IntegrityError`), `test_check_constraints`
-    (valores negativos → falla), `test_seed_execution` (vistas devuelven datos tras el seed),
-    `test_division_by_zero` (vistas devuelven 0.0, nunca error).
-
-> **Estado real:** ✅ Implementado y probado — ver `schema.sql`, `views.sql`, `seed.sql`,
-> `limpieza.sql` y los 15 tests reales en `test/test_database.py`.
+  - _Integración (`test_database.py`):_ `test_database_schema` (existencia de tablas/vistas), `test_referential_integrity` (FK inexistente → `IntegrityError`), `test_check_constraints` (valores negativos → falla), `test_seed_execution` (vistas devuelven datos tras el seed), `test_division_by_zero` (vistas devuelven 0.0, nunca error).
 
 #### US-102 — DatabaseManager y Patrón Repository
 
 - **Esfuerzo:** M (3-5 días) · **Prioridad:** Urgente (bloqueante) · **Dependencias:** US-101
-- **Objetivo Funcional:** implementar el orquestador de conexión y las interfaces de persistencia
-  bajo Clean Architecture, asegurando que el acceso a datos sea independiente del motor de base
+- **Objetivo Funcional:** implementar el orquestador de conexión y las interfaces de persistencia bajo Clean Architecture, asegurando que el acceso a datos sea independiente del motor de base
   de datos y garantizando la integridad referencial.
-- **Narrativa:** Como desarrollador, quiero una capa de infraestructura que gestione el ciclo de
-  vida de la conexión SQLite y exponga repositorios tipados para cada agregado del dominio.
-- **Capa de Dominio — Interfaces (`src/dominio/repositorios/`):** las firmas reales ya migraron
-  de "parámetros sueltos" a **recibir la dataclass completa** (el patrón que se charló y se
-  confirmó como buena práctica en esta revisión — menos superficie de ruptura, el repositorio no
-  necesita conocer la forma interna de la entidad). Estado real, verificado línea por línea hoy:
-  - `UsuarioRepositorio` (`UserRepository`): `encontrar_por_mail(email)`/`get_by_email`,
-    `encontrar_por_id(id)`/`get_by_id`, **`guardar(usuario: Usuario)`**/`save` _(el PRD original
-    también menciona `exists_by_email`, no presente en la interfaz real actual — se puede resolver
-    con `encontrar_por_mail(...) is not None`, o agregarlo explícito, a decidir por el equipo)_.
-  - `ClubRepositorio` (`ClubRepository`): `buscar_por_id_usuario`/`get_clubs_by_user`,
-    `buscar_por_id`/`get_by_id`, `buscar_por_nombre`, **`guardar(club: Club)`**/`save`,
-    **`link_user_to_club(us_club: UsuarioClub)`**.
-  - `JugadorRepositorio` (`PlayerRepository`): `buscar_por_id`, `buscar_por_dni`/`search_by_dni`,
-    `buscar_por_club`, **`guardar(jugador: Jugador)`**, **`link_to_club(jc: JugadorClub)`**,
-    `club_activo`/`get_active_club`.
-  - `CompetenciaRepositorio` (`CompetitionRepository`): **`guardar_competencia(compe:
-Competencia)`**/`save_competencia`, `buscar_competencia_por_id`/`get_competencia_by_id`,
-    `obtener_todas_competencias`/`get_all_competencias`, **`guardar_categoria(cat:
-Categoria)`**/`save_categoria`, `obtener_categorias`/`get_categorias`,
-    **`guardar_inscripcion(inscripcion: Inscripcion)`**/`save_inscripcion`,
-    `buscar_inscripcion_por_id`/`get_inscripcion_by_id`,
-    `obtener_inscripciones_por_club`/`get_inscripciones_by_club`,
-    **`guardar_lista_buena_fe(listaBF: ListaBuenaFe)`**/`save_lista_buena_fe`,
-    `obtener_lista_por_inscripcion`/`get_lista_by_inscripcion` _(tipada `-> ListaBuenaFe`
-    singular, coherente con la relación 1:1 — ver inconsistencia con su implementación en sección 20)_, `agregar_jugador_lista(idJugador, idListaBuenaFe)`/`add_jugador_to_lista` y
-    `obtener_jugadores_lista`/`get_jugadores_by_lista` — **estos dos últimos son la única
-    excepción que sigue con parámetros sueltos en la interfaz, y además están sin implementar
-    (`pass`) en `SqliteCompetenciaRepositorio` — ver sección 20**.
-  - `JuegoRepositorio` (`GameRepository`): `buscar_por_club`, `buscar_por_id`,
-    **`guardar_partido(partido: Partido)`**/`save_partido`, **`guardar_boxscore(boxscore:
-JugadorPartido)`**/`save_boxscore` — la interfaz ya pide la entidad completa, pero
-    `SqliteJuegoRepositorio` todavía no la respeta (sigue con parámetros sueltos y no compila
-    contra tablas reales) — ver AC4 abajo y detalle completo en sección 20.
+- **Narrativa:** Como desarrollador, quiero una capa de infraestructura que gestione el ciclo de vida de la conexión SQLite y exponga repositorios tipados para cada agregado del dominio.
+- **Capa de Dominio — Interfaces (`src/dominio/repositorios/`):** las firmas reales ya migraron de "parámetros sueltos" a **recibir la dataclass completa**
+  - `UsuarioRepositorio` (`UserRepository`): `encontrar_por_mail(email)`/`get_by_email`, `encontrar_por_id(id)`/`get_by_id`, **`guardar(usuario: Usuario)`**/`save`.
+  - `ClubRepositorio` (`ClubRepository`): `buscar_por_id_usuario`/`get_clubs_by_user`, `buscar_por_id`/`get_by_id`, `buscar_por_nombre`, **`guardar(club: Club)`**/`save`, **`link_user_to_club(us_club: UsuarioClub)`**.
+  - `JugadorRepositorio` (`PlayerRepository`): `buscar_por_id`, `buscar_por_dni`/`search_by_dni`, `buscar_por_club`, **`guardar(jugador: Jugador)`**, **`link_to_club(jc: JugadorClub)`**, `club_activo`/`get_active_club`.
+  - `CompetenciaRepositorio` (`CompetitionRepository`): **`guardar_competencia(compe:Competencia)`**/`save_competencia`, `buscar_competencia_por_id`/`get_competencia_by_id`, `obtener_todas_competencias`/`get_all_competencias`, **`guardar_categoria(cat:Categoria)`**/`save_categoria`, `obtener_categorias`/`get_categorias`, **`guardar_inscripcion(inscripcion: Inscripcion)`**/`save_inscripcion`, `buscar_inscripcion_por_id`/`get_inscripcion_by_id`, `obtener_inscripciones_por_club`/`get_inscripciones_by_club`, **`guardar_lista_buena_fe(listaBF: ListaBuenaFe)`**/`save_lista_buena_fe`, `obtener_lista_por_inscripcion`/`get_lista_by_inscripcion` _(tipada `-> ListaBuenaFe` singular, coherente con la relación 1:1)_, `agregar_jugador_lista(idJugador, idListaBuenaFe)`/`add_jugador_to_lista` y `obtener_jugadores_lista`/`get_jugadores_by_lista`.
+  - `JuegoRepositorio` (`GameRepository`): `buscar_por_club`, `buscar_por_id`, **`guardar_partido(partido: Partido)`**/`save_partido`, **`guardar_boxscore(boxscore:JugadorPartido)`**/`save_boxscore`
 - **Capa de Infraestructura:**
-  - **Clase `SQLiteManager`:** administra la conexión (`sqlite3.Connection`); `connect()` activa
-    `PRAGMA foreign_keys` y `row_factory = sqlite3.Row`, retornando la conexión activa si ya
-    existe; `initialize_schema()`/`inicializar_schema()` ejecuta `schema.sql` + `views.sql` en una
-    sola llamada atómica.
-  - **Implementaciones concretas** (`src/infraestructura/repositorios/`):
-    `SqliteUsuarioRepositorio`, `SqliteClubRepositorio`, `SqliteJugadorRepositorio`,
-    `SqliteCompetenciaRepositorio`, `SqliteJuegoRepositorio`.
-    `SqliteCompetenciaRepositorio` maneja `competencia`, `categoria`, `inscripcion`,
-    `listaBuenaFe` y `jugadorListaBuenaFe` como un único agregado competitivo.
-    Cada repositorio mapea manualmente `sqlite3.Row` a las dataclasses de dominio mediante un
-    método privado `_row_to_entity()`.
+  - **Clase `SQLiteManager`:** administra la conexión (`sqlite3.Connection`); `connect()` activa `PRAGMA foreign_keys` y `row_factory = sqlite3.Row`, retornando la conexión activa si ya existe; `initialize_schema()`/`inicializar_schema()` ejecuta `schema.sql` + `views.sql` en una sola llamada atómica.
+  - **Implementaciones concretas** (`src/infraestructura/repositorios/`): `SqliteUsuarioRepositorio`, `SqliteClubRepositorio`, `SqliteJugadorRepositorio`, `SqliteCompetenciaRepositorio`, `SqliteJuegoRepositorio`. `SqliteCompetenciaRepositorio` maneja `competencia`, `categoria`, `inscripcion`, `listaBuenaFe` y `jugadorListaBuenaFe` como un único agregado competitivo. Cada repositorio mapea manualmente `sqlite3.Row` a las dataclasses de dominio mediante un método privado `_row_to_entity()`.
 - **Criterios de Aceptación:**
-  - **AC1 — Gestión de Conexión:** `connect()` garantiza integridad referencial y acceso por
-    nombre de columna.
-  - **AC2 — Abstracción Total:** la capa `dominio/` no importa `sqlite3`, `pandas` ni ninguna
-    librería de infraestructura.
-  - **AC3 — Mapeo de Datos:** los repositorios retornan objetos `@dataclass` puros, nunca tuplas
-    de SQLite.
-  - **AC4 — Transaccionalidad:** `SqliteJuegoRepositorio.guardar_boxscore()` (y, a futuro, un
-    método combinado tipo `save_with_boxscore`) debe permitir transacciones multi-tabla para
-    asegurar la integridad de la carga de partidos. **Hoy no se cumple, y el problema es previo a
-    la transaccionalidad:** `SqliteJuegoRepositorio` ni siquiera se puede ejecutar tal como está
-    — `guardar_partido` inserta contra una tabla `Juego` que no existe (la real es `partido`) y
-    llama a `self.conexion.obtener_conexion()`, método que no existe sobre un `sqlite3.Connection`
-    crudo (`AttributeError` garantizado); `guardar_boxscore` tiene la lista de columnas del
-    `INSERT` con 19 nombres (falta `idClub`) pero 20 valores en la tupla
-    (`sqlite3.ProgrammingError` garantizado). Antes de pensar en envolver esto en una transacción
-    multi-tabla, hay que corregir estos tres bugs — ver sección 20 para el detalle completo.
+  - **AC1 — Gestión de Conexión:** `connect()` garantiza integridad referencial y acceso por nombre de columna.
+  - **AC2 — Abstracción Total:** la capa `dominio/` no importa `sqlite3`, `pandas` ni ninguna librería de infraestructura.
+  - **AC3 — Mapeo de Datos:** los repositorios retornan objetos `@dataclass` puros, nunca tuplas de SQLite.
+  - **AC4 — Transaccionalidad:** `SqliteJuegoRepositorio.guardar_boxscore()` (y, a futuro, un método combinado tipo `save_with_boxscore`) debe permitir transacciones multi-tabla para asegurar la integridad de la carga de partidos. **Hoy no se cumple, y el problema es previo a la transaccionalidad:** `SqliteJuegoRepositorio` ni siquiera se puede ejecutar tal como está — `guardar_partido` inserta contra una tabla `Juego` que no existe (la real es `partido`) y llama a `self.conexion.obtener_conexion()`, método que no existe sobre un `sqlite3.Connection` crudo (`AttributeError` garantizado); `guardar_boxscore` tiene la lista de columnas del `INSERT` con 19 nombres (falta `idClub`) pero 20 valores en la tupla (`sqlite3.ProgrammingError` garantizado). Antes de pensar en envolver esto en una transacción multi-tabla, hay que corregir estos tres bugs.
 - **Reglas de Negocio:**
   - Validación de DNI duplicado al guardar un jugador (lanza excepción de dominio).
   - Uso de `cursor.lastrowid` para retornar la entidad con el ID asignado por la base de datos.
-- **Entidades/Modelos implicados:** `Usuario`, `Club`, `Jugador`, `JugadorClub`, `Competencia`,
-  `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`, `Partido`,
-  `EstadisticaJugadorPartido`.
-- **Vistas SQL necesarias:** `v_partidos_resumen` y `v_boxscore_completo` para optimizar las
-  consultas de lectura en los repositorios.
+- **Entidades/Modelos implicados:** `Usuario`, `Club`, `Jugador`, `JugadorClub`, `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`, `Partido`, `EstadisticaJugadorPartido`.
+- **Vistas SQL necesarias:** `v_partidos_resumen` y `v_boxscore_completo` para optimizar las consultas de lectura en los repositorios.
 - **Testing Mínimo:**
-  - _Integración (`tests/integration/test_repositories.py`, hoy `test/test_repositorios.py`):_
-    CRUD completo por repositorio usando DB `:memory:`; `buscar_por_dni` retorna `None` si no
-    existe, sin lanzar excepción; el `save()` de un partido y sus estadísticas es atómico; los
-    repositorios de lectura usan las vistas SQL correctamente.
+  - _Integración (`tests/integration/test_repositories.py`):_ CRUD completo por repositorio usando DB `:memory:`; `buscar_por_dni` retorna `None` si no existe, sin lanzar excepción; el `save()` de un partido y sus estadísticas es atómico; los repositorios de lectura usan las vistas SQL correctamente.
 
-**Archivos a crear (consolidado, nombres en español = convención real del proyecto):**
+**Archivos a crear (consolidado, nombres en español):**
 
 ```text
 src/dominio/repositorios/
@@ -605,46 +483,29 @@ src/infraestructura/repositorios/
 ├── sqlite_jugador_repositorio.py     ⚠️ existe, conexión OK, pero `link_to_club` usa atributos
 │                                        que no existen en `JugadorClub` (`id_jugador`/`id_club`
 │                                        en vez de `idJugador`/`idClub`) — ver sección 20
-├── sqlite_competencia_repositorio.py ⚠️ EXISTE (ya no es un gap) — pero con 3 bugs y 2 métodos
+├── sqlite_competencia_repositorio.py ⚠️ EXISTE  — pero con 3 bugs y 2 métodos
 │                                        sin implementar (`pass`) — ver sección 20
 └── sqlite_juego_repositorio.py       ⚠️ existe, conexión OK, pero no es funcional: tabla/columna
                                          equivocada, método de conexión inexistente, `INSERT`
                                          desalineado — ver sección 20
 ```
 
-> **Estado real:** las 5 implementaciones ya existen y las 5 usan el mismo patrón de conexión
-> (`sqlite3.Connection` crudo por constructor — esto ya está unificado, no es un problema). Lo
-> que falta es corregir bugs puntuales de tres de ellas. Ver el detalle completo en la sección 20.
+> **Estado real:** las 5 implementaciones ya existen y las 5 usan el mismo patrón de conexión (`sqlite3.Connection` crudo por constructor). Lo que falta es corregir bugs puntuales de tres de ellas.
 
 ### Épica H1-E2: Lógica de Aplicación y CLI
 
 #### US-103 — Gestión de Entidades (Casos de Uso Administrativos)
 
 - **Esfuerzo:** L (6-10 días) · **Prioridad:** Alta · **Dependencias:** US-101, US-102
-- **Objetivo Funcional:** implementar la lógica de negocio pura y la interfaz de usuario por
-  comandos para la gestión integral de las entidades del sistema (jugadores, clubes,
-  competencias, inscripciones), asegurando la validación de reglas deportivas y la integridad de
-  los datos.
-- **Narrativa:** Como administrador, quiero disponer de casos de uso con lógica de negocio
-  validada para gestionar el ciclo de vida de los jugadores y sus afiliaciones, así como la
-  estructura de competencias y clubes.
+- **Objetivo Funcional:** implementar la lógica de negocio pura y la interfaz de usuario por comandos para la gestión integral de las entidades del sistema (jugadores, clubes, competencias, inscripciones), asegurando la validación de reglas deportivas y la integridad de los datos.
+- **Narrativa:** Como administrador, quiero disponer de casos de uso con lógica de negocio validada para gestionar el ciclo de vida de los jugadores y sus afiliaciones, así como la estructura de competencias y clubes.
 - **Capa de Dominio:**
-  - **Entidades:** `Usuario`, `Club`, `Jugador`, `JugadorClub` (historial N:M jugador-club),
-    `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`, `Partido`,
-    `EstadisticaJugador`. `@dataclass` puras, serializables, sin dependencias externas.
-  - **Lógica de validación:** en `__post_init__` de las entidades (ej. tiros convertidos ≤
-    lanzados, valores no negativos) — **pendiente, hoy las entidades son dataclasses simples sin
-    validación** (ver sección 20).
-  - **Excepciones** (`src/dominio/exceptions.py`, a crear): `JugadorDuplicadoError`,
-    `ClubNoEncontradoError`, `UsuarioNoEncontradoError`, `CredencialesInvalidasError`,
-    `VinculoActivoExistenteError`.
+  - **Entidades:** `Usuario`, `Club`, `Jugador`, `JugadorClub` (historial N:M jugador-club), `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`, `Partido`, `EstadisticaJugador`. `@dataclass` puras, serializables, sin dependencias externas.
+  - **Lógica de validación:** en `__post_init__` de las entidades (ej. tiros convertidos ≤ lanzados, valores no negativos) — **pendiente, hoy las entidades son dataclasses simples sin validación** (ver sección 20).
+  - **Excepciones** (`src/dominio/exceptions.py`, a crear): `JugadorDuplicadoError`, `ClubNoEncontradoError`, `UsuarioNoEncontradoError`, `CredencialesInvalidasError`, `VinculoActivoExistenteError`.
 - **Capa de Aplicación (a crear):**
-  - **Casos de uso:** `RegistrarJugadorUseCase` (valida DNI numérico, no vacío y no duplicado),
-    `CrearClubUseCase`, `VincularJugadorAClubUseCase` (evita vínculos activos duplicados),
-    `CrearCompetenciaUseCase`, `InscribirClubEnCompetenciaUseCase` (genera automáticamente la
-    `listaBuenaFe` vacía asociada, 1:1 — **este caso de uso depende de que primero se corrija
-    `SqliteCompetenciaRepositorio.obtener_lista_por_inscripcion`**: hoy la implementación devuelve
-    `list[ListaBuenaFe]` pese a que tanto la interfaz de dominio como la relación 1:1 real dicen
+  - **Casos de uso:** `RegistrarJugadorUseCase` (valida DNI numérico, no vacío y no duplicado), `CrearClubUseCase`, `VincularJugadorAClubUseCase` (evita vínculos activos duplicados),
+    `CrearCompetenciaUseCase`, `InscribirClubEnCompetenciaUseCase` (genera automáticamente la `listaBuenaFe` vacía asociada, 1:1 — **este caso de uso depende de que primero se corrija `SqliteCompetenciaRepositorio.obtener_lista_por_inscripcion`**: hoy la implementación devuelve `list[ListaBuenaFe]` pese a que tanto la interfaz de dominio como la relación 1:1 real dicen
     que debería devolver `ListaBuenaFe | None`; si se construye el caso de uso contra el
     comportamiento actual, va a tratar como "lista de listas de buena fe" algo que conceptualmente
     es un objeto único — ver sección 20), `ListarClubesUsuarioUseCase`,
@@ -1720,178 +1581,65 @@ descripción` con alcance entre paréntesis — ambos formatos conviven en las f
 
 ## 20. Estado real del código vs. plan (hallazgos)
 
-Auditoría hecha releyendo `src/` completo (dominio + infraestructura + tests), `schema.sql`,
-`views.sql`, `seed.sql`, `docs/diagramas/diagramas.md`, y corriendo la suite real
-(`pytest -q`) para esta revisión del 2026-08-09. Nada de esto se corrigió en código — es
-diagnóstico para que el equipo decida qué hacer.
+Auditoría hecha releyendo `src/` completo (dominio + infraestructura + tests), `schema.sql`, `views.sql`, `seed.sql`, `docs/diagramas/diagramas.md`, y corriendo la suite real (`pytest -q`) para esta revisión del 2026-08-09. Nada de esto se corrigió en código — es diagnóstico para que el equipo decida qué hacer.
 
 ### Hallazgos de código (repositorios) — actualizado 2026-08-09
 
-- ✅ **Patrón de conexión — ya resuelto, corrección de un hallazgo anterior.** Una revisión previa
-  de este documento decía que `SqliteJugadorRepositorio` y `SqliteJuegoRepositorio` seguían
-  importando una clase `SqliteConexion` inexistente. **Ya no es así:** las **5** implementaciones
-  (`usuario`, `club`, `jugador`, `competencia`, `juego`) reciben `sqlite3.Connection` **crudo**
-  directamente en el constructor, de forma uniforme. Este punto queda cerrado.
-- ⚠️ **`SqliteCompetenciaRepositorio` ya no es un gap — existe, pero con bugs reales.** Cambia el
-  diagnóstico de fondo: el archivo `src/infraestructura/repositorios/sqlite_competencia_repositorio.py`
-  existe y tiene sus 12 métodos, pero:
-  - `guardar_inscripcion`: el `INSERT` declara 3 columnas (`idClub,idCategoria,idCompetencia`)
-    pero la query solo tiene **un** `?` — `sqlite3.ProgrammingError` garantizado al ejecutarse.
-  - `obtener_categorias`: `rows = cursor.fetchall` — falta el `()`; asigna el método en vez de
-    invocarlo, y falla al intentar iterar sobre él.
-  - `agregar_jugador_lista` y `obtener_jugadores_lista`: son stubs vacíos (`pass`) — no están
-    implementados, pese a que la interfaz y la clase que los contiene ya existen. Sin esto, no se
-    puede poblar ni consultar quién está habilitado en una lista de buena fe a través del
-    repositorio (hoy `seed.sql` lo hace con `INSERT` directo, saltando la capa de dominio).
-  - `obtener_lista_por_inscripcion`: tipada `-> list[ListaBuenaFe]` en la implementación, pero la
-    interfaz de dominio la tipa `-> ListaBuenaFe` (singular) — y la relación real es 1:1
-    (`idInscripcion UNIQUE` en `listaBuenaFe`). La implementación contradice tanto su propia
-    interfaz como la regla de negocio ya documentada en la sección 3.
-- ❌ **`sqlite_juego_repositorio.py` no es funcional (más allá del bug de tabla/columna ya
-  conocido):**
-  - `_row_to_entity` y `buscar_por_id` siguen usando `Juego`/`idJuego` (la tabla real es
-    `partido`, la columna `idPartido`) — bug ya documentado en revisiones anteriores, sigue sin
-    corregirse.
-  - `guardar_partido` e inserta en la tabla inexistente `Juego`, y llama a
-    `self.conexion.obtener_conexion()` — método que no existe sobre un `sqlite3.Connection` crudo
-    → `AttributeError` apenas se invoca.
-  - `guardar_boxscore`: la lista de columnas del `INSERT` tiene 19 nombres (falta `idClub`) pero
-    la tupla de valores tiene 20 → `sqlite3.ProgrammingError` garantizado.
-  - **Violación de Liskov — hallazgo nuevo:** la interfaz de dominio ya pide
-    `guardar_partido(partido: Partido)` y `guardar_boxscore(boxscore: JugadorPartido)` (recibir la
-    entidad completa), pero la implementación real sigue con parámetros sueltos (`fecha, estadio,
-idCompetencia, ...` y 19 parámetros respectivamente) — no cumple el contrato de la interfaz
-    que dice implementar.
-- ⚠️ **`SquliteJugadorRepositorio.link_to_club` — bug nuevo, no documentado antes:** usa
-  `jc.id_jugador` y `jc.id_club`, pero la dataclass real `JugadorClub` tiene los campos
-  `idJugador`/`idClub` (sin guión bajo) → `AttributeError` garantizado al invocarlo. Además el
-  método no retorna nada, pese a que la interfaz pide `-> JugadorClub`.
-- ✅ **`sqlite_usuario_repositorio.py` — sigue correcto:** `FROM usuario` e `idUsuario` correctos,
-  mapeo `pw ↔ contrasenia` bien resuelto, y es el único repositorio con tests dedicados hoy.
-- ⚠️ **Patrón sistémico — funciones que deberían devolver `list[X]` y devuelven `None`.** Es el
-  mismo tipo de problema que se charló sobre pasar dataclasses en vez de parámetros sueltos, pero
-  del lado de las lecturas: **todos** los métodos "listar"/"buscar_por_X" de las 5
-  implementaciones devuelven `None` cuando no hay resultados, en vez de `[]`, pese a que la
-  interfaz de dominio los tipa `list[X]` sin `| None`. Rompe el contrato de tipos: cualquier
-  código futuro que llame a estos métodos y haga `for x in resultado` va a explotar con
-  `TypeError: 'NoneType' object is not iterable` si no se blinda contra `None` primero. Afecta:
-  `ClubRepositorio.buscar_por_id_usuario`, `.buscar_por_nombre`;
-  `JugadorRepositorio.buscar_por_club`; `JuegoRepositorio.buscar_por_club`;
-  `CompetenciaRepositorio.obtener_todas_competencias`, `.obtener_categorias`,
-  `.obtener_inscripciones_por_club`, `.obtener_lista_por_inscripcion`. Recomendación a documentar
-  (no a aplicar): devolver `[]` en el `if not rows`, nunca `None`, para que el tipo de retorno sea
-  siempre coherente con lo declarado en la interfaz.
-- ⚠️ **Manejo de errores silencioso — patrón sistémico en todos los `guardar*`.** Las 5
-  implementaciones atrapan `sqlite3.Error` en sus métodos `guardar*` y devuelven `None`
-  silenciosamente, sin loguear ni relanzar como excepción de dominio. Esto choca con las
-  excepciones de negocio que el propio plan ya prevé (`DNIDuplicadoError`,
-  `EmailYaRegistradoError`, etc. — sección "Reglas de Negocio Consolidadas", sección 6): hoy no
-  hay forma de distinguir "guardado exitoso" de "falló por violar una regla real (ej. DNI
-  duplicado)" de "falló por un bug" — las tres situaciones devuelven `None` igual. Cuando se
-  construya la capa de aplicación (US-103 en adelante), este punto va a ser bloqueante para poder
-  lanzar las excepciones de dominio que esas US ya dan por sentadas.
-- **Typo cosmético que persiste:** la clase se llama `SquliteJugadorRepositorio` (falta una "i").
-  No rompe nada porque nada la importa por nombre todavía.
-- **Divergencia menor de nombres de método:** el PRD (ambas fuentes) menciona
-  `exists_by_email`/`UserRepository.exists_by_email` como parte del contrato de usuario; la
-  interfaz real (`usuario_repositorio.py`) no lo tiene — solo `encontrar_por_mail`,
-  `encontrar_por_id`, `guardar`. No es necesariamente un problema (se puede resolver llamando a
-  `encontrar_por_mail` y chequeando `is not None`), pero vale la pena que el equipo decida si
-  agregan el método explícito o lo dejan así.
-- **Cobertura de tests real, verificada corriendo la suite hoy (`pytest -q`): 30 tests, 29 pasan,
-  1 falla** (`test_guardar_usuario_con_error`, porque las entidades siguen sin validar tipos en
-  `__post_init__` — ya documentado más abajo en "Hallazgos de organización de código"). La suite
-  se dividió desde la última revisión en 5 archivos por repositorio
-  (`test_repositorios_{usuario,club,jugador,juego,competencia}.py`), pero
-  **`test_repositorios_juego.py` y `test_repositorios_competencia.py` están completamente
-  vacíos** — cero tests. Son justamente los dos repositorios con más bugs de los listados arriba;
-  por eso el pipeline aparece en verde (salvo el único test que falla) pese a que ninguno de esos
-  dos repositorios funcionaría hoy si se los usara.
+- ✅ **Patrón de conexión — ya resuelto, corrección de un hallazgo anterior.** Una revisión previa de este documento decía que `SqliteJugadorRepositorio` y `SqliteJuegoRepositorio` seguían importando una clase `SqliteConexion` inexistente. **Ya no es así:** las **5** implementaciones (`usuario`, `club`, `jugador`, `competencia`, `juego`) reciben `sqlite3.Connection` **crudo** directamente en el constructor, de forma uniforme. Este punto queda cerrado.
+- ⚠️ **`SqliteCompetenciaRepositorio` ya no es un gap — existe, pero con bugs reales.** Cambia el diagnóstico de fondo: el archivo `src/infraestructura/repositorios/sqlite_competencia_repositorio.py` existe y tiene sus 12 métodos, pero:
+  - `guardar_inscripcion`: el `INSERT` declara 3 columnas (`idClub,idCategoria,idCompetencia`) pero la query solo tiene **un** `?` — `sqlite3.ProgrammingError` garantizado al ejecutarse.
+  - `obtener_categorias`: `rows = cursor.fetchall` — falta el `()`; asigna el método en vez de invocarlo, y falla al intentar iterar sobre él.
+  - `agregar_jugador_lista` y `obtener_jugadores_lista`: son stubs vacíos (`pass`) — no están implementados, pese a que la interfaz y la clase que los contiene ya existen. Sin esto, no se puede poblar ni consultar quién está habilitado en una lista de buena fe a través del repositorio (hoy `seed.sql` lo hace con `INSERT` directo, saltando la capa de dominio).
+  - `obtener_lista_por_inscripcion`: tipada `-> list[ListaBuenaFe]` en la implementación, pero la interfaz de dominio la tipa `-> ListaBuenaFe` (singular) — y la relación real es 1:1 (`idInscripcion UNIQUE` en `listaBuenaFe`). La implementación contradice tanto su propia interfaz como la regla de negocio ya documentada en la sección 3.
+- ❌ **`sqlite_juego_repositorio.py` no es funcional (más allá del bug de tabla/columna ya conocido):**
+  - `_row_to_entity` y `buscar_por_id` siguen usando `Juego`/`idJuego` (la tabla real es `partido`, la columna `idPartido`) — bug ya documentado en revisiones anteriores, sigue sin corregirse.
+  - `guardar_partido` e inserta en la tabla inexistente `Juego`, y llama a `self.conexion.obtener_conexion()` — método que no existe sobre un `sqlite3.Connection` crudo → `AttributeError` apenas se invoca.
+  - `guardar_boxscore`: la lista de columnas del `INSERT` tiene 19 nombres (falta `idClub`) pero la tupla de valores tiene 20 → `sqlite3.ProgrammingError` garantizado.
+  - **Violación de Liskov — hallazgo nuevo:** la interfaz de dominio ya pide `guardar_partido(partido: Partido)` y `guardar_boxscore(boxscore: JugadorPartido)` (recibir la entidad completa), pero la implementación real sigue con parámetros sueltos (`fecha, estadio,idCompetencia, ...` y 19 parámetros respectivamente) — no cumple el contrato de la interfaz que dice implementar.
+- ⚠️ **`SquliteJugadorRepositorio.link_to_club` — bug nuevo, no documentado antes:** usa `jc.id_jugador` y `jc.id_club`, pero la dataclass real `JugadorClub` tiene los campos `idJugador`/`idClub` (sin guión bajo) → `AttributeError` garantizado al invocarlo. Además el método no retorna nada, pese a que la interfaz pide `-> JugadorClub`.
+- ✅ **`sqlite_usuario_repositorio.py` — sigue correcto:** `FROM usuario` e `idUsuario` correctos, mapeo `pw ↔ contrasenia` bien resuelto, y es el único repositorio con tests dedicados hoy.
+- ⚠️ **Patrón sistémico — funciones que deberían devolver `list[X]` y devuelven `None`.** Es el mismo tipo de problema que se charló sobre pasar dataclasses en vez de parámetros sueltos, pero del lado de las lecturas: **todos** los métodos "listar"/"buscar_por_X" de las 5 implementaciones devuelven `None` cuando no hay resultados, en vez de `[]`, pese a que la interfaz de dominio los tipa `list[X]` sin `| None`. Rompe el contrato de tipos: cualquier código futuro que llame a estos métodos y haga `for x in resultado` va a explotar con `TypeError: 'NoneType' object is not iterable` si no se blinda contra `None` primero. Afecta: `ClubRepositorio.buscar_por_id_usuario`, `.buscar_por_nombre`; `JugadorRepositorio.buscar_por_club`; `JuegoRepositorio.buscar_por_club`; `CompetenciaRepositorio.obtener_todas_competencias`, `.obtener_categorias`, `.obtener_inscripciones_por_club`, `.obtener_lista_por_inscripcion`. Recomendación a documentar (no a aplicar): devolver `[]` en el `if not rows`, nunca `None`, para que el tipo de retorno sea siempre coherente con lo declarado en la interfaz.
+- ⚠️ **Manejo de errores silencioso — patrón sistémico en todos los `guardar*`.** Las 5 implementaciones atrapan `sqlite3.Error` en sus métodos `guardar*` y devuelven `None` silenciosamente, sin loguear ni relanzar como excepción de dominio. Esto choca con las excepciones de negocio que el propio plan ya prevé (`DNIDuplicadoError`, `EmailYaRegistradoError`, etc. — sección "Reglas de Negocio Consolidadas", sección 6): hoy no hay forma de distinguir "guardado exitoso" de "falló por violar una regla real (ej. DNI duplicado)" de "falló por un bug" — las tres situaciones devuelven `None` igual. Cuando se construya la capa de aplicación (US-103 en adelante), este punto va a ser bloqueante para poder lanzar las excepciones de dominio que esas US ya dan por sentadas.
+- **Typo cosmético que persiste:** la clase se llama `SquliteJugadorRepositorio` (falta una "i"). No rompe nada porque nada la importa por nombre todavía.
+- **Divergencia menor de nombres de método:** el PRD (ambas fuentes) menciona `exists_by_email`/`UserRepository.exists_by_email` como parte del contrato de usuario; la interfaz real (`usuario_repositorio.py`) no lo tiene — solo `encontrar_por_mail`, `encontrar_por_id`, `guardar`. No es necesariamente un problema (se puede resolver llamando a `encontrar_por_mail` y chequeando `is not None`), pero vale la pena que el equipo decida si agregan el método explícito o lo dejan así.
+- **Cobertura de tests real, verificada corriendo la suite hoy (`pytest -q`): 30 tests, 29 pasan, 1 falla** (`test_guardar_usuario_con_error`, porque las entidades siguen sin validar tipos en `__post_init__` — ya documentado más abajo en "Hallazgos de organización de código"). La suite se dividió desde la última revisión en 5 archivos por repositorio (`test_repositorios_{usuario,club,jugador,juego,competencia}.py`), pero **`test_repositorios_juego.py` y `test_repositorios_competencia.py` están completamente vacíos** — cero tests. Son justamente los dos repositorios con más bugs de los listados arriba; por eso el pipeline aparece en verde (salvo el único test que falla) pese a que ninguno de esos dos repositorios funcionaría hoy si se los usara.
 
 ### Hallazgos del DER y diagramas (`docs/diagramas/diagramas.md`) — nuevo, 2026-08-09
 
 Ya corregidos directamente en ese archivo (ver el DER y su nota de hallazgos ahí). Resumen:
 
-- `categoria` tenía la PK mal nombrada (`idCompetencia` copiado por error en vez de
-  `idCategoria`).
-- La relación `inscripcion`–`listaBuenaFe` estaba dibujada 1:N (`||--o{`) cuando el schema real
-  la fuerza 1:1 (`idInscripcion UNIQUE`).
-- La relación `club`–`partido` estaba duplicada dos veces con la misma etiqueta, sin distinguir
-  los roles local/visitante (dos FKs distintas: `idClubLocal`, `idClubVisitante`).
-- La PK compuesta de `jugadorClub` en el diagrama le faltaba `fechaDesde` (el schema real es
-  `PRIMARY KEY (idJugador, idClub, fechaDesde)`).
-- Tipos de dato desalineados: `contraseña`→`contrasenia`, `dni` de `varchar`→`integer`,
-  `partido.idCompetencia` de `varchar`→`integer`.
-- El diagrama de clases tenía las firmas de los repositorios desactualizadas (parámetros sueltos
-  en vez de las dataclasses que ya usa la interfaz real) — corregido para que coincida con
-  `src/dominio/repositorios/*.py`.
+- `categoria` tenía la PK mal nombrada (`idCompetencia` copiado por error en vez de `idCategoria`).
+- La relación `inscripcion`–`listaBuenaFe` estaba dibujada 1:N (`||--o{`) cuando el schema real la fuerza 1:1 (`idInscripcion UNIQUE`).
+- La relación `club`–`partido` estaba duplicada dos veces con la misma etiqueta, sin distinguir los roles local/visitante (dos FKs distintas: `idClubLocal`, `idClubVisitante`).
+- La PK compuesta de `jugadorClub` en el diagrama le faltaba `fechaDesde` (el schema real es `PRIMARY KEY (idJugador, idClub, fechaDesde)`).
+- Tipos de dato desalineados: `contraseña`→`contrasenia`, `dni` de `varchar`→`integer`, `partido.idCompetencia` de `varchar`→`integer`.
+- El diagrama de clases tenía las firmas de los repositorios desactualizadas (parámetros sueltos en vez de las dataclasses que ya usa la interfaz real) — corregido para que coincida con `src/dominio/repositorios/*.py`.
 
 ### Campo/tabla que falta para que el propio PRD sea implementable — nuevo, 2026-08-09
 
-**No existe ningún campo que guarde el resultado final oficial del partido** (ej.
-`puntosLocalFinal`/`puntosVisitanteFinal`). Importa porque la propia **US-201 AC3** pide verificar
-que "la suma de puntos individuales coincida con el resultado final del partido cargado", pero
-hoy no hay dónde guardar ese resultado final para comparar contra él — solo se puede sumar el
-boxscore contra sí mismo. Se dejó la propuesta volcada (marcada como propuesta, no implementada)
-en el DER de `docs/diagramas/diagramas.md` y anotada en US-105 y US-201 de este documento.
-Relacionado: tampoco existe todavía la tabla `schema_version` que pide US-204 (Hito 2, no
-arrancado — esperable, solo se deja anotado para cuando se aborde esa US).
+**No existe ningún campo que guarde el resultado final oficial del partido** (ej.`puntosLocalFinal`/`puntosVisitanteFinal`). Importa porque la propia **US-201 AC3** pide verificar que "la suma de puntos individuales coincida con el resultado final del partido cargado", pero hoy no hay dónde guardar ese resultado final para comparar contra él — solo se puede sumar el boxscore contra sí mismo. Se dejó la propuesta volcada (marcada como propuesta, no implementada) en el DER de `docs/diagramas/diagramas.md` y anotada en US-105 y US-201 de este documento. Relacionado: tampoco existe todavía la tabla `schema_version` que pide US-204 (Hito 2, no arrancado — esperable, solo se deja anotado para cuando se aborde esa US).
 
 ### Hallazgos de organización de código
 
-- **Entidades agrupadas en un mismo archivo:** el PRD prevé un archivo por entidad
-  (`categoria.py`, `inscripcion.py`, `lista_buena_fe.py`, etc. separados); el código real agrupa
-  varias entidades relacionadas en un mismo archivo (ej. `competencia.py` contiene 5 dataclasses:
-  `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`). Es razonable
-  para el tamaño actual del proyecto, pero conviene un acuerdo explícito del equipo sobre si se
-  mantiene así.
-- **Capa de aplicación todavía no existe** (`src/aplicacion/`) — es esperable en este punto
-  (Hito 1, US-103 en adelante no implementadas), no es un bug, solo un recordatorio de que
-  `main.py` hoy no sigue el patrón de Composition Root descrito en la sección 4 porque todavía no
-  hay casos de uso que orquestar.
+- **Entidades agrupadas en un mismo archivo:** el PRD prevé un archivo por entidad (`categoria.py`, `inscripcion.py`, `lista_buena_fe.py`, etc. separados); el código real agrupa varias entidades relacionadas en un mismo archivo (ej. `competencia.py` contiene 5 dataclasses: `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`). Es razonable para el tamaño actual del proyecto, pero conviene un acuerdo explícito del equipo sobre si se mantiene así.
+- **Capa de aplicación todavía no existe** (`src/aplicacion/`) — es esperable en este punto (Hito 1, US-103 en adelante no implementadas), no es un bug, solo un recordatorio de que `main.py` hoy no sigue el patrón de Composition Root descrito en la sección 4 porque todavía no hay casos de uso que orquestar.
 
 ### Hallazgos de documentación (inconsistencias entre las fuentes del PRD)
 
-- **El submódulo (`.md`) tenía Hito 3 y 4 incompletos.** Le faltaba la Épica H3-E3 (US-303,
-  Scouting de Rival) completa, y las épicas H4-E2, H4-E3, H4-E4 (US-402 Backup, US-403 Seguridad,
-  US-404 Empaquetado) completas. Solo estaban en el LaTeX. Ya se completó en este documento
-  usando esa fuente.
-- **Tres versiones distintas de la Definición de "Hecho" (DoD).** Una en el LaTeX (la más
-  completa, con Catálogo de Criticidad integrado) y **dos** dentro del mismo archivo del
-  submódulo (una "v2" a mitad de documento, otra más corta al final). Se consolidaron en la
-  sección 13 de este documento, usando la más completa como base.
-- **El `.md` del submódulo no tenía sección de Requisitos No Funcionales (NFR) en absoluto** —
-  solo estaba en el LaTeX. Se agregó en la sección 7.
-- **El `.md` del submódulo no tenía el Proceso de Liberación de Versiones** (versionado
-  semántico, estrategia de ramas, pasos de release, formato de changelog, hotfix) — solo estaba
-  en el LaTeX. Se agregó en la sección 15.
-- **ADR-002 y ADR-008 tienen bloqueo de hito contradictorio entre fuentes:** el cuerpo narrativo
-  del LaTeX dice que ADR-002 (Framework UI) bloquea el **Hito 2**, pero la tabla de ADRs del
-  mismo LaTeX dice que bloquea el **Hito 4** — y el Hito 4 es, de hecho, donde se implementa la
-  UI (US-401), lo cual sugiere que la tabla tiene razón y el texto narrativo del Hito 2 tiene un
-  error de copy-paste. Mismo patrón con ADR-008 (Backup): el texto dice "Hito 3", la tabla dice
-  "Hito 4", y el Hito 4 es donde vive US-402 (Backup) — la tabla parece ser la correcta en ambos
-  casos. Se documenta la discrepancia tal cual en la sección 18 en vez de resolverla
-  unilateralmente, para que el equipo lo confirme.
-- **El estándar de análisis estático documentado no coincide con el real:** el Acuerdo de
-  Ingeniería original (sección 5) decía `flake8`/`pylint`; el proyecto usa `ruff` en la práctica
-  (`pyproject.toml`, CI). Ya corregido en la transcripción.
-- **La tabla "Estructura de Repositorios"** (sección 17) le faltaba la fila de Competencia en
-  ambas fuentes originales — es la inconsistencia que dio origen a esta revisión. Corregida acá.
+- **El submódulo (`.md`) tenía Hito 3 y 4 incompletos.** Le faltaba la Épica H3-E3 (US-303, Scouting de Rival) completa, y las épicas H4-E2, H4-E3, H4-E4 (US-402 Backup, US-403 Seguridad, US-404 Empaquetado) completas. Solo estaban en el LaTeX. Ya se completó en este documento usando esa fuente.
+- **Tres versiones distintas de la Definición de "Hecho" (DoD).** Una en el LaTeX (la más completa, con Catálogo de Criticidad integrado) y **dos** dentro del mismo archivo del submódulo (una "v2" a mitad de documento, otra más corta al final). Se consolidaron en la sección 13 de este documento, usando la más completa como base.
+- **El `.md` del submódulo no tenía sección de Requisitos No Funcionales (NFR) en absoluto** — solo estaba en el LaTeX. Se agregó en la sección 7.
+- **El `.md` del submódulo no tenía el Proceso de Liberación de Versiones** (versionado semántico, estrategia de ramas, pasos de release, formato de changelog, hotfix) — solo estaba en el LaTeX. Se agregó en la sección 15.
+- **ADR-002 y ADR-008 tienen bloqueo de hito contradictorio entre fuentes:** el cuerpo narrativo del LaTeX dice que ADR-002 (Framework UI) bloquea el **Hito 2**, pero la tabla de ADRs del mismo LaTeX dice que bloquea el **Hito 4** — y el Hito 4 es, de hecho, donde se implementa la UI (US-401), lo cual sugiere que la tabla tiene razón y el texto narrativo del Hito 2 tiene un error de copy-paste. Mismo patrón con ADR-008 (Backup): el texto dice "Hito 3", la tabla dice "Hito 4", y el Hito 4 es donde vive US-402 (Backup) — la tabla parece ser la correcta en ambos casos. Se documenta la discrepancia tal cual en la sección 18 en vez de resolverla unilateralmente, para que el equipo lo confirme.
+- **El estándar de análisis estático documentado no coincide con el real:** el Acuerdo de Ingeniería original (sección 5) decía `flake8`/`pylint`; el proyecto usa `ruff` en la práctica (`pyproject.toml`, CI). Ya corregido en la transcripción.
+- **La tabla "Estructura de Repositorios"** (sección 17) le faltaba la fila de Competencia en ambas fuentes originales — es la inconsistencia que dio origen a esta revisión. Corregida acá.
 
 ### Lo que ya está sólido (para no perder de vista en medio de tanto hallazgo)
 
-- ✅ `SQLiteManager` (`database_manager.py`): conexión, `PRAGMA foreign_keys`, `row_factory`,
-  inicialización de schema/vistas/seed/limpieza, con manejo de errores y logging. 15 tests de
-  integración reales.
-- ✅ Las 4 vistas SQL (`views.sql`) funcionan y están probadas, incluyendo protección contra
-  división por cero.
-- ✅ `SqliteUsuarioRepositorio` funcional, probado, y con el mapeo `pw`↔`contrasenia`
-  correctamente resuelto — el único repositorio con tests dedicados hoy.
+- ✅ `SQLiteManager` (`database_manager.py`): conexión, `PRAGMA foreign_keys`, `row_factory`, inicialización de schema/vistas/seed/limpieza, con manejo de errores y logging. 15 tests de integración reales.
+- ✅ Las 4 vistas SQL (`views.sql`) funcionan y están probadas, incluyendo protección contra división por cero.
+- ✅ `SqliteUsuarioRepositorio` funcional, probado, y con el mapeo `pw`↔`contrasenia` correctamente resuelto — el único repositorio con tests dedicados hoy.
 - ✅ `SqliteClubRepositorio` funcional (patrón de conexión directa, igual que los otros 4).
-- ✅ `SqliteCompetenciaRepositorio` ya existe (ya no es el gap original) — 10 de sus 12 métodos
-  tienen implementación real, aunque con los bugs puntuales ya detallados arriba.
-- ✅ Pipeline CI real con dos workflows (`linter.yml`, `test.yml`) corriendo en cada PR — ver
-  `docs/ideas-aprendizaje.md` sección 7 para el detalle de qué le falta para ser "completo".
-- ✅ Suite de tests dividida por repositorio (`test_repositorios_*.py`), más fácil de mantener que
-  el archivo único anterior — aunque dos de esos archivos todavía están vacíos (ver arriba).
+- ✅ `SqliteCompetenciaRepositorio` ya existe (ya no es el gap original) — 10 de sus 12 métodos tienen implementación real, aunque con los bugs puntuales ya detallados arriba.
+- ✅ Pipeline CI real con dos workflows (`linter.yml`, `test.yml`) corriendo en cada PR — ver `docs/ideas-aprendizaje.md` sección 7 para el detalle de qué le falta para ser "completo".
+- ✅ Suite de tests dividida por repositorio (`test_repositorios_*.py`), más fácil de mantener que el archivo único anterior — aunque dos de esos archivos todavía están vacíos (ver arriba).
