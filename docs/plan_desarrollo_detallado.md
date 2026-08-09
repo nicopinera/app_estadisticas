@@ -1,21 +1,16 @@
 # Plan de Desarrollo Detallado: StatsPro Basketball
 
-- **ID de referencia:** equivalente interno a PRD-BSKT-2026-001
-- **Estado:** Aprobado, en desarrollo (Hito 1 en curso)
-- **Producto:** StatsPro Basketball (nombre en clave)
-- **Ingeniería:** equipo de 2 ingenieros de software
+- **ID de referencia:** PRD-BSKT-2026-001
+- **Estado:** Aprobado
+- **Producto:** StatsPro Basketball
+- **Ingeniería:** equipo de 2 ingenieros
 - **Clasificación:** interno
 - **Stack principal:** SQLite · Python/Pandas · Flet (UI, pendiente ADR-002)
 
 > **Qué es este documento:** transcripción completa y fusionada del PRD del proyecto — todas las
 > historias de usuario, épicas e hitos, con sus criterios de aceptación, archivos a crear y
 > funciones/métodos involucrados. Combina dos fuentes que viven en el submódulo git
-> `docs/documentacion_app_estadistica/` (repo aparte, del compañero):
-> - **`PRD/Plan_Requerimientos_Producto_Pro.tex`** (+ PDF): el PRD formal, más completo en
->   descripción general, reglas de negocio consolidadas, NFRs, proceso de release y los 4 hitos.
-> - **`PRD/plan_desarrollo_detallado.md`**: versión Markdown con mayor detalle técnico en
->   Hito 1 y 2 (desglose exacto por Capa de Dominio/Aplicación/Infraestructura, firmas de método
->   de cada interfaz de repositorio).
+> `docs/documentacion_app_estadistica/`
 >
 > Donde una fuente tenía más detalle que la otra para la misma sección, se usó la más completa;
 > donde ambas aportaban algo distinto, se fusionó. **No es un resumen** — la única compresión
@@ -56,123 +51,87 @@
 
 ### 1.1 Planteamiento del problema
 
-El análisis estadístico en el básquet formativo sufre una brecha crítica entre la recolección de
-datos y su utilidad táctica. Los entrenadores operan bajo alta presión donde la toma de
-decisiones basada en datos se ve limitada por herramientas fragmentadas.
+El análisis estadístico en el básquet formativo sufre una brecha crítica entre la recolección de datos y su utilidad táctica. Los entrenadores operan bajo alta presión donde la toma de decisiones basada en datos se ve limitada por herramientas fragmentadas.
 
-| # | Problema | Impacto Operativo | Línea Base |
-|---|---|---|---|
-| 1 | Carga manual ineficiente | Interferencia táctica; pérdida de foco durante el partido | >20 min/partido |
-| 2 | Ceguera estadística | Decisiones por intuición, sin métricas avanzadas (PPP, EFF) | 0% automatizado |
-| 3 | Fragmentación de datos | Imposibilidad de seguimiento histórico o comparativo de rivales | Papel / Excel |
-| 4 | Inestabilidad de red | Apps web fallan en estadios sin conectividad | 100% online (competidores) |
-| 5 | Rigidez de plataformas | El DT no puede integrar datos de Ges Deportivo fácilmente | Ingesta manual |
+| #   | Problema                 | Impacto Operativo                                               | Línea Base                 |
+| --- | ------------------------ | --------------------------------------------------------------- | -------------------------- |
+| 1   | Carga manual ineficiente | Interferencia táctica; pérdida de foco durante el partido       | >20 min/partido            |
+| 2   | Ceguera estadística      | Decisiones por intuición, sin métricas avanzadas (PPP, EFF)     | 0% automatizado            |
+| 3   | Fragmentación de datos   | Imposibilidad de seguimiento histórico o comparativo de rivales | Papel / Excel              |
+| 4   | Inestabilidad de red     | Apps web fallan en estadios sin conectividad                    | 100% online (competidores) |
+| 5   | Rigidez de plataformas   | El DT no puede integrar datos de Ges Deportivo fácilmente       | Ingesta manual             |
 
-Desglose adicional (de `contexto_aux/Aplicación-de-Estadisticas.md`, basado en encuestas reales a
-DTs):
+Desglose adicional (basado en encuestas reales a DTs):
 
-- **Interferencia en el juego:** la carga manual en tiempo real distrae al entrenador o requiere
-  una persona dedicada exclusivamente a esa tarea.
-- **Ritmo frenético:** la velocidad del básquet genera demoras entre la carga de una estadística
-  y la siguiente.
-- **Cálculo manual y falta de tendencias:** los DTs pierden tiempo pasando el boxscore a mano y
-  calculando estadísticas avanzadas por su cuenta; no logran identificar numéricamente hacia
-  dónde van las tendencias del juego.
-- **Falta de centralización:** no hay un espacio virtual cómodo para el registro histórico, lo
-  que dificulta comparar rivales o evaluar la evolución de los propios jugadores.
-- **Herramientas inflexibles:** las apps existentes no se adaptan a los sistemas de competencia
-  locales, y los datos de plataformas externas (Ges Deportivo) no se integran sin trabajo manual.
+- **Interferencia en el juego:** la carga manual en tiempo real distrae al entrenador o requiere una persona dedicada exclusivamente a esa tarea.
+- **Ritmo frenético:** la velocidad del básquet genera demoras entre la carga de una estadística y la siguiente.
+- **Cálculo manual y falta de tendencias:** los DTs pierden tiempo pasando el boxscore a mano y calculando estadísticas avanzadas por su cuenta; no logran identificar numéricamente hacia dónde van las tendencias del juego.
+- **Falta de centralización:** no hay un espacio virtual cómodo para el registro histórico, lo que dificulta comparar rivales o evaluar la evolución de los propios jugadores.
+- **Herramientas inflexibles:** las apps existentes no se adaptan a los sistemas de competencia locales, y los datos de plataformas externas (Ges Deportivo) no se integran sin trabajo manual.
 
-**Línea base cuantificada:** carga manual >20-40 min; 0% de automatización de importación Excel;
-65% de los usuarios encuestados requieren uso offline; datos aislados por partido sin acumulación
-histórica.
+**Línea base cuantificada:** carga manual >20-40 min; 0% de automatización de importación Excel; 65% de los usuarios encuestados requieren uso offline; datos aislados por partido sin acumulación histórica.
 
 ### 1.2 Visión del producto
 
-Desarrollar una aplicación multiplataforma (PC y Mobile) de ejecución local que centralice el
-conocimiento deportivo en un motor estadístico profesional, permitiendo una gestión integral
-**sin necesidad de internet**, con un flujo optimizado mediante la carga de planillas de "Ges
-Deportivo".
+Desarrollar una aplicación multiplataforma (PC y Mobile) de ejecución local que centralice el conocimiento deportivo en un motor estadístico profesional, permitiendo una gestión integral **sin necesidad de internet**, con un flujo optimizado mediante la carga de planillas de "Ges Deportivo".
 
 Pilares del producto:
 
-1. **Accesibilidad y flexibilidad:** acceso desde cualquier dispositivo — cancha (celular/tablet)
-   o casa (PC/notebook) para análisis más profundo.
-2. **Gestión organizativa completa:** perfil de usuario, club, categorías, competencias y listas
-   de buena fe.
-3. **Ingesta de datos automatizada y manual:** además de la carga manual partido a partido, el
-   software interpreta automáticamente planillas Excel de Ges Deportivo.
-4. **Generación de estadísticas avanzadas:** motor de análisis que entrega resúmenes y
-   estadísticas acumuladas, tradicionales y avanzadas, individuales y de equipo.
-5. **Visualización y toma de decisiones:** comparación de equipos/jugadores, filtros, gráficos
-   claros para identificar tendencias a corto, mediano y largo plazo.
+1. **Accesibilidad y flexibilidad:** acceso desde cualquier dispositivo — cancha (celular/tablet) o casa (PC/notebook) para análisis más profundo.
+2. **Gestión organizativa completa:** perfil de usuario, club, categorías, competencias y listas de buena fe.
+3. **Ingesta de datos automatizada y manual:** además de la carga manual partido a partido, el  software interpreta automáticamente planillas Excel de Ges Deportivo.
+4. **Generación de estadísticas avanzadas:** motor de análisis que entrega resúmenes y estadísticas acumuladas, tradicionales y avanzadas, individuales y de equipo.
+5. **Visualización y toma de decisiones:** comparación de equipos/jugadores, filtros, gráficos claros para identificar tendencias a corto, mediano y largo plazo.
 
 ### 1.3 Metas y no metas
 
 **En el alcance (v1.0):**
 
 - **Ingesta multimodal:**
-  - *Automática:* carga de planillas Excel de Ges Deportivo.
-  - *Manual:* formulario para carga post-partido (jugador por jugador).
+  - _Automática:_ carga de planillas Excel de Ges Deportivo.
+  - _Manual:_ formulario para carga post-partido (jugador por jugador).
 - **Persistencia local:** base de datos SQLite única por instalación de usuario.
-- **Motor estadístico:** análisis de tendencias, PPP, porcentajes por zona y eficiencia con
-  Pandas.
+- **Motor estadístico:** análisis de tendencias, PPP, estadistica avanzada y eficiencia con Pandas.
 - **Multiplataforma:** ejecución en Windows, Linux, macOS y dispositivos móviles.
 
 **Fuera de alcance (v1.0):**
 
-- **Carga en vivo:** toma de datos en tiempo real durante el partido — se posterga a versiones
-  post-estables (ver Hito 7 en el roadmap futuro).
+- **Carga en vivo:** toma de datos en tiempo real durante el partido — se posterga a versiones post-estables (ver Hito 7 en el roadmap futuro).
 - **Sincronización cloud:** no se contempla almacenamiento en la nube inicialmente.
-- **Importación automática/API:** no hay conexión directa con servidores de Ges Deportivo (solo
-  archivos Excel exportados manualmente por el usuario).
-- Adicionalmente, según `contexto_aux`: análisis avanzado con IA, integración con sensores, y
-  "no incorporar características demasiado complejas desde el inicio" — se prioriza una primera
-  versión mínima y funcional sobre un sistema definitivo hecho de una sola vez.
+- **Importación automática/API:** no hay conexión directa con servidores de Ges Deportivo (solo archivos Excel exportados manualmente por el usuario).
+- Adicionalmente: análisis avanzado con IA, integración con sensores, y "no incorporar características demasiado complejas desde el inicio" — se prioriza una primera versión mínima y funcional sobre un sistema definitivo hecho de una sola vez.
 
 ### 1.4 Métricas de éxito
 
-- **MTTR (Time to Report):** tiempo desde la carga del archivo hasta el informe completo
-  **< 2 minutos**.
-- **Tasa de automatización:** % de estadísticas de partido generadas sin intervención manual
-  **> 95%**.
+- **MTTR (Time to Report):** tiempo desde la carga del archivo hasta el informe completo **< 2 minutos**.
+- **Tasa de automatización:** % de estadísticas de partido generadas sin intervención manual **> 95%**.
 - **Disponibilidad offline:** **100%** de las funcionalidades críticas operativas sin conexión.
 - **North Star Metric:** número de sesiones de análisis táctico realizadas por el DT por semana.
-- **Tiempo de carga de datos:** la mayoría de los DTs encuestados solo están dispuestos a dedicar
-  entre "menos de 10 minutos" y "10-20 minutos" por partido — es el techo operativo real.
-- **Adopción por usabilidad:** los DTs prefieren explícitamente una app "simple y rápida" por
-  sobre una "completa pero más compleja" — la simplicidad es un requisito de producto, no un
-  nice-to-have.
+- **Tiempo de carga de datos:** la mayoría de los DTs encuestados solo están dispuestos a dedicar entre "menos de 10 minutos" y "10-20 minutos" por partido — es el techo operativo real.
+- **Adopción por usabilidad:** los DTs prefieren explícitamente una app "simple y rápida" por sobre una "completa pero más compleja" — la simplicidad es un requisito de producto, no un nice-to-have.
 
 ---
 
 ## 2. Perfiles de Usuario
 
-| Perfil | Rol y Contexto | Objetivo Principal | Problema Actual |
-|---|---|---|---|
-| **Director Técnico** | Líder táctico, desde categorías formativas hasta profesional | Optimizar rendimiento mediante datos objetivos | El cálculo manual de EFF/PPP es tedioso |
-| **Analista / Asistente** | Responsable de carga y procesamiento de datos | Proveer informes rápidos y precisos al DT | Carga redundante de datos ya existentes en Ges Deportivo |
+| Perfil                   | Rol y Contexto                                               | Objetivo Principal                             | Problema Actual                                          |
+| ------------------------ | ------------------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------- |
+| **Director Técnico**     | Líder táctico, desde categorías formativas hasta profesional | Optimizar rendimiento mediante datos objetivos | El cálculo manual de EFF/PPP es tedioso                  |
+| **Analista / Asistente** | Responsable de carga y procesamiento de datos                | Proveer informes rápidos y precisos al DT      | Carga redundante de datos ya existentes en Ges Deportivo |
 
 ### Perfil ampliado del usuario principal (Entrenador / Analista Estadístico)
 
-- **Categorías que dirige:** todo el espectro — formativas (Mini, U13, U15, U17), de desarrollo
-  (U21, Reserva), Primera Amateur, Veteranos y básquet Profesional.
+- **Categorías que dirige:** todo el espectro — formativas (Mini, U13, U15, U17), de desarrollo (U21, Reserva), Primera Amateur, Veteranos y básquet Profesional.
 - **Tamaño del cuerpo técnico:** variable — solos, en duplas, o equipos de 3+ personas.
-- **Momento de análisis:** algunos toman datos durante el partido o en el club, pero la mayoría
-  analiza las estadísticas **de forma diferida en sus casas**, horas o días después del partido.
+- **Momento de análisis:** algunos toman datos durante el partido o en el club, pero la mayoría analiza las estadísticas **de forma diferida en sus casas**, horas o días después del partido.
 - **Herramientas actuales:** papel y lápiz o Excel básico; algunos usan apps específicas.
-  Satisfacción con los métodos actuales: media a baja.
-- **Pain points textuales** (de entrevistas reales, `contexto_aux/Perfil-Usuario.md`):
-  - *"pierdo el foco en la mejora"* del equipo durante el partido por tener que anotar/calcular.
-  - El juego es *"demasiado frenético"* — demoras y pérdida de datos entre una carga y la
-    siguiente.
-  - *"tener que pasar el boxscore manualmente y calcular las [estadísticas] avanzadas por mi
-    cuenta"* — frustración explícita con el cálculo manual.
-  - No pueden *"identificar tendencias de hacia dónde va el básquet, ni identificar
-    numéricamente errores del equipo"* — faltan datos como porcentajes reales por zona de cancha
-    o situaciones puntuales (ej. goles rivales desde el 1v1).
-  - *"no hay un espacio virtual donde se puedan dejar constancia de las estadísticas y que sea
-    cómodo"* para medir rendimiento a corto/mediano/largo plazo.
+- Satisfacción con los métodos actuales: media a baja.
+- **Pain points textuales**:
+  - _"pierdo el foco en la mejora"_ del equipo durante el partido por tener que anotar/calcular.
+  - El juego es _"demasiado frenético"_ — demoras y pérdida de datos entre una carga y la siguiente.
+  - _"tener que pasar el boxscore manualmente y calcular las estadísticas avanzadas por mi cuenta"_ — frustración explícita con el cálculo manual.
+  - No pueden _"identificar tendencias de hacia dónde va el básquet, ni identificar numéricamente errores del equipo"_ — faltan datos como porcentajes reales por zona de cancha o situaciones puntuales (ej. goles rivales desde el 1v1).
+  - _"no hay un espacio virtual donde se puedan dejar constancia de las estadísticas y que sea cómodo"_ para medir rendimiento a corto/mediano/largo plazo.
 
 ---
 
@@ -185,21 +144,13 @@ El sistema usa una base de datos relacional local (**SQLite**) con esquema norma
 - **Gestión de identidad:** `usuario`, `club`, `usuarioClub` (N:M).
 - **Estructura deportiva:** `jugador`, `categoria`, `competencia`, `inscripcion`.
 - **Gestión de listas:** `listaBuenaFe`, `jugadorListaBuenaFe`.
-- **Eventos y estadísticas:** `partido`, `jugadorPartido` (20+ métricas: puntos, T1/T2/T3,
-  rebotes, asistencias, etc.).
+- **Eventos y estadísticas:** `partido`, `jugadorPartido` (20+ métricas: puntos, T1/T2/T3, rebotes, asistencias, etc.).
 
 ### Reglas de integridad
 
 - Relación **1:1** entre `inscripcion` y `listaBuenaFe`.
 - El historial de afiliaciones de un jugador se mantiene vía `jugadorClub` (N:M con fechas).
-- `jugadorPartido` actúa como **fact table** para el motor de análisis (Pandas lee desde acá vía
-  las vistas SQL).
-
-> El detalle exacto del schema (tablas, tipos, `CHECK` constraints, claves foráneas) vive en
-> `src/infraestructura/persistencia/sql/schema.sql` — es la fuente de verdad ejecutable, este
-> documento no la duplica línea por línea. Ver también `docs/vistas_sql.md` para las 4 vistas de
-> análisis (`v_partidos_resumen`, `v_boxscore_completo`, `v_jugador_totales_temporada`,
-> `v_listas_detalle`).
+- `jugadorPartido` actúa como **fact table** para el motor de análisis (Pandas lee desde acá vía las vistas SQL).
 
 ---
 
@@ -207,28 +158,22 @@ El sistema usa una base de datos relacional local (**SQLite**) con esquema norma
 
 ### Capas y responsabilidades
 
-- **Dominio** (`src/dominio/`): entidades puras, reglas de negocio, excepciones e interfaces
-  (ports), sin dependencias externas.
-- **Aplicación** (`src/aplicacion/`, a crear): casos de uso y DTOs; orquesta reglas mediante
-  inyección de dependencias.
-- **Infraestructura** (`src/infraestructura/`): repositorios SQLite, parser Excel (Pandas), UI
-  CLI/GUI y generación de reportes.
+- **Dominio** (`src/dominio/`): entidades puras, reglas de negocio, excepciones e interfaces (ports), sin dependencias externas.
+- **Aplicación** (`src/aplicacion/`, a crear): casos de uso y DTOs; orquesta reglas mediante inyección de dependencias.
+- **Infraestructura** (`src/infraestructura/`): repositorios SQLite, parser Excel (Pandas), UI CLI/GUI y generación de reportes.
 
 ### Regla de dependencias
 
-```
+```text
 dominio  ←  aplicación  ←  infraestructura
 ```
 
-`dominio` no puede importar `aplicación` ni `infraestructura`. `aplicación` puede importar
-`dominio`, pero no `infraestructura`.
+`dominio` no puede importar `aplicación` ni `infraestructura`. `aplicación` puede importar `dominio`, pero no `infraestructura`.
 
 ### Patrones de diseño
 
-- **Repository Pattern:** abstracción de persistencia por agregado (`UsuarioRepositorio`,
-  `JugadorRepositorio`, etc.).
-- **Dependency Injection:** los casos de uso reciben puertos (interfaces), no implementaciones
-  concretas, por constructor.
+- **Repository Pattern:** abstracción de persistencia por agregado (`UsuarioRepositorio`, `JugadorRepositorio`, etc.).
+- **Dependency Injection:** los casos de uso reciben puertos (interfaces), no implementaciones concretas, por constructor.
 - **Command Pattern:** CLI extensible por subcomandos sin bloques monolíticos `if/else`.
 
 ### Estructura de directorios de referencia
@@ -239,9 +184,9 @@ src/
 ├── dominio/
 │   ├── entidades/          # @dataclass puras, sin imports externos
 │   ├── repositorios/       # interfaces (ABC) de repositorios
-│   ├── exceptions.py       # excepciones de negocio (a crear)
+│   ├── exceptions.py       # excepciones de negocio
 │   └── services/           # lógica de dominio compleja (opcional)
-├── aplicacion/              # (a crear)
+├── aplicacion/
 │   ├── use_cases/           # orquestadores (reciben repos por DI)
 │   ├── dtos/                 # dataclasses de entrada/salida entre capas
 │   └── services/             # servicios de aplicación (ej. SessionManager)
@@ -249,65 +194,39 @@ src/
 │   ├── repositorios/         # implementaciones SQLite de las interfaces de dominio
 │   ├── persistencia/
 │   │   └── sql/               # schema.sql, views.sql, seed.sql, limpieza.sql
-│   ├── analytics/             # motor Pandas (a crear, Hito 2)
-│   ├── ingest/                 # parser Excel (a crear, Hito 2)
-│   ├── reports/                 # generador PDF (a crear, Hito 3)
-│   ├── security/                 # PasswordHasher (a crear, Hito 1 US-104)
+│   ├── analytics/             # motor Pandas
+│   ├── ingest/                 # parser Excel
+│   ├── reports/                 # generador PDF
+│   ├── security/                 # PasswordHasher
 │   └── ui/
-│       ├── cli/                   # interfaz de línea de comandos (a crear)
-│       └── flet/                   # GUI (a crear, Hito 4)
+│       ├── cli/                   # interfaz de línea de comandos
+│       └── flet/                   # GUI
 └── tests/ (hoy: test/)
-    ├── unit/                       # sin DB, con mocks (a crear como subcarpeta)
-    ├── integration/                 # con DB en memoria — hoy los tests viven flat en test/
+    ├── unit/ # sin DB, con mocks
+    ├── integration/ # con DB en memoria — hoy los tests viven flat en test/
     └── conftest.py
 ```
 
-> **Nota:** la estructura real hoy tiene todo bajo `test/` sin separar `unit/`/`integration/` en
-> subcarpetas — es una simplificación válida para el tamaño actual del proyecto; considerar
-> separarlas cuando la suite crezca (ver sección 20).
-
 ### ¿Qué va en cada capa? Guía práctica
 
-**Capa de Dominio (`src/dominio/`)** — el núcleo del sistema. No depende de ninguna tecnología
-concreta.
+**Capa de Dominio (`src/dominio/`)** — el núcleo del sistema. No depende de ninguna tecnología concreta.
 
-- **`entidades/`** — clases Python puras (`@dataclass`) que modelan los conceptos del básquet.
-  Pueden tener métodos con lógica de negocio simple (validaciones, cálculos derivados). **No
-  importan** `sqlite3`, `pandas` ni ningún framework. Ejemplo objetivo: `Jugador` con
-  `calcular_edad()`; `EstadisticaJugador` con `validar_consistencia_puntos()` (pendiente, ver
-  US-103).
-- **`repositorios/`** — interfaces abstractas (`ABC` + `@abstractmethod` en este proyecto — ver
-  nota sobre `Protocol` en sección 19) que definen *qué* operaciones existen sobre los datos, sin
-  decir *cómo*. Ejemplo real: `JugadorRepositorio` declara `buscar_por_id`, `buscar_por_dni`,
+- **`entidades/`** — clases Python puras (`@dataclass`) que modelan los conceptos del básquet. Pueden tener métodos con lógica de negocio simple (validaciones, cálculos derivados). **No importan** `sqlite3`, `pandas` ni ningún framework. Ejemplo objetivo: `Jugador` con `calcular_edad()`; `EstadisticaJugador` con `validar_consistencia_puntos()`.
+- **`repositorios/`** — interfaces abstractas (`ABC` + `@abstractmethod` en este proyecto — ver nota sobre `Protocol` en sección 19) que definen _qué_ operaciones existen sobre los datos, sin decir _cómo_. Ejemplo real: `JugadorRepositorio` declara `buscar_por_id`, `buscar_por_dni`,
   `guardar`, sin una sola línea de SQL.
-- **`exceptions.py`** (a crear) — errores propios del negocio deportivo:
-  `DNIDuplicadoError`, `JugadorNoHabilitadoError`,
-  `PartidoInvalidoError("El club local no puede ser el visitante")`.
+- **`exceptions.py`** — errores propios del negocio deportivo: `DNIDuplicadoError`, `JugadorNoHabilitadoError`, `PartidoInvalidoError("El club local no puede ser el visitante")`.
 
-**Capa de Aplicación (`src/aplicacion/`, a crear)** — orquesta el dominio para los casos de uso
-del usuario. No contiene lógica de negocio pura (eso va en dominio) ni detalles técnicos (eso va
-en infraestructura).
+**Capa de Aplicación (`src/aplicacion/`)** — orquesta el dominio para los casos de uso del usuario. No contiene lógica de negocio pura (eso va en dominio) ni detalles técnicos (eso va en infraestructura).
 
-- **`use_cases/`** — un archivo = una acción del usuario. Cada caso de uso recibe sus
-  dependencias (repositorios, servicios) por constructor y expone un único método `execute(dto)`.
-  Ejemplo: `RegistrarJugadorUseCase.execute(dto)` verifica DNI no duplicado
-  (`player_repo.find_by_dni`), crea la entidad `Jugador`, la persiste (`player_repo.save`) y
-  retorna un `JugadorDTO`.
-- **`dtos/`** — ver más abajo.
-- **`services/`** — servicios transversales que no pertenecen a un caso de uso específico, como
-  `SessionManager` (sesión persistente) y `ExecutionContext` (propagación de `correlation_id`
-  para logs).
+- **`use_cases/`** — un archivo = una acción del usuario. Cada caso de uso recibe sus dependencias (repositorios, servicios) por constructor y expone un único método `execute(dto)`. Ejemplo: `RegistrarJugadorUseCase.execute(dto)` verifica DNI no duplicado (`player_repo.find_by_dni`), crea la entidad `Jugador`, la persiste (`player_repo.save`) y retorna un `JugadorDTO`.
+- **`dtos/`**
+- **`services/`** — servicios transversales que no pertenecen a un caso de uso específico, como `SessionManager` (sesión persistente) y `ExecutionContext` (propagación de `correlation_id` para logs).
 
-**Capa de Infraestructura (`src/infraestructura/`)** — implementa los contratos del dominio con
-tecnologías concretas. Es la única capa que puede importar `sqlite3`, `pandas`, `flet`, `bcrypt`,
-etc.
+**Capa de Infraestructura (`src/infraestructura/`)** — implementa los contratos del dominio con tecnologías concretas. Es la única capa que puede importar `sqlite3`, `pandas`, `flet`, `bcrypt`, etc.
 
-- **`repositorios/`** — implementaciones SQLite de las interfaces de dominio. Cada clase hereda
-  de su interfaz correspondiente (`SqliteJugadorRepositorio(JugadorRepositorio)`).
-- **`persistencia/`** — infraestructura técnica de la base: `database_manager.py` (conexión,
-  inicialización), archivos `.sql` (schema, vistas, seed), migraciones futuras. Sin lógica de
-  negocio.
-- **`analytics/`** (a crear) — `formulas.py` (funciones puras sobre DataFrames),
+- **`repositorios/`** — implementaciones SQLite de las interfaces de dominio. Cada clase hereda de su interfaz correspondiente (`SqliteJugadorRepositorio(JugadorRepositorio)`).
+- **`persistencia/`** — infraestructura técnica de la base: `database_manager.py` (conexión, inicialización), archivos `.sql` (schema, vistas, seed), migraciones futuras. Sin lógica de negocio.
+- **`analytics/`**  — `formulas.py` (funciones puras sobre DataFrames),
   `pandas_analytics_service.py`, `chart_generator.py`.
 - **`ingest/`** (a crear) — parser Excel de Ges Deportivo y servicio de ingesta.
 - **`reports/`** (a crear) — generadores de PDF y reportería de CLI (leaderboards).
@@ -425,19 +344,19 @@ no se implementaron aún — es esperable en este punto del proyecto.)
 
 ### Gestión de tareas — prioridad y esfuerzo
 
-| Prioridad | Descripción |
-|---|---|
-| Urgente | Bloqueante; detiene el desarrollo de otras US |
-| Alta | Impacto directo en la entrega del hito |
-| Media | Importante pero no bloquea el progreso |
-| Baja | Mejora o refinamiento posterior |
+| Prioridad | Descripción                                   |
+| --------- | --------------------------------------------- |
+| Urgente   | Bloqueante; detiene el desarrollo de otras US |
+| Alta      | Impacto directo en la entrega del hito        |
+| Media     | Importante pero no bloquea el progreso        |
+| Baja      | Mejora o refinamiento posterior               |
 
-| Tamaño | Esfuerzo estimado |
-|---|---|
-| XS | Menos de 1 día hábil |
-| S | 1–2 días hábiles |
-| M | 3–5 días hábiles |
-| L | 6–10 días hábiles |
+| Tamaño | Esfuerzo estimado    |
+| ------ | -------------------- |
+| XS     | Menos de 1 día hábil |
+| S      | 1–2 días hábiles     |
+| M      | 3–5 días hábiles     |
+| L      | 6–10 días hábiles    |
 
 ---
 
@@ -447,21 +366,25 @@ Centraliza las reglas obligatorias del dominio para que desarrollo y testing sea
 todas las historias de usuario.
 
 **Identidad y Seguridad**
+
 - Email de usuario único por sistema.
 - Contraseña nunca persistida en texto plano ni en logs.
 - Sesión requiere usuario autenticado y, para comandos operativos, club activo.
 
 **Jugadores, Clubes y Afiliaciones**
+
 - DNI de jugador único cuando está informado.
 - Un jugador no puede tener dos vínculos activos superpuestos con el mismo club.
 - Historial de afiliación coherente en fechas: `fecha_hasta >= fecha_desde`.
 
 **Competencias, Inscripciones y Listas**
+
 - Una inscripción es única por club + competencia + categoría + temporada.
 - Cada inscripción tiene una única lista de buena fe asociada (1:1).
 - Solo jugadores habilitados en lista pueden figurar en carga oficial de partido.
 
 **Partidos y Estadísticas**
+
 - Un partido no puede tener el mismo club como local y visitante.
 - Toda carga de partido y boxscore es atómica (todo o nada).
 - Estadísticas de tiro: convertidos ≤ lanzados; todos los valores no negativos.
@@ -469,6 +392,7 @@ todas las historias de usuario.
 - Minutos por jugador no pueden exceder el máximo reglamentario definido por competencia.
 
 **Analítica y Reporting**
+
 - Fórmulas avanzadas deben manejar división por cero y no devolver `NaN`/`inf`.
 - Reportes y dashboards se construyen sobre vistas SQL normalizadas y versionadas.
 - Toda exportación (PDF/backup) debe ser trazable en logs con timestamp y resultado.
@@ -477,15 +401,15 @@ todas las historias de usuario.
 
 ## 7. Requisitos No Funcionales (NFR)
 
-| ID | Requisito | Medición / Umbral | Severidad |
-|---|---|---|---|
-| NFR-1 | Portabilidad | Ejecución nativa en Windows 10+, Android 9+, iOS 14+ | Bloqueante |
-| NFR-2 | Rendimiento Ingesta | Procesamiento de Excel con Pandas < 5 seg | Alta |
-| NFR-3 | Fiabilidad de Datos | Integridad referencial en SQLite (FKs activas) | Bloqueante |
-| NFR-4 | Usabilidad | Carga de partido completo en < 3 clics desde selección de archivo | Media |
-| NFR-5 | Arranque | Tiempo de inicio de la GUI < 3 seg en entorno objetivo | Alta |
-| NFR-6 | Offline | 100% de funcionalidades críticas sin conexión a internet | Bloqueante |
-| NFR-7 | Cobertura de Tests | ≥80% no críticos; ≥95% en módulos críticos (ver Catálogo de Criticidad) | Alta |
+| ID    | Requisito           | Medición / Umbral                                                       | Severidad  |
+| ----- | ------------------- | ----------------------------------------------------------------------- | ---------- |
+| NFR-1 | Portabilidad        | Ejecución nativa en Windows 10+, Android 9+, iOS 14+                    | Bloqueante |
+| NFR-2 | Rendimiento Ingesta | Procesamiento de Excel con Pandas < 5 seg                               | Alta       |
+| NFR-3 | Fiabilidad de Datos | Integridad referencial en SQLite (FKs activas)                          | Bloqueante |
+| NFR-4 | Usabilidad          | Carga de partido completo en < 3 clics desde selección de archivo       | Media      |
+| NFR-5 | Arranque            | Tiempo de inicio de la GUI < 3 seg en entorno objetivo                  | Alta       |
+| NFR-6 | Offline             | 100% de funcionalidades críticas sin conexión a internet                | Bloqueante |
+| NFR-7 | Cobertura de Tests  | ≥80% no críticos; ≥95% en módulos críticos (ver Catálogo de Criticidad) | Alta       |
 
 > Complementan a los NFR ya descriptos en `contexto_aux/Requerimientos-no-funcionales.md`:
 > usabilidad para usuarios no técnicos, tiempo de carga de partido 10-20 min, disponibilidad
@@ -495,17 +419,17 @@ todas las historias de usuario.
 
 ## 8. Registro de Decisiones Arquitectónicas (ADR)
 
-| ID | Título | Estado | Decisión | Bloquea |
-|---|---|---|---|---|
-| ADR-001 | Arquitectura Local-First | ✅ Aprobado | SQLite + offline-first | Hito 1 |
-| ADR-002 | Framework UI | ⏳ Pendiente | Flet (Python puro) vs. Compose Multiplatform | Hito 4 |
-| ADR-003 | Protocolo de Ingesta Excel | ⏳ Pendiente | Estandarizar mapeo/limpieza de columnas de Ges Deportivo | US-201 |
-| ADR-004 | Versionado de DB | ⏳ Pendiente | Migraciones manuales (`schema_version`) vs. Alembic | Hito 2 |
-| ADR-005 | Reportes PDF | ⏳ Pendiente | `reportlab` (sin dependencias externas) vs. `weasyprint` (HTML→PDF) | US-302 |
-| ADR-006 | Seguridad y Cifrado | ⏳ Pendiente | Hash de passwords y eventual cifrado DB (SQLCipher) | US-106 / Hito 4 |
-| ADR-007 | Motor de Visualización | ⏳ Pendiente | `matplotlib` (offline) vs. `plotly` (interactivo, requiere servidor local) | US-301 |
-| ADR-008 | Estrategia de Backup | ⏳ Pendiente | Exportación/restauración de base local y versiones | Hito 4 |
-| ADR-009 | Pipeline CI/CD | ⏳ Pendiente | GitHub Actions para lint, tests y cobertura automáticos | US-108 |
+| ID      | Título                     | Estado       | Decisión                                                                   | Bloquea         |
+| ------- | -------------------------- | ------------ | -------------------------------------------------------------------------- | --------------- |
+| ADR-001 | Arquitectura Local-First   | ✅ Aprobado  | SQLite + offline-first                                                     | Hito 1          |
+| ADR-002 | Framework UI               | ⏳ Pendiente | Flet (Python puro) vs. Compose Multiplatform                               | Hito 4          |
+| ADR-003 | Protocolo de Ingesta Excel | ⏳ Pendiente | Estandarizar mapeo/limpieza de columnas de Ges Deportivo                   | US-201          |
+| ADR-004 | Versionado de DB           | ⏳ Pendiente | Migraciones manuales (`schema_version`) vs. Alembic                        | Hito 2          |
+| ADR-005 | Reportes PDF               | ⏳ Pendiente | `reportlab` (sin dependencias externas) vs. `weasyprint` (HTML→PDF)        | US-302          |
+| ADR-006 | Seguridad y Cifrado        | ⏳ Pendiente | Hash de passwords y eventual cifrado DB (SQLCipher)                        | US-106 / Hito 4 |
+| ADR-007 | Motor de Visualización     | ⏳ Pendiente | `matplotlib` (offline) vs. `plotly` (interactivo, requiere servidor local) | US-301          |
+| ADR-008 | Estrategia de Backup       | ⏳ Pendiente | Exportación/restauración de base local y versiones                         | Hito 4          |
+| ADR-009 | Pipeline CI/CD             | ⏳ Pendiente | GitHub Actions para lint, tests y cobertura automáticos                    | US-108          |
 
 Estructura canónica de un ADR (ver `docs/documentacion_app_estadistica/ADR/template_adr.md`):
 Contexto → Decisión → Alternativas Consideradas → Consecuencia (Positivas / Negativas /
@@ -555,7 +479,7 @@ con persistencia robusta.
   4. `v_listas_detalle`: jugadores habilitados por inscripción.
 - **Criterios de Aceptación:**
   - **AC1.** Schema idempotente: `CREATE TABLE IF NOT EXISTS` en toda la DDL, con `DROP TABLE IF
-    EXISTS` en orden inverso de dependencias.
+EXISTS` en orden inverso de dependencias.
   - **AC2.** FKs activas con reglas `ON DELETE/UPDATE CASCADE` en relaciones críticas.
   - **AC3.** `CHECK` constraints en métricas numéricas (ej. `puntos >= 0`,
     `minutosJugados BETWEEN 0 AND 48`) y en integridad lógica (ej. `idClubLocal != idClubVisitante`).
@@ -574,7 +498,7 @@ con persistencia robusta.
   `categoria`, `competencia`, `inscripcion`, `listaBuenaFe`, `jugadorListaBuenaFe`, `jugadorClub`,
   `partido`, `jugadorPartido`.
 - **Testing Mínimo:**
-  - *Integración (`test_database.py`):* `test_database_schema` (existencia de tablas/vistas),
+  - _Integración (`test_database.py`):_ `test_database_schema` (existencia de tablas/vistas),
     `test_referential_integrity` (FK inexistente → `IntegrityError`), `test_check_constraints`
     (valores negativos → falla), `test_seed_execution` (vistas devuelven datos tras el seed),
     `test_division_by_zero` (vistas devuelven 0.0, nunca error).
@@ -590,27 +514,38 @@ con persistencia robusta.
   de datos y garantizando la integridad referencial.
 - **Narrativa:** Como desarrollador, quiero una capa de infraestructura que gestione el ciclo de
   vida de la conexión SQLite y exponga repositorios tipados para cada agregado del dominio.
-- **Capa de Dominio — Interfaces (`src/dominio/repositorios/`):**
-  - `UsuarioRepositorio` (`UserRepository`): `encontrar_por_mail`/`get_by_email`,
-    `encontrar_por_id`/`get_by_id`, `guardar`/`save` *(el PRD original también menciona
-    `exists_by_email`, no presente en la interfaz real actual — ver sección 20)*.
+- **Capa de Dominio — Interfaces (`src/dominio/repositorios/`):** las firmas reales ya migraron
+  de "parámetros sueltos" a **recibir la dataclass completa** (el patrón que se charló y se
+  confirmó como buena práctica en esta revisión — menos superficie de ruptura, el repositorio no
+  necesita conocer la forma interna de la entidad). Estado real, verificado línea por línea hoy:
+  - `UsuarioRepositorio` (`UserRepository`): `encontrar_por_mail(email)`/`get_by_email`,
+    `encontrar_por_id(id)`/`get_by_id`, **`guardar(usuario: Usuario)`**/`save` _(el PRD original
+    también menciona `exists_by_email`, no presente en la interfaz real actual — se puede resolver
+    con `encontrar_por_mail(...) is not None`, o agregarlo explícito, a decidir por el equipo)_.
   - `ClubRepositorio` (`ClubRepository`): `buscar_por_id_usuario`/`get_clubs_by_user`,
-    `buscar_por_id`/`get_by_id`, `buscar_por_nombre`, `guardar`/`save`,
-    `link_user_to_club`.
+    `buscar_por_id`/`get_by_id`, `buscar_por_nombre`, **`guardar(club: Club)`**/`save`,
+    **`link_user_to_club(us_club: UsuarioClub)`**.
   - `JugadorRepositorio` (`PlayerRepository`): `buscar_por_id`, `buscar_por_dni`/`search_by_dni`,
-    `buscar_por_club`, `guardar`, `link_to_club`, `club_activo`/`get_active_club`.
-  - `CompetenciaRepositorio` (`CompetitionRepository`): `guardar_competencia`/`save_competencia`,
-    `buscar_competencia_por_id`/`get_competencia_by_id`,
-    `obtener_todas_competencias`/`get_all_competencias`, `guardar_categoria`/`save_categoria`,
-    `obtener_categorias`/`get_categorias`, `guardar_inscripcion`/`save_inscripcion`,
+    `buscar_por_club`, **`guardar(jugador: Jugador)`**, **`link_to_club(jc: JugadorClub)`**,
+    `club_activo`/`get_active_club`.
+  - `CompetenciaRepositorio` (`CompetitionRepository`): **`guardar_competencia(compe:
+Competencia)`**/`save_competencia`, `buscar_competencia_por_id`/`get_competencia_by_id`,
+    `obtener_todas_competencias`/`get_all_competencias`, **`guardar_categoria(cat:
+Categoria)`**/`save_categoria`, `obtener_categorias`/`get_categorias`,
+    **`guardar_inscripcion(inscripcion: Inscripcion)`**/`save_inscripcion`,
     `buscar_inscripcion_por_id`/`get_inscripcion_by_id`,
     `obtener_inscripciones_por_club`/`get_inscripciones_by_club`,
-    `guardar_lista_buena_fe`/`save_lista_buena_fe`,
-    `obtener_lista_por_inscripcion`/`get_lista_by_inscripcion`,
-    `agregar_jugador_lista`/`add_jugador_to_lista`,
-    `obtener_jugadores_lista`/`get_jugadores_by_lista`.
+    **`guardar_lista_buena_fe(listaBF: ListaBuenaFe)`**/`save_lista_buena_fe`,
+    `obtener_lista_por_inscripcion`/`get_lista_by_inscripcion` _(tipada `-> ListaBuenaFe`
+    singular, coherente con la relación 1:1 — ver inconsistencia con su implementación en sección 20)_, `agregar_jugador_lista(idJugador, idListaBuenaFe)`/`add_jugador_to_lista` y
+    `obtener_jugadores_lista`/`get_jugadores_by_lista` — **estos dos últimos son la única
+    excepción que sigue con parámetros sueltos en la interfaz, y además están sin implementar
+    (`pass`) en `SqliteCompetenciaRepositorio` — ver sección 20**.
   - `JuegoRepositorio` (`GameRepository`): `buscar_por_club`, `buscar_por_id`,
-    `guardar_partido`/`save_partido`, `guardar_boxscore`/`save_boxscore`.
+    **`guardar_partido(partido: Partido)`**/`save_partido`, **`guardar_boxscore(boxscore:
+JugadorPartido)`**/`save_boxscore` — la interfaz ya pide la entidad completa, pero
+    `SqliteJuegoRepositorio` todavía no la respeta (sigue con parámetros sueltos y no compila
+    contra tablas reales) — ver AC4 abajo y detalle completo en sección 20.
 - **Capa de Infraestructura:**
   - **Clase `SQLiteManager`:** administra la conexión (`sqlite3.Connection`); `connect()` activa
     `PRAGMA foreign_keys` y `row_factory = sqlite3.Row`, retornando la conexión activa si ya
@@ -632,7 +567,14 @@ con persistencia robusta.
     de SQLite.
   - **AC4 — Transaccionalidad:** `SqliteJuegoRepositorio.guardar_boxscore()` (y, a futuro, un
     método combinado tipo `save_with_boxscore`) debe permitir transacciones multi-tabla para
-    asegurar la integridad de la carga de partidos.
+    asegurar la integridad de la carga de partidos. **Hoy no se cumple, y el problema es previo a
+    la transaccionalidad:** `SqliteJuegoRepositorio` ni siquiera se puede ejecutar tal como está
+    — `guardar_partido` inserta contra una tabla `Juego` que no existe (la real es `partido`) y
+    llama a `self.conexion.obtener_conexion()`, método que no existe sobre un `sqlite3.Connection`
+    crudo (`AttributeError` garantizado); `guardar_boxscore` tiene la lista de columnas del
+    `INSERT` con 19 nombres (falta `idClub`) pero 20 valores en la tupla
+    (`sqlite3.ProgrammingError` garantizado). Antes de pensar en envolver esto en una transacción
+    multi-tabla, hay que corregir estos tres bugs — ver sección 20 para el detalle completo.
 - **Reglas de Negocio:**
   - Validación de DNI duplicado al guardar un jugador (lanza excepción de dominio).
   - Uso de `cursor.lastrowid` para retornar la entidad con el ID asignado por la base de datos.
@@ -642,7 +584,7 @@ con persistencia robusta.
 - **Vistas SQL necesarias:** `v_partidos_resumen` y `v_boxscore_completo` para optimizar las
   consultas de lectura en los repositorios.
 - **Testing Mínimo:**
-  - *Integración (`tests/integration/test_repositories.py`, hoy `test/test_repositorios.py`):*
+  - _Integración (`tests/integration/test_repositories.py`, hoy `test/test_repositorios.py`):_
     CRUD completo por repositorio usando DB `:memory:`; `buscar_por_dni` retorna `None` si no
     existe, sin lanzar excepción; el `save()` de un partido y sus estadísticas es atómico; los
     repositorios de lectura usan las vistas SQL correctamente.
@@ -659,14 +601,20 @@ src/dominio/repositorios/
 
 src/infraestructura/repositorios/
 ├── sqlite_usuario_repositorio.py     ✅ existe, funcional y testeado
-├── sqlite_club_repositorio.py        ✅ existe, funcional
-├── sqlite_jugador_repositorio.py     ⚠️ existe pero rota (ver sección 20)
-├── sqlite_competencia_repositorio.py ❌ NO EXISTE — gap pendiente
-└── sqlite_juego_repositorio.py       ⚠️ existe pero rota (ver sección 20)
+├── sqlite_club_repositorio.py        ✅ existe, funcional (sin tests dedicados todavía)
+├── sqlite_jugador_repositorio.py     ⚠️ existe, conexión OK, pero `link_to_club` usa atributos
+│                                        que no existen en `JugadorClub` (`id_jugador`/`id_club`
+│                                        en vez de `idJugador`/`idClub`) — ver sección 20
+├── sqlite_competencia_repositorio.py ⚠️ EXISTE (ya no es un gap) — pero con 3 bugs y 2 métodos
+│                                        sin implementar (`pass`) — ver sección 20
+└── sqlite_juego_repositorio.py       ⚠️ existe, conexión OK, pero no es funcional: tabla/columna
+                                         equivocada, método de conexión inexistente, `INSERT`
+                                         desalineado — ver sección 20
 ```
 
-> **Estado real:** parcialmente implementado — ver el detalle completo de qué funciona y qué no
-> en la sección 20.
+> **Estado real:** las 5 implementaciones ya existen y las 5 usan el mismo patrón de conexión
+> (`sqlite3.Connection` crudo por constructor — esto ya está unificado, no es un problema). Lo
+> que falta es corregir bugs puntuales de tres de ellas. Ver el detalle completo en la sección 20.
 
 ### Épica H1-E2: Lógica de Aplicación y CLI
 
@@ -694,7 +642,12 @@ src/infraestructura/repositorios/
   - **Casos de uso:** `RegistrarJugadorUseCase` (valida DNI numérico, no vacío y no duplicado),
     `CrearClubUseCase`, `VincularJugadorAClubUseCase` (evita vínculos activos duplicados),
     `CrearCompetenciaUseCase`, `InscribirClubEnCompetenciaUseCase` (genera automáticamente la
-    `listaBuenaFe` vacía asociada, 1:1), `ListarClubesUsuarioUseCase`,
+    `listaBuenaFe` vacía asociada, 1:1 — **este caso de uso depende de que primero se corrija
+    `SqliteCompetenciaRepositorio.obtener_lista_por_inscripcion`**: hoy la implementación devuelve
+    `list[ListaBuenaFe]` pese a que tanto la interfaz de dominio como la relación 1:1 real dicen
+    que debería devolver `ListaBuenaFe | None`; si se construye el caso de uso contra el
+    comportamiento actual, va a tratar como "lista de listas de buena fe" algo que conceptualmente
+    es un objeto único — ver sección 20), `ListarClubesUsuarioUseCase`,
     `ListarJugadoresClubUseCase`, `ListarPartidosPorClubUseCase` (usa `v_partidos_resumen`),
     `CambiarClubActivoUseCase`.
   - **DTOs:** `JugadorDTO`, `ClubDTO`, `CompetenciaDTO`, `CrearJugadorDTO`, `PartidoResumenDTO`,
@@ -720,10 +673,10 @@ src/infraestructura/repositorios/
     mismo club dos veces).
   - Porcentajes y totales en estadísticas se validan antes de la persistencia.
 - **Testing Mínimo:**
-  - *Unitarios:* validar excepciones en `EstadisticaJugador` por datos incoherentes; mocks de
+  - _Unitarios:_ validar excepciones en `EstadisticaJugador` por datos incoherentes; mocks de
     repositorios para `RegistrarJugador` (DNI duplicado) y `VincularJugadorAClub`; propiedades
     calculadas (`nombre_completo`, `rebotes_totales`).
-  - *Integración:* persistencia real en DB `:memory:` y validación de consultas vía DTOs.
+  - _Integración:_ persistencia real en DB `:memory:` y validación de consultas vía DTOs.
 
 **Archivos a crear:**
 
@@ -781,9 +734,9 @@ src/aplicacion/use_cases/  (❌ ninguno existe todavía — capa aplicación no 
     `is_authenticated`, `clear_session`/`destroy`, `set_active_club`/`set_club_activo`).
 - **Capa de Infraestructura:**
   - **Seguridad:** `PasswordHasher` — wrapper sobre `bcrypt`/`argon2-cffi` (objetivo final) con
-    solo dos métodos públicos: `hash(password)` y `verify(password, hash)`. *(v0.1 puede arrancar
+    solo dos métodos públicos: `hash(password)` y `verify(password, hash)`. _(v0.1 puede arrancar
     con `hashlib.pbkdf2_hmac`/SHA-256 con salt dinámico según ADR-006, migrando a bcrypt/Argon2
-    después — ver tabla de ADRs.)*
+    después — ver tabla de ADRs.)_
   - **Persistencia:** `SqliteUsuarioRepositorio`.
   - **Gestión de sesión:** `SessionManager` persiste `usuario_id` y `club_activo_id` en un JSON
     oculto (`~/.statspro/session.json` o `~/.statspro_session.json`).
@@ -805,9 +758,9 @@ src/aplicacion/use_cases/  (❌ ninguno existe todavía — capa aplicación no 
   - Los comandos protegidos ejecutan `require_auth()` y `require_active_club()` según
     corresponda.
 - **Testing Mínimo:**
-  - *Unitarias:* hash y verificación de contraseñas; lógica de registro/login con repositorios
+  - _Unitarias:_ hash y verificación de contraseñas; lógica de registro/login con repositorios
     mock.
-  - *Integración:* persistencia de sesión con archivo temporal; flujo completo
+  - _Integración:_ persistencia de sesión con archivo temporal; flujo completo
     registro → login → sesión usando DB `:memory:`.
 
 **Archivos a crear:**
@@ -842,6 +795,10 @@ test/
     idPartido, puntos, tiros, rebotes, etc.).
   - **Interfaces:** `JuegoRepositorio` con método `save_partido_completo(partido, boxscore: list[EstadisticaJugador])`
     (a agregar — hoy el método existente es `guardar_boxscore` fila por fila, ver sección 20).
+    **Bloqueo real, no solo un método por agregar:** `SqliteJuegoRepositorio.guardar_partido` y
+    `.guardar_boxscore` hoy no son funcionales en absoluto (tabla `Juego` inexistente, llamada a
+    un método de conexión que no existe, `INSERT` con columnas/valores desalineados — ver sección 20) — esta US no se puede construir sobre la implementación actual sin corregir esos tres
+    bugs primero, además de sumar el método combinado atómico.
 - **Capa de Aplicación:**
   - **Caso de uso:** `CargarPartidoUseCase` (orquesta validación y persistencia).
   - **DTOs:** `PartidoDTO`, `BoxscoreDTO`, `EstadisticaInputDTO`.
@@ -864,10 +821,15 @@ test/
   - Todos los campos numéricos `≥ 0`.
   - `minutosJugados` no excede el total del partido (ej. 48 min).
   - No se puede cargar un partido si los clubes involucrados no existen en la DB.
+  - **Nota (campo propuesto, no implementado todavía):** si se agrega a `Partido` un resultado
+    final (`puntosLocalFinal`/`puntosVisitanteFinal`, ver sección 20 y el DER en
+    `docs/diagramas/diagramas.md`), esta US sería el lugar natural para completarlo — junto con
+    una regla que valide que la suma de puntos del boxscore por club coincide con ese resultado
+    final antes de persistir.
 - **Testing Mínimo:**
-  - *Unitarias:* fallo de persistencia total ante una sola estadística inválida; el mensaje de
+  - _Unitarias:_ fallo de persistencia total ante una sola estadística inválida; el mensaje de
     error especifica jugador y campo.
-  - *Integración:* flujo completo (partido + boxscore) en DB `:memory:` con repositorios reales.
+  - _Integración:_ flujo completo (partido + boxscore) en DB `:memory:` con repositorios reales.
 
 **Archivos a crear:**
 
@@ -932,8 +894,8 @@ src/infraestructura/ui/cli/
   - **AC3 — Flujo de sesión:** los comandos `club`, `player` y `game` ejecutan `require_auth()`
     al inicio; `game` y `player list` ejecutan `require_active_club()`.
 - **Testing Mínimo:**
-  - *Unitario:* flujo de guards de autenticación y club activo.
-  - *Integración:* ejecución de cada subcomando con DB en memoria, verificando salida esperada;
+  - _Unitario:_ flujo de guards de autenticación y club activo.
+  - _Integración:_ ejecución de cada subcomando con DB en memoria, verificando salida esperada;
     comando sin sesión → mensaje de error controlado.
 
 #### US-107 — Monitoreo y Trazabilidad Operativa
@@ -972,9 +934,9 @@ test/
     negocio.
   - **AC5.** En modo Seq, eventos filtrables por `correlation_id`, `command_name` y nivel.
 - **Testing Mínimo:**
-  - *Unitario:* creación y propagación de `execution_context`; redacción de secretos en campos
+  - _Unitario:_ creación y propagación de `execution_context`; redacción de secretos en campos
     conocidos.
-  - *Integración:* flujo CLI completo → verificar que cada evento tiene el mismo
+  - _Integración:_ flujo CLI completo → verificar que cada evento tiene el mismo
     `correlation_id`.
 
 > **Estado real:** el proyecto ya tiene un logger funcional (`src/infraestructura/logger.py`,
@@ -1033,9 +995,8 @@ de datos.
 **Épicas:** 3 · **Historias:** 5 · **Esfuerzo total estimado:** ~30 días·persona
 
 **Decisión previa requerida:** ADR-002 debe estar aprobado (framework UI: Flet vs. Compose
-Multiplatform) — *nota: el LaTeX dice que ADR-002 bloquea Hito 2, pero la tabla de ADRs (sección
-8) lo lista bloqueando Hito 4; se transcribe la referencia tal cual aparece en cada fuente como
-otro punto a resolver por el equipo, ver sección 20.*
+Multiplatform) — _nota: el LaTeX dice que ADR-002 bloquea Hito 2, pero la tabla de ADRs (sección 8) lo lista bloqueando Hito 4; se transcribe la referencia tal cual aparece en cada fuente como
+otro punto a resolver por el equipo, ver sección 20._
 
 ### Épica H2-E1: Integración "Ges Deportivo"
 
@@ -1044,7 +1005,7 @@ otro punto a resolver por el equipo, ver sección 20.*
 - **Esfuerzo:** L (6-10 días) · **Prioridad:** Urgente (bloqueante) · **Dependencias:** US-105,
   ADR-003
 - **Objetivo Funcional:** convertir planillas Excel externas de Ges Deportivo en datos
-  persistibles sin transcripción manual, incluyendo modo *preview* sin efecto secundario y
+  persistibles sin transcripción manual, incluyendo modo _preview_ sin efecto secundario y
   reporte de calidad de la importación.
 - **Narrativa:** Como analista, quiero procesar los archivos de Ges Deportivo para eliminar el
   error humano en la transcripción y agilizar el análisis.
@@ -1066,7 +1027,14 @@ otro punto a resolver por el equipo, ver sección 20.*
   - **AC2 — Lógica de Merge:** si el jugador no existe (por DNI), se crea automáticamente; si ya
     existe, se vincula.
   - **AC3 — Verificación de Consistencia:** la suma de puntos individuales debe coincidir con el
-    resultado final del partido cargado.
+    resultado final del partido cargado. **Este AC no es implementable tal cual está redactado
+    con el schema actual:** no existe ningún campo que guarde el "resultado final" oficial del
+    partido para comparar contra la suma de `jugadorPartido.puntos` — hoy solo se puede sumar el
+    boxscore contra sí mismo, no contra un total independiente informado por la planilla de Ges
+    Deportivo. Se necesita primero agregar a `Partido`/`partido` un campo de resultado final (ej.
+    `puntosLocalFinal`/`puntosVisitanteFinal` — propuesta ya volcada en el DER de
+    `docs/diagramas/diagramas.md` y en la sección 20) antes de poder escribir este AC como un
+    test verificable.
   - **AC4 — Transaccionalidad:** el proceso es atómico por partido; si falla una estadística, no
     se guarda el partido ni sus jugadores asociados.
   - **AC5 — Vista Previa:** método `preview()` que valida el archivo sin persistir cambios.
@@ -1076,9 +1044,9 @@ otro punto a resolver por el equipo, ver sección 20.*
   - Club o competencia inexistentes → se crean automáticamente con los nombres provistos.
   - El formato de fechas se valida según el estándar del proyecto.
 - **Testing Mínimo:**
-  - *Unitarias:* mapeo de columnas, tipado correcto, detección de errores de formato; estrategias
+  - _Unitarias:_ mapeo de columnas, tipado correcto, detección de errores de formato; estrategias
     de merge y rechazo de filas inválidas.
-  - *Integración:* importación de fixture a DB `:memory:`, verificando persistencia y rollback
+  - _Integración:_ importación de fixture a DB `:memory:`, verificando persistencia y rollback
     ante error; modo `preview` no produce cambios.
 
 **Archivos a crear:**
@@ -1130,9 +1098,9 @@ test/
   - **AC5.** Cada fórmula documentada con su fuente/referencia técnica.
   - **AC6.** `formulas.py` no contiene ningún acceso a base de datos ni I/O externo.
 - **Testing Mínimo:**
-  - *Unitarias (`test_formulas.py`):* cobertura del **100%** de las funciones matemáticas, con
+  - _Unitarias (`test_formulas.py`):_ cobertura del **100%** de las funciones matemáticas, con
     valores calculados a mano y casos límite (ceros).
-  - *Integración:* `GenerarTablaComparativaUseCase` con datos de dos equipos en un mismo partido
+  - _Integración:_ `GenerarTablaComparativaUseCase` con datos de dos equipos en un mismo partido
     (semilla), verificando que los totales coinciden con el resultado final.
 
 **Archivos a crear:**
@@ -1174,10 +1142,10 @@ test/test_formulas.py
   - **AC4 — Integridad de Datos:** porcentajes expresados como float entre 0-100 o como ratio
     según corresponda.
 - **Testing Mínimo:**
-  - *Unitarias:* fórmulas con DataFrames en memoria.
-  - *Integración:* vistas reales en DB `:memory:` con datos semilla, comparadas con valores
+  - _Unitarias:_ fórmulas con DataFrames en memoria.
+  - _Integración:_ vistas reales en DB `:memory:` con datos semilla, comparadas con valores
     esperados.
-  - *Regresión:* test que falla si se renombra una columna consumida.
+  - _Regresión:_ test que falla si se renombra una columna consumida.
 
 #### US-205 — Consulta Estadística por CLI
 
@@ -1289,9 +1257,9 @@ por el DT para tomar decisiones tácticas antes, durante y después del partido.
 - **Implementación requerida:** `stats leaders --season 2025` invoca al caso de uso
   correspondiente y muestra resultados formateados.
 - **Testing Mínimo:**
-  - *Unitario:* ordenamiento de líderes y desempate por criterio secundario; transformación de
+  - _Unitario:_ ordenamiento de líderes y desempate por criterio secundario; transformación de
     DataFrame a serie temporal para gráficos.
-  - *Integración:* reporter CLI + chart generator con datos semilla, verificando salida completa.
+  - _Integración:_ reporter CLI + chart generator con datos semilla, verificando salida completa.
 
 ### Épica H3-E2: Reportería y Exportación
 
@@ -1351,15 +1319,15 @@ test/
   - **Caso de uso:** `GenerarScoutingRivalUseCase`.
   - **DTOs:** `ScoutingDTO`.
 - **Criterios de Aceptación:**
-  - **AC1.** Ventana de análisis de últimos *N* partidos configurable por parámetro.
+  - **AC1.** Ventana de análisis de últimos _N_ partidos configurable por parámetro.
   - **AC2.** Detección de patrones: rachas (victorias/derrotas consecutivas), tendencia de tiro,
     pérdidas recurrentes.
   - **AC3.** Filtros por competencia y categoría producen resultados consistentes con las vistas
     SQL.
   - **AC4.** Reporte exportable (texto/PDF) con conclusiones destacadas y datos fuente citados.
 - **Testing Mínimo:**
-  - *Unitario:* agregaciones históricas y funciones de detección de rachas.
-  - *Integración:* vistas de scouting con dataset histórico de ejemplo (mínimo 10 partidos del
+  - _Unitario:_ agregaciones históricas y funciones de detección de rachas.
+  - _Integración:_ vistas de scouting con dataset histórico de ejemplo (mínimo 10 partidos del
     rival); consistencia de filtros por competencia y ventana N.
 
 **Archivos a crear:**
@@ -1415,8 +1383,8 @@ como binario autónomo para las plataformas objetivo.
   - **AC6.** La UI no contiene lógica de negocio; invoca casos de uso vía inyección de
     dependencias.
 - **Testing Mínimo:**
-  - *Unitario:* validadores de formularios, reglas de navegación de estado de pantalla.
-  - *Manual guiado:* flujo Dashboard → GameEntry → PlayerProfile en desktop y mobile;
+  - _Unitario:_ validadores de formularios, reglas de navegación de estado de pantalla.
+  - _Manual guiado:_ flujo Dashboard → GameEntry → PlayerProfile en desktop y mobile;
     importación de Excel desde la pantalla de importación.
 
 **Archivos a crear:**
@@ -1523,7 +1491,7 @@ test/test_credential_policy.py
     de versión.
   - **AC4.** Versión embebida en la aplicación (About screen / CLI `--version`) coincide con el
     tag de release.
-  - **AC5.** `CHANGELOG.md` actualizado siguiendo formato *Keep a Changelog* en cada release.
+  - **AC5.** `CHANGELOG.md` actualizado siguiendo formato _Keep a Changelog_ en cada release.
 - **Testing Mínimo:** instalar binario desktop en máquina limpia (sin Python) y ejecutar flujo
   completo; instalar APK en dispositivo/emulador Android y verificar arranque; el pipeline de
   release ejecuta tests completos antes de generar artefactos.
@@ -1592,6 +1560,7 @@ justificación, owner técnico y cobertura objetivo.
 objetivo | Evidencia`.
 
 **Criterios de clasificación (crítico si cumple al menos uno):**
+
 - Controla acceso, autenticación o autorización.
 - Persiste datos en múltiples tablas con transacciones.
 - Impacta la integridad histórica del dato deportivo.
@@ -1619,13 +1588,13 @@ kickoff de hito y en cada planificación de sprint.
 
 ### Estrategia de ramas
 
-| Rama | Propósito |
-|---|---|
-| `main` | Solo commits de merge desde `release/`. Cada commit tiene un tag de versión. Nunca se trabaja directo acá. |
-| `develop` | Rama de integración; las `feature/` se mergean acá. |
-| `feature/nombre` | Una rama por US o tarea, desde `develop`, mergeada por PR. Ej. `feature/us-101-sqlite-schema`. |
-| `release/vX.Y.Z` | Se crea desde `develop` cuando el hito está feature-complete. Solo acepta fixes y bump de versión. |
-| `hotfix/descripcion` | Para bugs críticos en producción; desde `main`, se mergea a `main` y a `develop`. |
+| Rama                 | Propósito                                                                                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `main`               | Solo commits de merge desde `release/`. Cada commit tiene un tag de versión. Nunca se trabaja directo acá. |
+| `develop`            | Rama de integración; las `feature/` se mergean acá.                                                        |
+| `feature/nombre`     | Una rama por US o tarea, desde `develop`, mergeada por PR. Ej. `feature/us-101-sqlite-schema`.             |
+| `release/vX.Y.Z`     | Se crea desde `develop` cuando el hito está feature-complete. Solo acepta fixes y bump de versión.         |
+| `hotfix/descripcion` | Para bugs críticos en producción; desde `main`, se mergea a `main` y a `develop`.                          |
 
 ### Proceso de release paso a paso
 
@@ -1637,7 +1606,7 @@ kickoff de hito y en cada planificación de sprint.
 3. **Mergear de vuelta a `develop`:** para que los fixes del release lleguen a desarrollo; borrar
    la rama de release.
 4. **Crear el GitHub Release:** con `gh release create v0.1.0 --title "..." --notes-file
-   CHANGELOG.md`; adjuntar binarios con `gh release upload`; o automatizado por
+CHANGELOG.md`; adjuntar binarios con `gh release upload`; o automatizado por
    `.github/workflows/release.yml` (US-404) al detectar el tag.
 5. **Verificar el release:** confirmar tag/notas/artefactos en GitHub; instalar el binario en
    máquina limpia y correr el smoke-test de instalación.
@@ -1697,13 +1666,13 @@ desarrollo; una sección `[vX.Y.Z] - YYYY-MM-DD` por release con subsecciones `A
 
 Cada módulo de datos se divide siguiendo el S.R.P. (Single Responsibility Principle):
 
-| Entidad / Agregado | Repositorio | Vistas Relacionadas |
-|---|---|---|
-| **Identidad** | `SqliteUsuarioRepositorio` | N/A |
-| **Clubes** | `SqliteClubRepositorio` | `v_listas_detalle` |
-| **Jugadores** | `SqliteJugadorRepositorio` | `v_jugador_totales_temporada` |
-| **Competencia** | `SqliteCompetenciaRepositorio` | `v_listas_detalle` |
-| **Partidos/Stats** | `SqliteJuegoRepositorio` | `v_partidos_resumen`, `v_boxscore_completo` |
+| Entidad / Agregado | Repositorio                    | Vistas Relacionadas                         | Estado real                                                              |
+| ------------------ | ------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------ |
+| **Identidad**      | `SqliteUsuarioRepositorio`     | N/A                                         | ✅ funcional y testeado                                                  |
+| **Clubes**         | `SqliteClubRepositorio`        | `v_listas_detalle`                          | ✅ funcional, sin tests dedicados                                        |
+| **Jugadores**      | `SqliteJugadorRepositorio`     | `v_jugador_totales_temporada`               | ⚠️ bug en `link_to_club` (ver sección 20)                                |
+| **Competencia**    | `SqliteCompetenciaRepositorio` | `v_listas_detalle`                          | ⚠️ implementado, con 3 bugs y 2 métodos sin implementar (ver sección 20) |
+| **Partidos/Stats** | `SqliteJuegoRepositorio`       | `v_partidos_resumen`, `v_boxscore_completo` | ❌ no funcional (ver sección 20)                                         |
 
 > **Corrección respecto a ambas fuentes originales:** tanto el LaTeX como el `.md` del submódulo
 > listan esta tabla con **solo 4 filas**, omitiendo el repositorio de Competencia — pese a que el
@@ -1717,26 +1686,26 @@ Cada módulo de datos se divide siguiendo el S.R.P. (Single Responsibility Princ
 (Duplicado intencional de la sección 8, en el formato de tabla de bloqueo que traían ambas
 fuentes, por si se prefiere consultar esta vista en vez de la de "Registro de Decisiones":)
 
-| ADR | Título | Bloquea | Decisión recomendada |
-|---|---|---|---|
-| ADR-001 | Arquitectura Local-First | Hito 1 | ✅ SQLite + offline-first (ya definido) |
-| ADR-002 | Framework UI | Hito 2 *(LaTeX)* / Hito 4 *(tabla ADR)* | Evaluar Flet vs. Compose Multiplatform — **resolver la discrepancia de a qué hito bloquea, ver sección 20** |
-| ADR-003 | Protocolo de Ingesta Excel | US-201/US-202 | Pandas + investigación previa de columnas reales de Ges Deportivo |
-| ADR-004 | Versionado de DB | Hito 2 | Migraciones manuales (`schema_version`) vs. `alembic` |
-| ADR-005 | Reportes PDF | US-302 | `reportlab` (sin dependencias) o `weasyprint` (HTML→PDF) |
-| ADR-006 | Seguridad y Cifrado | US-106/US-403 | v0.1: SHA-256 con salt fijo. v1.0: migrar a `bcrypt` con salt dinámico |
-| ADR-007 | Motor de Visualización | US-301 | `matplotlib` (offline) o `plotly` (interactivo) |
-| ADR-008 | Estrategia de Backup | Hito 3 *(LaTeX)* / Hito 4 *(tabla ADR)* | Export manual de `.db` + script de restauración — **misma discrepancia de hito, ver sección 20** |
-| ADR-009 | Pipeline CI/CD | US-108 | GitHub Actions para lint, tests y cobertura automáticos |
+| ADR     | Título                     | Bloquea                                 | Decisión recomendada                                                                                        |
+| ------- | -------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ADR-001 | Arquitectura Local-First   | Hito 1                                  | ✅ SQLite + offline-first (ya definido)                                                                     |
+| ADR-002 | Framework UI               | Hito 2 _(LaTeX)_ / Hito 4 _(tabla ADR)_ | Evaluar Flet vs. Compose Multiplatform — **resolver la discrepancia de a qué hito bloquea, ver sección 20** |
+| ADR-003 | Protocolo de Ingesta Excel | US-201/US-202                           | Pandas + investigación previa de columnas reales de Ges Deportivo                                           |
+| ADR-004 | Versionado de DB           | Hito 2                                  | Migraciones manuales (`schema_version`) vs. `alembic`                                                       |
+| ADR-005 | Reportes PDF               | US-302                                  | `reportlab` (sin dependencias) o `weasyprint` (HTML→PDF)                                                    |
+| ADR-006 | Seguridad y Cifrado        | US-106/US-403                           | v0.1: SHA-256 con salt fijo. v1.0: migrar a `bcrypt` con salt dinámico                                      |
+| ADR-007 | Motor de Visualización     | US-301                                  | `matplotlib` (offline) o `plotly` (interactivo)                                                             |
+| ADR-008 | Estrategia de Backup       | Hito 3 _(LaTeX)_ / Hito 4 _(tabla ADR)_ | Export manual de `.db` + script de restauración — **misma discrepancia de hito, ver sección 20**            |
+| ADR-009 | Pipeline CI/CD             | US-108                                  | GitHub Actions para lint, tests y cobertura automáticos                                                     |
 
 ---
 
 ## 19. Convenciones rápidas
 
 - **Commits:** `tipo: descripción corta` (`FEAT`, `FIX`, `DOCS`, `STYLE`, `REFACTOR`, `PERF`,
-  `TEST`) — ver `docs/info_modulo/02-reglas.md`. *(El LaTeX propone el formato `tipo(alcance):
-  descripción` con alcance entre paréntesis — ambos formatos conviven en las fuentes, el equipo
-  debería fijar uno solo.)*
+  `TEST`) — ver `docs/info_modulo/02-reglas.md`. _(El LaTeX propone el formato `tipo(alcance):
+descripción` con alcance entre paréntesis — ambos formatos conviven en las fuentes, el equipo
+  debería fijar uno solo.)_
 - **Interfaces de repositorio:** el proyecto usa `ABC`/`@abstractmethod` en la práctica, **no**
   `typing.Protocol` como sugiere `docs/info_protocolos.md`. Ambas son válidas — vale un ADR corto
   para dejarlo asentado.
@@ -1751,33 +1720,76 @@ fuentes, por si se prefiere consultar esta vista en vez de la de "Registro de De
 
 ## 20. Estado real del código vs. plan (hallazgos)
 
-Auditoría hecha releyendo `src/` completo, el submódulo y el LaTeX en profundidad para esta
-transcripción. Nada de esto se corrigió — es diagnóstico para que el equipo decida qué hacer.
+Auditoría hecha releyendo `src/` completo (dominio + infraestructura + tests), `schema.sql`,
+`views.sql`, `seed.sql`, `docs/diagramas/diagramas.md`, y corriendo la suite real
+(`pytest -q`) para esta revisión del 2026-08-09. Nada de esto se corrigió en código — es
+diagnóstico para que el equipo decida qué hacer.
 
-### Hallazgos de código (repositorios)
+### Hallazgos de código (repositorios) — actualizado 2026-08-09
 
-- ❌ **`SqliteCompetenciaRepositorio` sigue sin existir.** El gap original que motivó toda esta
-  revisión. La interfaz (`dominio/repositorios/competencia_repositorio.py`) y la entidad están
-  completas y listas.
-- ⚠️ **Patrón de conexión inconsistente entre repositorios — hallazgo nuevo de esta sesión.**
-  Desde la última revisión, el equipo resolvió el bug de la clase `SqliteConexion` faltante,
-  **pero de dos formas distintas dentro del mismo repo**:
-  - `SqliteClubRepositorio` y `SqliteUsuarioRepositorio` ahora reciben un `sqlite3.Connection`
-    **crudo** directamente en el constructor. Este patrón **funciona y está probado**:
-    `test/test_repositorios.py` tiene 6 tests reales contra `SqliteUsuarioRepositorio`, y los 25
-    tests de la suite completa pasan.
-  - `SqliteJugadorRepositorio` y `SqliteJuegoRepositorio` **siguen** importando
-    `infraestructura.persistencia.sqlite_conexion.SqliteConexion`, que **sigue sin existir** —
-    estos dos repositorios todavía no se pueden instanciar.
-  - **Recomendación:** unificar los 4 (+ el futuro de Competencia) al patrón de
-    `sqlite3.Connection` directo, que es el que ya se probó que funciona, en vez de construir la
-    clase `SqliteConexion` que nunca se llegó a escribir.
-- ❌ **`sqlite_juego_repositorio.py` sigue con tabla/columna equivocada:** `FROM Juego` (la tabla
-  real es `partido`) y `idJuego` (real: `idPartido`). El `INSERT` de `guardar_boxscore` tiene la
-  lista de columnas desalineada de los valores.
-- ✅ **`sqlite_usuario_repositorio.py` — corregido desde la revisión anterior:** ahora usa `FROM
-  usuario` e `idUsuario` correctamente, y el mapeo `pw ↔ contrasenia` está bien resuelto en
-  `_row_to_entity` y en el `INSERT` de `guardar()`.
+- ✅ **Patrón de conexión — ya resuelto, corrección de un hallazgo anterior.** Una revisión previa
+  de este documento decía que `SqliteJugadorRepositorio` y `SqliteJuegoRepositorio` seguían
+  importando una clase `SqliteConexion` inexistente. **Ya no es así:** las **5** implementaciones
+  (`usuario`, `club`, `jugador`, `competencia`, `juego`) reciben `sqlite3.Connection` **crudo**
+  directamente en el constructor, de forma uniforme. Este punto queda cerrado.
+- ⚠️ **`SqliteCompetenciaRepositorio` ya no es un gap — existe, pero con bugs reales.** Cambia el
+  diagnóstico de fondo: el archivo `src/infraestructura/repositorios/sqlite_competencia_repositorio.py`
+  existe y tiene sus 12 métodos, pero:
+  - `guardar_inscripcion`: el `INSERT` declara 3 columnas (`idClub,idCategoria,idCompetencia`)
+    pero la query solo tiene **un** `?` — `sqlite3.ProgrammingError` garantizado al ejecutarse.
+  - `obtener_categorias`: `rows = cursor.fetchall` — falta el `()`; asigna el método en vez de
+    invocarlo, y falla al intentar iterar sobre él.
+  - `agregar_jugador_lista` y `obtener_jugadores_lista`: son stubs vacíos (`pass`) — no están
+    implementados, pese a que la interfaz y la clase que los contiene ya existen. Sin esto, no se
+    puede poblar ni consultar quién está habilitado en una lista de buena fe a través del
+    repositorio (hoy `seed.sql` lo hace con `INSERT` directo, saltando la capa de dominio).
+  - `obtener_lista_por_inscripcion`: tipada `-> list[ListaBuenaFe]` en la implementación, pero la
+    interfaz de dominio la tipa `-> ListaBuenaFe` (singular) — y la relación real es 1:1
+    (`idInscripcion UNIQUE` en `listaBuenaFe`). La implementación contradice tanto su propia
+    interfaz como la regla de negocio ya documentada en la sección 3.
+- ❌ **`sqlite_juego_repositorio.py` no es funcional (más allá del bug de tabla/columna ya
+  conocido):**
+  - `_row_to_entity` y `buscar_por_id` siguen usando `Juego`/`idJuego` (la tabla real es
+    `partido`, la columna `idPartido`) — bug ya documentado en revisiones anteriores, sigue sin
+    corregirse.
+  - `guardar_partido` e inserta en la tabla inexistente `Juego`, y llama a
+    `self.conexion.obtener_conexion()` — método que no existe sobre un `sqlite3.Connection` crudo
+    → `AttributeError` apenas se invoca.
+  - `guardar_boxscore`: la lista de columnas del `INSERT` tiene 19 nombres (falta `idClub`) pero
+    la tupla de valores tiene 20 → `sqlite3.ProgrammingError` garantizado.
+  - **Violación de Liskov — hallazgo nuevo:** la interfaz de dominio ya pide
+    `guardar_partido(partido: Partido)` y `guardar_boxscore(boxscore: JugadorPartido)` (recibir la
+    entidad completa), pero la implementación real sigue con parámetros sueltos (`fecha, estadio,
+idCompetencia, ...` y 19 parámetros respectivamente) — no cumple el contrato de la interfaz
+    que dice implementar.
+- ⚠️ **`SquliteJugadorRepositorio.link_to_club` — bug nuevo, no documentado antes:** usa
+  `jc.id_jugador` y `jc.id_club`, pero la dataclass real `JugadorClub` tiene los campos
+  `idJugador`/`idClub` (sin guión bajo) → `AttributeError` garantizado al invocarlo. Además el
+  método no retorna nada, pese a que la interfaz pide `-> JugadorClub`.
+- ✅ **`sqlite_usuario_repositorio.py` — sigue correcto:** `FROM usuario` e `idUsuario` correctos,
+  mapeo `pw ↔ contrasenia` bien resuelto, y es el único repositorio con tests dedicados hoy.
+- ⚠️ **Patrón sistémico — funciones que deberían devolver `list[X]` y devuelven `None`.** Es el
+  mismo tipo de problema que se charló sobre pasar dataclasses en vez de parámetros sueltos, pero
+  del lado de las lecturas: **todos** los métodos "listar"/"buscar_por_X" de las 5
+  implementaciones devuelven `None` cuando no hay resultados, en vez de `[]`, pese a que la
+  interfaz de dominio los tipa `list[X]` sin `| None`. Rompe el contrato de tipos: cualquier
+  código futuro que llame a estos métodos y haga `for x in resultado` va a explotar con
+  `TypeError: 'NoneType' object is not iterable` si no se blinda contra `None` primero. Afecta:
+  `ClubRepositorio.buscar_por_id_usuario`, `.buscar_por_nombre`;
+  `JugadorRepositorio.buscar_por_club`; `JuegoRepositorio.buscar_por_club`;
+  `CompetenciaRepositorio.obtener_todas_competencias`, `.obtener_categorias`,
+  `.obtener_inscripciones_por_club`, `.obtener_lista_por_inscripcion`. Recomendación a documentar
+  (no a aplicar): devolver `[]` en el `if not rows`, nunca `None`, para que el tipo de retorno sea
+  siempre coherente con lo declarado en la interfaz.
+- ⚠️ **Manejo de errores silencioso — patrón sistémico en todos los `guardar*`.** Las 5
+  implementaciones atrapan `sqlite3.Error` en sus métodos `guardar*` y devuelven `None`
+  silenciosamente, sin loguear ni relanzar como excepción de dominio. Esto choca con las
+  excepciones de negocio que el propio plan ya prevé (`DNIDuplicadoError`,
+  `EmailYaRegistradoError`, etc. — sección "Reglas de Negocio Consolidadas", sección 6): hoy no
+  hay forma de distinguir "guardado exitoso" de "falló por violar una regla real (ej. DNI
+  duplicado)" de "falló por un bug" — las tres situaciones devuelven `None` igual. Cuando se
+  construya la capa de aplicación (US-103 en adelante), este punto va a ser bloqueante para poder
+  lanzar las excepciones de dominio que esas US ya dan por sentadas.
 - **Typo cosmético que persiste:** la clase se llama `SquliteJugadorRepositorio` (falta una "i").
   No rompe nada porque nada la importa por nombre todavía.
 - **Divergencia menor de nombres de método:** el PRD (ambas fuentes) menciona
@@ -1786,6 +1798,44 @@ transcripción. Nada de esto se corrigió — es diagnóstico para que el equipo
   `encontrar_por_id`, `guardar`. No es necesariamente un problema (se puede resolver llamando a
   `encontrar_por_mail` y chequeando `is not None`), pero vale la pena que el equipo decida si
   agregan el método explícito o lo dejan así.
+- **Cobertura de tests real, verificada corriendo la suite hoy (`pytest -q`): 30 tests, 29 pasan,
+  1 falla** (`test_guardar_usuario_con_error`, porque las entidades siguen sin validar tipos en
+  `__post_init__` — ya documentado más abajo en "Hallazgos de organización de código"). La suite
+  se dividió desde la última revisión en 5 archivos por repositorio
+  (`test_repositorios_{usuario,club,jugador,juego,competencia}.py`), pero
+  **`test_repositorios_juego.py` y `test_repositorios_competencia.py` están completamente
+  vacíos** — cero tests. Son justamente los dos repositorios con más bugs de los listados arriba;
+  por eso el pipeline aparece en verde (salvo el único test que falla) pese a que ninguno de esos
+  dos repositorios funcionaría hoy si se los usara.
+
+### Hallazgos del DER y diagramas (`docs/diagramas/diagramas.md`) — nuevo, 2026-08-09
+
+Ya corregidos directamente en ese archivo (ver el DER y su nota de hallazgos ahí). Resumen:
+
+- `categoria` tenía la PK mal nombrada (`idCompetencia` copiado por error en vez de
+  `idCategoria`).
+- La relación `inscripcion`–`listaBuenaFe` estaba dibujada 1:N (`||--o{`) cuando el schema real
+  la fuerza 1:1 (`idInscripcion UNIQUE`).
+- La relación `club`–`partido` estaba duplicada dos veces con la misma etiqueta, sin distinguir
+  los roles local/visitante (dos FKs distintas: `idClubLocal`, `idClubVisitante`).
+- La PK compuesta de `jugadorClub` en el diagrama le faltaba `fechaDesde` (el schema real es
+  `PRIMARY KEY (idJugador, idClub, fechaDesde)`).
+- Tipos de dato desalineados: `contraseña`→`contrasenia`, `dni` de `varchar`→`integer`,
+  `partido.idCompetencia` de `varchar`→`integer`.
+- El diagrama de clases tenía las firmas de los repositorios desactualizadas (parámetros sueltos
+  en vez de las dataclasses que ya usa la interfaz real) — corregido para que coincida con
+  `src/dominio/repositorios/*.py`.
+
+### Campo/tabla que falta para que el propio PRD sea implementable — nuevo, 2026-08-09
+
+**No existe ningún campo que guarde el resultado final oficial del partido** (ej.
+`puntosLocalFinal`/`puntosVisitanteFinal`). Importa porque la propia **US-201 AC3** pide verificar
+que "la suma de puntos individuales coincida con el resultado final del partido cargado", pero
+hoy no hay dónde guardar ese resultado final para comparar contra él — solo se puede sumar el
+boxscore contra sí mismo. Se dejó la propuesta volcada (marcada como propuesta, no implementada)
+en el DER de `docs/diagramas/diagramas.md` y anotada en US-105 y US-201 de este documento.
+Relacionado: tampoco existe todavía la tabla `schema_version` que pide US-204 (Hito 2, no
+arrancado — esperable, solo se deja anotado para cuando se aborde esa US).
 
 ### Hallazgos de organización de código
 
@@ -1836,8 +1886,12 @@ transcripción. Nada de esto se corrigió — es diagnóstico para que el equipo
   integración reales.
 - ✅ Las 4 vistas SQL (`views.sql`) funcionan y están probadas, incluyendo protección contra
   división por cero.
-- ✅ `SqliteUsuarioRepositorio` funcional, probado (6 tests reales), y con el mapeo
-  `pw`↔`contrasenia` correctamente resuelto.
-- ✅ `SqliteClubRepositorio` funcional (migrado al patrón de conexión directa).
+- ✅ `SqliteUsuarioRepositorio` funcional, probado, y con el mapeo `pw`↔`contrasenia`
+  correctamente resuelto — el único repositorio con tests dedicados hoy.
+- ✅ `SqliteClubRepositorio` funcional (patrón de conexión directa, igual que los otros 4).
+- ✅ `SqliteCompetenciaRepositorio` ya existe (ya no es el gap original) — 10 de sus 12 métodos
+  tienen implementación real, aunque con los bugs puntuales ya detallados arriba.
 - ✅ Pipeline CI real con dos workflows (`linter.yml`, `test.yml`) corriendo en cada PR — ver
   `docs/ideas-aprendizaje.md` sección 7 para el detalle de qué le falta para ser "completo".
+- ✅ Suite de tests dividida por repositorio (`test_repositorios_*.py`), más fácil de mantener que
+  el archivo único anterior — aunque dos de esos archivos todavía están vacíos (ver arriba).
