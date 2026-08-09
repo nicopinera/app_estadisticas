@@ -2,30 +2,10 @@ import sqlite3
 
 import pytest
 
-import config.rutas as ruta
 from dominio.entidades.club import Club, UsuarioClub
 from infraestructura.repositorios.sqlite_club_repositorio import (
     SqliteClubRepositorio,
 )
-
-
-@pytest.fixture
-def db_conexion():
-    conexion = sqlite3.connect(":memory:")
-    cursor = conexion.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON;")
-
-    with open(ruta.SCHEMA_SQL, "r") as schema:
-        cursor.executescript(schema.read())
-
-    with open(ruta.VISTA_SQL, "r") as schema:
-        cursor.executescript(schema.read())
-
-    with open(ruta.SEED_SQL, "r") as seed:
-        cursor.executescript(seed.read())
-    conexion.row_factory = sqlite3.Row
-
-    return conexion
 
 
 def test_buscar_id(db_conexion):

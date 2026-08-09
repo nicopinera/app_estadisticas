@@ -2,30 +2,10 @@ import sqlite3
 
 import pytest
 
-import config.rutas as ruta
 from dominio.entidades.usuario import Usuario
 from infraestructura.repositorios.sqlite_usuario_repositorio import (
     SqliteUsuarioRepositorio,
 )
-
-
-@pytest.fixture
-def db_conexion():
-    conexion = sqlite3.connect(":memory:")
-    cursor = conexion.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON;")
-
-    with open(ruta.SCHEMA_SQL, "r") as schema:
-        cursor.executescript(schema.read())
-
-    with open(ruta.VISTA_SQL, "r") as schema:
-        cursor.executescript(schema.read())
-
-    with open(ruta.SEED_SQL, "r") as seed:
-        cursor.executescript(seed.read())
-    conexion.row_factory = sqlite3.Row
-
-    return conexion
 
 
 def test_buscar_usuario_id(db_conexion):
@@ -74,20 +54,20 @@ def test_guardar_usuario_con_error(db_conexion):
     nombre = 10
     email = "claudio@gmail.com"
     pw = "123456"
-    us_aux = Usuario(nombre=nombre, email=email, pw=pw)
     with pytest.raises(TypeError):
-        us_rep.guardar(us_aux=us_aux)
+        us_aux = Usuario(nombre=nombre, email=email, pw=pw)
+        u_aux = us_rep.guardar(us_aux=us_aux)
 
     nombre = "10"
     email = True
     pw = "123456"
-    us_aux = Usuario(nombre=nombre, email=email, pw=pw)
     with pytest.raises(TypeError):
-        us_rep.guardar(us_aux=us_aux)
+        us_aux = Usuario(nombre=nombre, email=email, pw=pw)
+        u_aux = us_rep.guardar(us_aux=us_aux)
 
     nombre = "10"
     email = "True"
     pw = 123456
-    us_aux = Usuario(nombre=nombre, email=email, pw=pw)
     with pytest.raises(TypeError):
-        us_rep.guardar(us_aux=us_aux)
+        us_aux = Usuario(nombre=nombre, email=email, pw=pw)
+        u_aux = us_rep.guardar(us_aux=us_aux)
