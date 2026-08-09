@@ -27,45 +27,45 @@ namespace Dominio.Repositorios{
         + buscar_por_id_usuario(id_usuario) : list[Club]
         + buscar_por_id(id_club): Club
         + buscar_por_nombre(nombre): list[Club]
-        + guardar(nombre)
-        + link_user_to_club(idUsuario, idClub, rol)
+        + guardar(club: Club): Club
+        + link_user_to_club(us_club: UsuarioClub): UsuarioClub
     }
     class CompetenciaRepositorio{
         <<interface>>
-        + guardar_competencia(nombre_competencia, anio, tipo)
-        + buscar_competencia_por_id(idCompetencia)
-        + obtener_todas_competencias()
-        + guardar_categoria(nombre_categoria)
-        + obtener_categorias()
-        + guardar_inscripcion(idClub, idCategoria, idCompetencia)
-        + buscar_inscripcion_por_id(idInscripcion)
-        + obtener_inscripciones_por_club(idClub)
-        + guardar_lista_buena_fe(fecha, idInscripcion)
-        + obtener_lista_por_inscripcion(idInscripcion)
-        + agregar_jugador_lista(idJugador, idListaBuenaFe)
-        + obtener_jugadores_lista(idListaBuenaFe)
+        + guardar_competencia(compe: Competencia): Competencia
+        + buscar_competencia_por_id(idCompetencia): Competencia
+        + obtener_todas_competencias(): list[Competencia]
+        + guardar_categoria(cat: Categoria): Categoria
+        + obtener_categorias(): list[Categoria]
+        + guardar_inscripcion(inscripcion: Inscripcion): Inscripcion
+        + buscar_inscripcion_por_id(idInscripcion): Inscripcion
+        + obtener_inscripciones_por_club(idClub): list[Inscripcion]
+        + guardar_lista_buena_fe(listaBF: ListaBuenaFe): ListaBuenaFe
+        + obtener_lista_por_inscripcion(idInscripcion): ListaBuenaFe
+        + agregar_jugador_lista(idJugador, idListaBuenaFe): JugadorListaBuenaFe
+        + obtener_jugadores_lista(idListaBuenaFe): list[JugadorListaBuenaFe]
     }
     class UsuarioRepositorio{
         <<interface>>
-        + encontrar_por_mail(email)
-        + encontrar_por_id(id)
-        + guardar(nombre, email, pw)
+        + encontrar_por_mail(email): Usuario
+        + encontrar_por_id(id): Usuario
+        + guardar(us_aux: Usuario): Usuario
     }
     class JuegoRepositorio{
         <<interface>>
-        + buscar_por_club(id_club)
-        + buscar_por_id(idPartido)
-        + guardar_partido(partido)
-        + guardar_boxscore(boxscore)
+        + buscar_por_club(id_club): list[Partido]
+        + buscar_por_id(idPartido): Partido
+        + guardar_partido(partido: Partido): Partido
+        + guardar_boxscore(boxscore: JugadorPartido): JugadorPartido
     }
     class JugadorRepositorio{
         <<interface>>
-        + buscar_por_id(id_jugador)
-        + buscar_por_dni(dni_jugador)
-        + buscar_por_club(idClub)
-        + guardar(nombre, apellido, dni, anioNacimiento)
-        + link_to_club(id_jugador, id_club, fechaDesde)
-        + club_activo(id_jugador)
+        + buscar_por_id(id_jugador): Jugador
+        + buscar_por_dni(dni_jugador): Jugador
+        + buscar_por_club(idClub): list[Jugador]
+        + guardar(jugador: Jugador): Jugador
+        + link_to_club(jc: JugadorClub): JugadorClub
+        + club_activo(id_jugador): Club
     }
 }
 namespace Dominio.Entidades{
@@ -110,7 +110,7 @@ namespace Dominio.Entidades{
         + nombre
         + email
         + pw
-        + idusuario
+        + idUsuario
     }
     class JugadorPartido{
         <<Dataclass>>
@@ -247,4 +247,110 @@ flowchart LR
     repoJugador -->|"Maneja"|J
     repoJugador -->|"Maneja"|JC
     end
+```
+
+## DER
+
+```mermaid
+erDiagram
+    u[usuario] {
+        int idUsuario PK
+        varchar nombre
+        varchar email
+        varchar contrasenia
+    }
+    us[usuarioClub] {
+        int idUsuario FK,PK
+        int idClub FK,PK
+        varchar rolEntrenador
+    }
+    c[club] {
+        int idClub PK
+        varchar nombre
+    }
+    jc[jugadorClub] {
+        int idJugador FK,PK
+        int idClub FK,PK
+        date fechaDesde PK
+        date fechaHasta
+    }
+    j[jugador] {
+        int idJugador PK
+        varchar nombre
+        int dni
+        year anioNacimiento
+    }
+    jlbf[jugadorListaBuenaFe] {
+        int idJugador PK,FK
+        int idListaBuenaFe PK,FK
+    }
+    lbf[listaBuenaFe] {
+        int idListaBuenaFe PK
+        date fechaPresentacion
+        int idInscripcion FK,UK
+    }
+    ins[inscripcion] {
+        int idInscripcion PK
+        int idClub FK
+        int idCategoria FK
+        int idCompetencia FK
+    }
+    cat[categoria] {
+        int idCategoria PK
+        varchar nombre
+    }
+    p[partido] {
+        int idPartido PK
+        date fecha
+        varchar estadio
+        int idCompetencia FK
+        int idClubLocal FK
+        int idClubVisitante FK
+        int puntosLocalFinal
+        int puntosVisitanteFinal
+    }
+    jp[jugadorPartido] {
+        int idJugador PK,FK
+        int idPartido PK,FK
+        int idClub FK
+        int minutosJugados
+        int puntos
+        int T2C
+        int T2L
+        int T3C
+        int T3L
+        int T1C
+        int T1L
+        int RebotesDefensivos
+        int RebotesOfensivos
+        int Asistencias
+        int Recuperos
+        int Perdidas
+        int TaponesRecibidos
+        int TaponesRealizados
+        int FaltasRecibidas
+        int FaltasCometidas
+    }
+    cop[competencia] {
+        int idCompetencia PK
+        varchar nombre
+        year anio
+        varchar tipo
+    }
+    u ||--o{ us : tiene
+    c ||--o{ us : pertenece
+    c ||--o{ jc : tiene
+    c ||--o{ ins : tiene
+    c ||--o{ p : "es local en"
+    c ||--o{ p : "es visitante en"
+    j ||--o{ jc : pertenece
+    j ||--o{ jlbf : pertenece
+    j ||--o{ jp : participa
+    lbf ||--o{ jlbf : tiene
+    cat ||--o{ ins : tiene
+    cop ||--o{ ins : tiene
+    ins ||--|| lbf : tiene
+    p ||--o{ jp : tiene
+    c ||--o{ jp : participa
+    cop ||--o{ p : tiene
 ```
