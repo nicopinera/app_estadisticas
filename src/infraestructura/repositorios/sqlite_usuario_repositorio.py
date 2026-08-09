@@ -30,9 +30,7 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         cursor = self.conexion.cursor()  # con este cursor ejecutamos las consultas SQL
 
         query = "SELECT * FROM usuario WHERE idUsuario = ?"  # esto sirve para buscar un usuario por su ID  # noqa: E501
-        cursor.execute(
-            query, (id,)
-        )  # ejecutamos la consulta SQL con el ID del usuario que queremos buscar
+        cursor.execute(query, (id,))  # ejecutamos la consulta SQL con el ID del usuario que queremos buscar
         row = cursor.fetchone()
         # acá saca la primer coincidencia que encuentra en la BD
 
@@ -56,21 +54,20 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         return self._row_to_entity(row)
 
     def guardar(self, us_aux: Usuario) -> Usuario:
-        if not isinstance(us_aux.nombre, str):
-            raise TypeError("nombre debe ser un string")
-        if not isinstance(us_aux.email, str):
-            raise TypeError("email debe ser un string")
-        if not isinstance(us_aux.pw, str):
-            raise TypeError("contraseña tiene que ser un string")
-
-        cursor = self.conexion.cursor()
-        query = "INSERT INTO usuario (email, nombre, contrasenia) VALUES (?, ?, ?)"
-        cursor.execute(query, (us_aux.email, us_aux.nombre, us_aux.pw))
-        self.conexion.commit()
-        idUsuario = cursor.lastrowid
-        return Usuario(
-            nombre=us_aux.nombre, email=us_aux.email, pw=us_aux.pw, idUsuario=idUsuario
-        )
+        try:
+            cursor = self.conexion.cursor()
+            query = "INSERT INTO usuario (email, nombre, contrasenia) VALUES (?, ?, ?)"
+            cursor.execute(query, (us_aux.email, us_aux.nombre, us_aux.pw))
+            self.conexion.commit()
+            idUsuario = cursor.lastrowid
+            return Usuario(
+                nombre=us_aux.nombre,
+                email=us_aux.email,
+                pw=us_aux.pw,
+                idUsuario=idUsuario,
+            )
+        except sqlite3.Error:
+            return None
 
     # Estos comentarios son de ayuda propia para poder entender que significa cada parte del codigo,  # noqa: E501
     # que hace cada funcion y como poder implementar las logica de negocio

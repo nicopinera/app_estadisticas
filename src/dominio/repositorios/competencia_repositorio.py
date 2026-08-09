@@ -13,9 +13,7 @@ class CompetenciaRepositorio(ABC):
     "Maneja competencia, categoria, inscripcion, listaBuenaFe y jugadorListaBuenaFe"
 
     @abstractmethod
-    def guardar_competencia(
-        self, nombre_competencia: str, anio: int, tipo: str | None
-    ) -> Competencia:
+    def guardar_competencia(self, compe: Competencia) -> Competencia:
         "Registra una Competencia"
         pass
 
@@ -30,7 +28,7 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_categoria(self, nombre_categoria: str) -> Categoria:
+    def guardar_categoria(self, cat: Categoria) -> Categoria:
         "Registra una Categoria"
         pass
 
@@ -40,9 +38,7 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_inscripcion(
-        self, idClub: int, idCategoria: int, idCompetencia: int
-    ) -> Inscripcion:
+    def guardar_inscripcion(self, inscripcion: Inscripcion) -> Inscripcion:
         "Guarda una inscripcion"
         pass
 
@@ -57,7 +53,7 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_lista_buena_fe(self, fecha: str, idInscripcion: int) -> ListaBuenaFe:
+    def guardar_lista_buena_fe(self, listaBF: ListaBuenaFe) -> ListaBuenaFe:
         "Genera una lista de buena fe vacia"
         pass
 
@@ -67,7 +63,7 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> None:
+    def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe:
         "Agrega un jugador a una lista de buena fe"
         pass
 

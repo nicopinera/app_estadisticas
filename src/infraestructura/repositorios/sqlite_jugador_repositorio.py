@@ -87,9 +87,7 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
     def link_to_club(self, jc: JugadorClub) -> None:
         cursor = self.conexion.cursor()
 
-        query = (
-            "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
-        )
+        query = "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
         cursor.execute(query, (jc.id_jugador, jc.id_club, jc.fechaDesde))
         self.conexion.commit()
 

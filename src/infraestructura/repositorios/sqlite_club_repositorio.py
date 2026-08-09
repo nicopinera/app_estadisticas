@@ -85,8 +85,6 @@ class SqliteClubRepositorio(ClubRepositorio):
             """
             cursor.execute(query, (us_club.idUsuario, us_club.idClub, us_club.rol))
             self.conexion.commit()
-            return UsuarioClub(
-                idUsuario=us_club.idUsuario, idClub=us_club.idClub, rol=us_club.rol
-            )
+            return UsuarioClub(idUsuario=us_club.idUsuario, idClub=us_club.idClub, rol=us_club.rol)
         except sqlite3.Error:
             return None

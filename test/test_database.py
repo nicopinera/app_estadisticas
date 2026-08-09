@@ -187,24 +187,18 @@ def test_limpieza_elimina_datos_de_seed():
     Test que verifica la limpieza correcta de los datos seed
     """
 
-    manager = SQLiteManager(
-        ":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL, ruta.CLEAR_SQL
-    )
+    manager = SQLiteManager(":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL, ruta.CLEAR_SQL)
     conexion = manager.connect()
     manager.inicializar_schema()
     manager.cargar_seed()
 
     cursor = conexion.cursor()
-    cursor.execute(
-        "SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",)
-    )
+    cursor.execute("SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",))
     assert cursor.fetchone()[0] == 1
 
     manager.limpieza()
 
-    cursor.execute(
-        "SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",)
-    )
+    cursor.execute("SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",))
     assert cursor.fetchone()[0] == 0
 
 
@@ -294,9 +288,7 @@ def test_business_constraints(db_conexion):
     # Pre-requisitos: Clubes y Competencia
     db_cursor.execute("INSERT INTO club (nombre) VALUES ('Atenas')")
     db_cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")
-    db_cursor.execute(
-        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)"
-    )
+    db_cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)")
 
     # 1. Probar que el local no sea igual al visitante
     with pytest.raises(sqlite3.IntegrityError):
@@ -310,9 +302,7 @@ def test_business_constraints(db_conexion):
 
     # 2. Probar que tiros convertidos no superen a los lanzados (T2C <= T2L)
     # Pre-requisito: Jugador y Partido
-    db_cursor.execute(
-        "INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')"
-    )
+    db_cursor.execute("INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')")
     db_cursor.execute(
         """
         INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
@@ -346,9 +336,7 @@ def test_foreign_key_behavior(db_conexion):
     cursor.execute("INSERT INTO club (nombre) VALUES ('Atenas')")
     cursor.execute("INSERT INTO categoria (nombre) VALUES ('U21')")
     cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)")
-    cursor.execute(
-        "INSERT INTO inscripcion (idClub, idCategoria, idCompetencia) VALUES (1, 1, 1)"
-    )
+    cursor.execute("INSERT INTO inscripcion (idClub, idCategoria, idCompetencia) VALUES (1, 1, 1)")
 
     # 1. CASCADE: Al borrar competencia, se debe borrar la inscripción automáticamente
     cursor.execute("DELETE FROM competencia WHERE idCompetencia = 1")
@@ -358,9 +346,7 @@ def test_foreign_key_behavior(db_conexion):
     # 2. RESTRICT: No se puede borrar un club si tiene registros en jugadorPartido
     # Re-insertamos datos necesarios
     cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")  # idClub = 2
-    cursor.execute(
-        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)"
-    )  # idCompetencia = 2
+    cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)")  # idCompetencia = 2
     cursor.execute(
         """
         INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
