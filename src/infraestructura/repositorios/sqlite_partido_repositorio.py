@@ -1,7 +1,7 @@
 import sqlite3
 
 from dominio.entidades.partido import JugadorPartido, Partido
-from dominio.repositorios.juego_repositorio import PartidoRepositorio
+from dominio.repositorios.partido_repositorio import PartidoRepositorio
 
 
 class SqlitePartidoRepositorio(PartidoRepositorio):
