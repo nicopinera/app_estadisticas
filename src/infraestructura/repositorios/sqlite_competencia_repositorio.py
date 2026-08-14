@@ -86,7 +86,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         cursor = self.conexion.cursor()
         query = "SELECT * FROM categoria;"
         cursor.execute(query)
-        rows = cursor.fetchall
+        rows = cursor.fetchall()
         if not rows:
             return None
         lista_categorias = []
@@ -100,7 +100,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         cursor = self.conexion.cursor()
         try:
             query = """
-            INSERT INTO inscripcion (idClub,idCategoria,idCompetencia) VALUES (?);
+            INSERT INTO inscripcion (idClub,idCategoria,idCompetencia) VALUES (?, ?, ?);
             """
             cursor.execute(query, (inscripcion.idClub, inscripcion.idCategoria, inscripcion.idCompetencia))
             self.conexion.commit()
@@ -169,10 +169,47 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             lista_buena_fe.append(aux)
         return lista_buena_fe
 
-    def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe:
+    def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe | None:
         "Agrega un jugador a una lista de buena fe"
-        pass
+        cursor = self.conexion.cursor()
+        try:
+            query = """
+            INSERT INTO jugadorListaBuenaFe (idJugador, idListaBuenaFe)
+            VALUES (?, ?);
+            """
+            cursor.execute(query, (idJugador, idListaBuenaFe))
+            self.conexion.commit()
 
-    def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe]:
+            return JugadorListaBuenaFe(
+                idJugador=idJugador,
+                idListaBuenaFe=idListaBuenaFe,
+            )
+        except sqlite3.Error as e:
+            print(f"\n[ERROR EN AGREGAR JUGADOR A LISTA]: {e}")
+            return None
+
+    def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe] | None:
         "Obtiene todos los jugadores de una lista de buena fe"
-        pass
+        cursor = self.conexion.cursor()
+        try:
+            query = """
+            SELECT idJugador, idListaBuenaFe
+            FROM jugadorListaBuenaFe
+            WHERE idListaBuenaFe = ?;
+            """
+            cursor.execute(query, (idListaBuenaFe,))
+            rows = cursor.fetchall()
+
+            if not rows:
+                return None
+
+            return [
+                JugadorListaBuenaFe(
+                    idJugador=row["idJugador"],
+                    idListaBuenaFe=row["idListaBuenaFe"],
+                )
+                for row in rows
+            ]
+        except sqlite3.Error as e:
+            print(f"\n[ERROR EN OBTENER JUGADORES DE LISTA]: {e}")
+            return None

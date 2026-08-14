@@ -5,7 +5,7 @@ from dominio.entidades.jugador import Jugador, JugadorClub
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
 
 
-class SquliteJugadorRepositorio(JugadorRepositorio):
+class SqliteJugadorRepositorio(JugadorRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
         self.conexion = conexion
 
