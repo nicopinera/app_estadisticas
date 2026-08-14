@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dominio.entidades.partido import JugadorPartido, Partido
 
 
-class JuegoRepositorio(ABC):
+class PartidoRepositorio(ABC):
     "Maneja partido y jugadorPartido"
 
     @abstractmethod
