@@ -49,7 +49,9 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         conexion = self.conexion.obtener_conexion()
         cursor = self.conexion.cursor()
 
-        query = "INSERT INTO Partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?, ?)"
+        query = """
+        INSERT INTO Partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?, ?);
+        """
         cursor.execute(
             query,
             (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante),
