@@ -88,7 +88,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         cursor = self.conexion.cursor()
 
         query = "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
-        cursor.execute(query, (jc.id_jugador, jc.id_club, jc.fechaDesde))
+        cursor.execute(query, (jc.idJugador, jc.idClub, jc.fechaDesde))
         self.conexion.commit()
 
     def club_activo(self, id_jugador: int) -> Club | None:

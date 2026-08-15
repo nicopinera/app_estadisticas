@@ -17,7 +17,7 @@ def test_buscar_por_id(db_conexion):
     assert juego_encontrado.idPartido == 1
 
 
-def guardar_partido(db_conexion):
+def test_guardar_partido(db_conexion):
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     nuevo_juego = juego_rep.guardar_partido(
         fecha="2023-01-01", estadio="Estadio Principal", idCompetencia=1, idClubLocal=1, idClubVisitante=2

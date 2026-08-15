@@ -45,29 +45,32 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         idCompetencia: int,
         idClubLocal: int,
         idClubVisitante: int,
-    ) -> Partido:
-        conexion = self.conexion.obtener_conexion()
+    ) -> Partido | None:
         cursor = self.conexion.cursor()
+        try:
+            query = """
+            INSERT INTO Partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante)
+            VALUES (?, ?, ?, ?, ?)
+              """
+            cursor.execute(
+                query,
+                (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante),
+            )
+            self.conexion.commit()
 
-        query = """
-        INSERT INTO Partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante) VALUES (?, ?, ?, ?, ?);
-        """
-        cursor.execute(
-            query,
-            (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante),
-        )
-        conexion.commit()
+            id_partido = cursor.lastrowid
 
-        id_partido = cursor.lastrowid
-
-        return Partido(
-            fecha=fecha,
-            estadio=estadio,
-            idCompetencia=idCompetencia,
-            idClubLocal=idClubLocal,
-            idClubVisitante=idClubVisitante,
-            idPartido=id_partido,
-        )
+            return Partido(
+                fecha=fecha,
+                estadio=estadio,
+                idCompetencia=idCompetencia,
+                idClubLocal=idClubLocal,
+                idClubVisitante=idClubVisitante,
+                idPartido=id_partido,
+            )
+        except sqlite3.Error as e:
+            print(f"\n[ERROR EN GUARDAR PARTIDO]: {e}")
+            return None
 
     def guardar_boxscore(
         self,
