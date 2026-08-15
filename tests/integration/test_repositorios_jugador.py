@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from dominio.entidades.jugador import Jugador, JugadorClub
-from infraestructura.repositorios.sqlite_jugador_repositorio import ( SqliteJugadorRepositorio )
+from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugadorRepositorio
 
 
 def test_buscar_por_id(db_conexion):
@@ -14,6 +14,7 @@ def test_buscar_por_id(db_conexion):
     assert jugador_encontrado.dni == 12351689
     assert jugador_encontrado.anioNacimiento == 1980
 
+
 def test_buscar_por_dni(db_conexion):
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     jugador_encontrado = jugador_rep.buscar_por_dni(12351689)
@@ -21,10 +22,11 @@ def test_buscar_por_dni(db_conexion):
     assert jugador_encontrado.apellido == "argento"
     assert jugador_encontrado.anioNacimiento == 1980
 
+
 def test_buscar_por_club(db_conexion):
-    
+
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
-    #creamos la persona Jugador para vincularla a un determinado club
+    # creamos la persona Jugador para vincularla a un determinado club
     nombre = "Carlos"
     apellido = "Mona Jimenez"
     dni = 99887766
@@ -35,7 +37,9 @@ def test_buscar_por_club(db_conexion):
     jugador_guardado = jugador_rep.guardar(jugador_aux)
 
     id_club = 1
-    jugador_club_aux = JugadorClub(fechaDesde="2023-01-01", fechaHasta=None, idJugador=jugador_guardado.idJugador, idClub=id_club)
+    jugador_club_aux = JugadorClub(
+        fechaDesde="2023-01-01", fechaHasta=None, idJugador=jugador_guardado.idJugador, idClub=id_club
+    )
     jugador_rep.link_to_club(jugador_club_aux)
 
     jugadores_encontrados = jugador_rep.buscar_por_club(id_club)
@@ -43,15 +47,16 @@ def test_buscar_por_club(db_conexion):
     assert jugadores_encontrados is not None
     assert len(jugadores_encontrados) >= 1
     assert jugadores_encontrados[0].nombre == "Carlos"
-    assert jugadores_encontrados[0].apellido == "Mona Jimenez" 
-    #esto es para corregir, estuve probando de varias formas y no funciona, es para revisar
+    assert jugadores_encontrados[0].apellido == "Mona Jimenez"
+    # esto es para corregir, estuve probando de varias formas y no funciona, es para revisar
+
 
 def test_guardar(db_conexion):
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     nombre = "Carlos"
     apellido = "Mona Jimenez"
     dni = 44390785
-    anioNacimiento = 1951 
+    anioNacimiento = 1951
     jugador_aux = Jugador(nombre=nombre, apellido=apellido, dni=dni, anioNacimiento=anioNacimiento)
     jugador_rep.guardar(jugador_aux)
     jugador_reg = jugador_rep.buscar_por_dni(dni)
@@ -74,6 +79,7 @@ def test_link_to_club(db_conexion):
     assert jugadores_en_club is not None
     encontrado = any(j.idJugador == jugador_guardado.idJugador for j in jugadores_en_club)
     assert encontrado is True
+
 
 def test_club_activo(db_conexion):
     jugador_rep = SqliteJugadorRepositorio(db_conexion)

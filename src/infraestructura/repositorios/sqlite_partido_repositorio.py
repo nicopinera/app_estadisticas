@@ -71,6 +71,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         except sqlite3.Error as e:
             print(f"\n[ERROR EN GUARDAR PARTIDO]: {e}")
             return None
+
     def guardar_boxscore(
         self,
         idJugador: int,
