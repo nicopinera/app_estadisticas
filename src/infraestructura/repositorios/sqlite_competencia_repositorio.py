@@ -2,6 +2,9 @@ import sqlite3
 
 from dominio.entidades.competencia import Categoria, Competencia, Inscripcion, JugadorListaBuenaFe, ListaBuenaFe
 from dominio.repositorios.competencia_repositorio import CompetenciaRepositorio
+from infraestructura.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
@@ -38,9 +41,15 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             cursor.execute(query, (compe.nombre, compe.anio, compe.tipo))
             self.conexion.commit()
             idCompetencia = cursor.lastrowid
-            return Competencia(nombre=compe.nombre, anio=compe.anio, tipo=compe.tipo, idCompetencia=idCompetencia)
         except sqlite3.Error:
-            return None
+            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+
+        try:
+            return Competencia(nombre=compe.nombre, anio=compe.anio, tipo=compe.tipo, idCompetencia=idCompetencia)
+        except TypeError as e:
+            logger.critical(f"""Competencia guardado (idCompetencia={idCompetencia})
+                                        pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia:
         cursor = self.conexion.cursor()
@@ -69,17 +78,22 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
 
     def guardar_categoria(self, cat: Categoria) -> Categoria:
         "Registra una Categoria"
-        cursor = self.conexion.cursor()
         try:
+            cursor = self.conexion.cursor()
             query = """
             INSERT INTO categoria (nombre) VALUES (?);
             """
             cursor.execute(query, (cat.nombre,))
             self.conexion.commit()
             idCategoria = cursor.lastrowid
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+        try:
             return Categoria(nombre=cat.nombre, idCategoria=idCategoria)
-        except sqlite3.Error:
-            return None
+        except TypeError as e:
+            logger.critical(f"""Categoria guardado (idCategoria={idCategoria})
+                                        pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     def obtener_categorias(self) -> list[Categoria]:
         "Devuelve todas las categorias existentes"

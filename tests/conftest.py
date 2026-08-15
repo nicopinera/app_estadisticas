@@ -38,7 +38,10 @@ def db_conexion_sin_seed():
     with open(ruta.VISTA_SQL, "r") as schema:
         cursor.executescript(schema.read())
 
-    return conexion
+    conexion.row_factory = sqlite3.Row
+
+    yield conexion
+    conexion.close()
 
 
 @pytest.fixture

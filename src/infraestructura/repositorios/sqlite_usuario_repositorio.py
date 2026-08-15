@@ -2,6 +2,9 @@ import sqlite3
 
 from dominio.entidades.usuario import Usuario
 from dominio.repositorios.usuario_repositorio import UsuarioRepositorio
+from infraestructura.logger import get_logger
+
+logger = get_logger(__name__)
 
 # importacion de la clase SqliteConexion para poder conectarse a la base de datos sqlite y la realizar operaciones CRUD  # noqa: E501
 # en la tabla Usuarios, tambien se importa UsuarioRepositorio para la implementacion
@@ -60,14 +63,15 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
             cursor.execute(query, (us_aux.email, us_aux.nombre, us_aux.pw))
             self.conexion.commit()
             idUsuario = cursor.lastrowid
-            return Usuario(
-                nombre=us_aux.nombre,
-                email=us_aux.email,
-                pw=us_aux.pw,
-                idUsuario=idUsuario,
-            )
-        except sqlite3.Error:
-            return None
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+
+        try:
+            return Usuario(nombre=us_aux.nombre, email=us_aux.email, pw=us_aux.pw, idUsuario=idUsuario)
+        except TypeError as e:
+            logger.critical(f"""Usuario guardado (idUsuario={idUsuario})
+                            pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     # Estos comentarios son de ayuda propia para poder entender que significa cada parte del codigo,  # noqa: E501
     # que hace cada funcion y como poder implementar las logica de negocio
