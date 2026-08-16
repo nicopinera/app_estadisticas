@@ -43,12 +43,13 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             idCompetencia = cursor.lastrowid
         except sqlite3.Error:
             logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            return None
 
         try:
             return Competencia(nombre=compe.nombre, anio=compe.anio, tipo=compe.tipo, idCompetencia=idCompetencia)
         except TypeError as e:
             logger.critical(f"""Competencia guardado (idCompetencia={idCompetencia})
-                                        pero no se pudo reconstruir el objeto de retorno: {e}""")
+                                pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
     def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia:
@@ -88,11 +89,12 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             idCategoria = cursor.lastrowid
         except sqlite3.Error as e:
             logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            return None
         try:
             return Categoria(nombre=cat.nombre, idCategoria=idCategoria)
         except TypeError as e:
-            logger.critical(f"""Categoria guardado (idCategoria={idCategoria})
-                                        pero no se pudo reconstruir el objeto de retorno: {e}""")
+            logger.critical(f"""Categoria guardada (idCategoria={idCategoria})
+                                pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
     def obtener_categorias(self) -> list[Categoria]:
@@ -119,11 +121,18 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             cursor.execute(query, (inscripcion.idClub, inscripcion.idCategoria, inscripcion.idCompetencia))
             self.conexion.commit()
             idInscripcion = cursor.lastrowid
+
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar inscripcion: {e}", exc_info=True)
+            return None
+        try:
             return Inscripcion(
                 inscripcion.idClub, inscripcion.idCategoria, inscripcion.idCompetencia, idInscripcion=idInscripcion
             )
-        except sqlite3.Error:
-            return None
+        except TypeError as e:
+            logger.critical(f"""Inscripcion guardada (idCategoria={idInscripcion})
+            pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion:
         "Devuelve informacion de una inscripcion por ID"
@@ -138,6 +147,13 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
     def obtener_inscripciones_por_club(self, idClub: int) -> list[Inscripcion]:
         "Devuelve todas las inscripciones de un club"
         cursor = self.conexion.cursor()
+
+        query = "SELECT * FROM club WHERE idClub = ?;"
+        cursor.execute(query, (idClub,))
+        row = cursor.fetchall()
+        if not row:
+            return None
+
         query = "SELECT * FROM inscripcion WHERE idClub = ?;"
         cursor.execute(query, (idClub,))
         row = cursor.fetchall()
@@ -159,17 +175,33 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             cursor.execute(query, (listaBF.fechaPresentacion, listaBF.idInscripcion))
             self.conexion.commit()
             idListaBuenaFe = cursor.lastrowid
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar lista de buena fe: {e}", exc_info=True)
+            return None
+
+        try:
             return ListaBuenaFe(
                 fechaPresentacion=listaBF.fechaPresentacion,
                 idInscripcion=listaBF.idInscripcion,
                 idListaBuenaFe=idListaBuenaFe,
             )
-        except sqlite3.Error:
-            return None
+        except TypeError as e:
+            logger.critical(f"""Lista de buena fe guardada (idListaBuenaFe={idListaBuenaFe})
+            pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     def obtener_lista_por_inscripcion(self, idInscripcion: int) -> list[ListaBuenaFe]:
         "Obtiene informacion de la lista de buena fe de una inscripcion"
         cursor = self.conexion.cursor()
+
+        query = """
+        SELECT * FROM inscripcion WHERE idInscripcion = ?;
+        """
+        cursor.execute(query, (idInscripcion,))
+        rows = cursor.fetchall()
+        if not rows:
+            return None
+
         query = """
         SELECT * FROM listaBuenaFe WHERE idInscripcion = ?;
         """
@@ -194,36 +226,36 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             cursor.execute(query, (idJugador, idListaBuenaFe))
             self.conexion.commit()
 
+        except sqlite3.Error as e:
+            logger.error(f"Error al agregar jugador a la lista: {e}", exc_info=True)
+            return None
+
+        try:
             return JugadorListaBuenaFe(
                 idJugador=idJugador,
                 idListaBuenaFe=idListaBuenaFe,
             )
-        except sqlite3.Error as e:
-            print(f"\n[ERROR EN AGREGAR JUGADOR A LISTA]: {e}")
-            return None
+        except TypeError as e:
+            logger.critical(f"""Jugador agregado a la lista pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe] | None:
         "Obtiene todos los jugadores de una lista de buena fe"
         cursor = self.conexion.cursor()
-        try:
-            query = """
-            SELECT idJugador, idListaBuenaFe
+        query = """
+            SELECT *
             FROM jugadorListaBuenaFe
             WHERE idListaBuenaFe = ?;
-            """
-            cursor.execute(query, (idListaBuenaFe,))
-            rows = cursor.fetchall()
-
-            if not rows:
-                return None
-
-            return [
-                JugadorListaBuenaFe(
-                    idJugador=row["idJugador"],
-                    idListaBuenaFe=row["idListaBuenaFe"],
-                )
-                for row in rows
-            ]
-        except sqlite3.Error as e:
-            print(f"\n[ERROR EN OBTENER JUGADORES DE LISTA]: {e}")
+        """
+        cursor.execute(query, (idListaBuenaFe,))
+        rows = cursor.fetchall()
+        if not rows:
             return None
+
+        return [
+            JugadorListaBuenaFe(
+                idJugador=row["idJugador"],
+                idListaBuenaFe=row["idListaBuenaFe"],
+            )
+            for row in rows
+        ]

@@ -44,6 +44,9 @@ def test_obtener_lista_por_inscripcion(db_conexion):
     assert lista_encontrada is not None
     assert len(lista_encontrada) > 0
 
+    lista_encontrada = comp_rep.obtener_lista_por_inscripcion(1000)
+    assert lista_encontrada is None
+
 
 def test_agregar_jugador_lista(db_conexion):
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
@@ -103,6 +106,9 @@ def test_obtener_inscripciones_por_club(db_conexion):
     assert inscripciones is not None
     assert len(inscripciones) > 0
 
+    inscripciones = comp_rep.obtener_inscripciones_por_club(145)
+    assert inscripciones is None
+
 
 def test_guardar_lista_buena_fe(db_conexion):
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
@@ -120,7 +126,7 @@ def test_guardar_lista_buena_fe(db_conexion):
     assert lista_guardada.idInscripcion == inscripcion_guardada.idInscripcion
 
 
-def obtener_jugadores_lista(db_conexion):
+def test_obtener_jugadores_lista(db_conexion):
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     jugadores_lista = comp_rep.obtener_jugadores_lista(1)
 
