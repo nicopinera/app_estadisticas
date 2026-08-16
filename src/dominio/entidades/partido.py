@@ -53,5 +53,3 @@ class JugadorPartido:
             raise TypeError(f"idPartido debe ser int, recibido {type(self.idPartido).__name__}")
         if not isinstance(self.idClub, int):
             raise TypeError(f"idClub debe ser int, recibido {type(self.idClub).__name__}")
-        if not isinstance(self.idClubVisitante, int):
-            raise TypeError(f"idClubVisitante debe ser int, recibido {type(self.idClubVisitante).__name__}")
