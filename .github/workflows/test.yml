@@ -10,10 +10,10 @@ jobs:
         uses: action/checkout@v4
 
       - name: Build Docker Image
-        uses: docker build -f Dockerfile.test -t app-estadisticas-tests .
+        run: docker build -f Dockerfile.test -t app-estadisticas-tests .
 
       - name: Run Test inside Docker
-        uses: docker run --rm app-estadisticas-tests
+        run: docker run --rm app-estadisticas-tests
 
   test_linux:
     runs-on: ubuntu-latest
