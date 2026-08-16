@@ -41,8 +41,8 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             cursor.execute(query, (compe.nombre, compe.anio, compe.tipo))
             self.conexion.commit()
             idCompetencia = cursor.lastrowid
-        except sqlite3.Error:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar Competencia: {e}", exc_info=True)
             return None
 
         try:
@@ -88,7 +88,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             self.conexion.commit()
             idCategoria = cursor.lastrowid
         except sqlite3.Error as e:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            logger.error(f"Error al guardar Categoria: {e}", exc_info=True)
             return None
         try:
             return Categoria(nombre=cat.nombre, idCategoria=idCategoria)
@@ -190,7 +190,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    def obtener_lista_por_inscripcion(self, idInscripcion: int) -> list[ListaBuenaFe]:
+    def obtener_lista_por_inscripcion(self, idInscripcion: int) -> ListaBuenaFe | None:
         "Obtiene informacion de la lista de buena fe de una inscripcion"
         cursor = self.conexion.cursor()
 
@@ -198,22 +198,18 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         SELECT * FROM inscripcion WHERE idInscripcion = ?;
         """
         cursor.execute(query, (idInscripcion,))
-        rows = cursor.fetchall()
-        if not rows:
+        rows = cursor.fetchone()
+        if rows is None:
             return None
 
         query = """
         SELECT * FROM listaBuenaFe WHERE idInscripcion = ?;
         """
         cursor.execute(query, (idInscripcion,))
-        rows = cursor.fetchall()
-        if not rows:
+        rows = cursor.fetchone()
+        if rows is None:
             return None
-        lista_buena_fe = []
-        for r in rows:
-            aux = self._row_to_entity_ListaBuenaFe(r)
-            lista_buena_fe.append(aux)
-        return lista_buena_fe
+        return self._row_to_entity_ListaBuenaFe(rows)
 
     def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe | None:
         "Agrega un jugador a una lista de buena fe"

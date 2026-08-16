@@ -81,7 +81,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
 
             id_partido = cursor.lastrowid
         except sqlite3.Error as e:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            logger.error(f"Error al guardar partido: {e}", exc_info=True)
             return None
 
         try:
@@ -98,7 +98,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
                                 pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    def guardar_boxscore(self, boxscore: JugadorPartido) -> JugadorPartido:
+    def guardar_boxscore(self, boxscore: JugadorPartido) -> JugadorPartido | None:
         try:
             cursor = self.conexion.cursor()
 
@@ -161,7 +161,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             )
             self.conexion.commit()
         except sqlite3.Error as e:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            logger.error(f"Error al guardar boxscore: {e}", exc_info=True)
             return None
 
         try:

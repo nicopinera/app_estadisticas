@@ -42,7 +42,6 @@ def test_obtener_lista_por_inscripcion(db_conexion):
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     lista_encontrada = comp_rep.obtener_lista_por_inscripcion(1)
     assert lista_encontrada is not None
-    assert len(lista_encontrada) > 0
 
     lista_encontrada = comp_rep.obtener_lista_por_inscripcion(1000)
     assert lista_encontrada is None

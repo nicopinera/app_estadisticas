@@ -66,7 +66,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             resultado.append(j_aux)
         return resultado
 
-    def guardar(self, jugador: Jugador) -> Jugador:
+    def guardar(self, jugador: Jugador) -> Jugador | None:
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -79,7 +79,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             self.conexion.commit()
             id_jugador = cursor.lastrowid
         except sqlite3.Error as e:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            logger.error(f"Error al guardar Jugador: {e}", exc_info=True)
             return None
 
         try:
@@ -102,7 +102,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             cursor.execute(query, (jc.idJugador, jc.idClub, jc.fechaDesde))
             self.conexion.commit()
         except sqlite3.Error as e:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            logger.error(f"Error al linkear jugador con club: {e}", exc_info=True)
             return None
 
         try:

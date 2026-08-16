@@ -57,4 +57,5 @@ def db_conexion_sandbox():
     manager.inicializar_schema()
     manager.cargar_seed()
 
-    return conexion
+    yield conexion
+    conexion.close()

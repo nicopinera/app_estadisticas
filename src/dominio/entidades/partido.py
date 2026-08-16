@@ -13,7 +13,7 @@ class Partido:
     def __post_init__(self):
         if not isinstance(self.fecha, str):
             raise TypeError(f"fecha debe ser str, recibido {type(self.fecha).__name__}")
-        if not isinstance(self.estadio, str):
+        if self.estadio is not None and not isinstance(self.estadio, str):
             raise TypeError(f"estadio debe ser str, recibido {type(self.estadio).__name__}")
         if not isinstance(self.idCompetencia, int):
             raise TypeError(f"idCompetencia debe ser int, recibido {type(self.idCompetencia).__name__}")

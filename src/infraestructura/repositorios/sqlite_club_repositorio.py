@@ -75,8 +75,8 @@ class SqliteClubRepositorio(ClubRepositorio):
             cursor.execute(query, (club.nombre,))
             self.conexion.commit()
             id_club = cursor.lastrowid
-        except sqlite3.Error:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar club: {e}", exc_info=True)
             return None
 
         try:
@@ -86,7 +86,7 @@ class SqliteClubRepositorio(ClubRepositorio):
                                 pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    def link_user_to_club(self, us_club: UsuarioClub) -> UsuarioClub:
+    def link_user_to_club(self, us_club: UsuarioClub) -> UsuarioClub | None:
         cursor = self.conexion.cursor()
         # Funcion para linkear un usuario a un club especifico
         try:
@@ -111,8 +111,8 @@ class SqliteClubRepositorio(ClubRepositorio):
             """
             cursor.execute(query, (us_club.idUsuario, us_club.idClub, us_club.rol))
             self.conexion.commit()
-        except sqlite3.Error:
-            logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+        except sqlite3.Error as e:
+            logger.error(f"Error al linkear club y usuario: {e}", exc_info=True)
             return None
 
         try:
