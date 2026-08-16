@@ -13,12 +13,12 @@ class CompetenciaRepositorio(ABC):
     "Maneja competencia, categoria, inscripcion, listaBuenaFe y jugadorListaBuenaFe"
 
     @abstractmethod
-    def guardar_competencia(self, compe: Competencia) -> Competencia:
+    def guardar_competencia(self, compe: Competencia) -> Competencia | None:
         "Registra una Competencia"
         pass
 
     @abstractmethod
-    def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia:
+    def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia | None:
         "Busca una Competencia por id"
         pass
 
@@ -28,7 +28,7 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_categoria(self, cat: Categoria) -> Categoria:
+    def guardar_categoria(self, cat: Categoria) -> Categoria | None:
         "Registra una Categoria"
         pass
 
@@ -38,12 +38,12 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_inscripcion(self, inscripcion: Inscripcion) -> Inscripcion:
+    def guardar_inscripcion(self, inscripcion: Inscripcion) -> Inscripcion | None:
         "Guarda una inscripcion"
         pass
 
     @abstractmethod
-    def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion:
+    def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion | None:
         "Devuelve informacion de una inscripcion por ID"
         pass
 
@@ -53,17 +53,17 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
-    def guardar_lista_buena_fe(self, listaBF: ListaBuenaFe) -> ListaBuenaFe:
+    def guardar_lista_buena_fe(self, listaBF: ListaBuenaFe) -> ListaBuenaFe | None:
         "Genera una lista de buena fe vacia"
         pass
 
     @abstractmethod
-    def obtener_lista_por_inscripcion(self, idInscripcion: int) -> ListaBuenaFe:
+    def obtener_lista_por_inscripcion(self, idInscripcion: int) -> ListaBuenaFe | None:
         "Obtiene informacion de la lista de buena fe de una inscripcion"
         pass
 
     @abstractmethod
-    def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe:
+    def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe | None:
         "Agrega un jugador a una lista de buena fe"
         pass
 
