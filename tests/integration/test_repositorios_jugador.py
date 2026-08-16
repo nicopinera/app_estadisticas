@@ -3,6 +3,7 @@ import sqlite3
 import pytest
 
 from dominio.entidades.jugador import Jugador, JugadorClub
+from dominio.exceptions import DNIDuplicadoError
 from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugadorRepositorio
 
 
@@ -93,3 +94,19 @@ def test_club_activo(db_conexion):
     club_activo = jugador_rep.club_activo(jugador_guardado.idJugador)
     assert club_activo is not None
     assert club_activo.idClub == id_club
+
+
+def test_guardar_jugador_dni_duplicado_lanza_excepcion(db_conexion):
+    """US-102 Reglas de Negocio: guardar un DNI ya registrado debe lanzar DNIDuplicadoError."""
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+
+    # DNI ya existente en el seed: 12351689 (jugador pepe argento, id=1)
+    jugador_duplicado = Jugador(
+        nombre="Otro",
+        apellido="Jugador",
+        dni=12351689,  # DNI ya registrado en el seed
+        anioNacimiento=1995,
+    )
+
+    with pytest.raises(DNIDuplicadoError):
+        jugador_rep.guardar(jugador_duplicado)

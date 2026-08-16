@@ -42,6 +42,7 @@ def test_obtener_lista_por_inscripcion(db_conexion):
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     lista_encontrada = comp_rep.obtener_lista_por_inscripcion(1)
     assert lista_encontrada is not None
+    assert isinstance(lista_encontrada, ListaBuenaFe)
 
     lista_encontrada = comp_rep.obtener_lista_por_inscripcion(1000)
     assert lista_encontrada is None
@@ -106,7 +107,7 @@ def test_obtener_inscripciones_por_club(db_conexion):
     assert len(inscripciones) > 0
 
     inscripciones = comp_rep.obtener_inscripciones_por_club(145)
-    assert inscripciones is None
+    assert inscripciones == []
 
 
 def test_guardar_lista_buena_fe(db_conexion):
