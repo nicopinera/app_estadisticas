@@ -56,7 +56,7 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
 
         return self._row_to_entity(row)
 
-    def guardar(self, us_aux: Usuario) -> Usuario:
+    def guardar(self, us_aux: Usuario) -> Usuario | None:
         try:
             cursor = self.conexion.cursor()
             query = "INSERT INTO usuario (email, nombre, contrasenia) VALUES (?, ?, ?)"
@@ -65,6 +65,7 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
             idUsuario = cursor.lastrowid
         except sqlite3.Error as e:
             logger.error(f"Error al guardar usuario: {e}", exc_info=True)
+            return None
 
         try:
             return Usuario(nombre=us_aux.nombre, email=us_aux.email, pw=us_aux.pw, idUsuario=idUsuario)
