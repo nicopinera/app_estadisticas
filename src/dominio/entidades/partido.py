@@ -17,6 +17,8 @@ class Partido:
             raise TypeError(f"estadio debe ser str, recibido {type(self.estadio).__name__}")
         if not isinstance(self.idCompetencia, int):
             raise TypeError(f"idCompetencia debe ser int, recibido {type(self.idCompetencia).__name__}")
+        if not isinstance(self.idClubLocal, int):
+            raise TypeError(f"idClubLocal debe ser int, recibido {type(self.idClubLocal).__name__}")
         if not isinstance(self.idClubVisitante, int):
             raise TypeError(f"idClubVisitante debe ser int, recibido {type(self.idClubVisitante).__name__}")
         if self.idPartido is not None and not isinstance(self.idPartido, int):

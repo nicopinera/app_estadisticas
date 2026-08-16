@@ -23,3 +23,10 @@ class PartidoRepositorio(ABC):
     @abstractmethod
     def guardar_boxscore(self, boxscore: JugadorPartido) -> JugadorPartido | None:
         pass
+
+    @abstractmethod
+    def save_with_boxscore(
+        self, partido: Partido, boxscore: list[JugadorPartido]
+    ) -> tuple[Partido, list[JugadorPartido]] | None:
+        """Guarda el partido y su boxscore en una única transacción atómica."""
+        pass
