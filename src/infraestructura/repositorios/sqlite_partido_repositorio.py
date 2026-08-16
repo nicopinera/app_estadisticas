@@ -201,7 +201,8 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
                 if cursor.fetchone() is None:
                     raise sqlite3.IntegrityError(f"La competencia con id {partido.idCompetencia} no existe.")
 
-                cursor.execute("SELECT COUNT(idClub) FROM club WHERE idClub IN (?, ?)", (partido.idClubLocal, partido.idClubVisitante))
+                cursor.execute("SELECT COUNT(idClub) FROM club WHERE idClub IN (?, ?)", (partido.idClubLocal,
+                                                                                          partido.idClubVisitante))
                 if cursor.fetchone()[0] < 2:
                     raise sqlite3.IntegrityError("El club local o visitante no existe.")
 
