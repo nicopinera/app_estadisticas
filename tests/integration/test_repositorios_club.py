@@ -57,13 +57,13 @@ def test_guardar(db_conexion):
 
     assert club_a_guardar.nombre == club_guardado.nombre
 
-    club_a_guardar = Club(nombre=None)
-    club_guardado = club_rep.guardar(club=club_a_guardar)
-    assert club_guardado is None
+    with pytest.raises(TypeError):
+        club_a_guardar = Club(nombre=None)
+        club_guardado = club_rep.guardar(club=club_a_guardar)
 
 
 def test_link_user_club(db_conexion):
-    us_aux = UsuarioClub(rol="Asistente", idUsuario=1, idClub=1)
+    us_aux = UsuarioClub(rol="Asistente", idUsuario=1, idClub=2)
     club_rep = SqliteClubRepositorio(db_conexion)
     us_aux_2 = club_rep.link_user_to_club(us_club=us_aux)
     assert us_aux_2.idUsuario == us_aux.idUsuario
@@ -71,6 +71,9 @@ def test_link_user_club(db_conexion):
     assert us_aux_2.rol == us_aux.rol
 
     us_aux = UsuarioClub(rol="Asistente", idUsuario=302, idClub=1)
-    club_rep = SqliteClubRepositorio(db_conexion)
+    us_aux_2 = club_rep.link_user_to_club(us_club=us_aux)
+    assert us_aux_2 is None
+
+    us_aux = UsuarioClub(rol="Asistente", idUsuario=1, idClub=302)
     us_aux_2 = club_rep.link_user_to_club(us_club=us_aux)
     assert us_aux_2 is None

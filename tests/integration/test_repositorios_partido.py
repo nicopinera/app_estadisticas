@@ -1,5 +1,8 @@
+import random
+
 import pytest
 
+from dominio.entidades.partido import JugadorPartido, Partido
 from infraestructura.repositorios.sqlite_partido_repositorio import SqlitePartidoRepositorio
 
 
@@ -19,28 +22,47 @@ def test_buscar_por_id(db_conexion):
 
 def test_guardar_partido(db_conexion):
     juego_rep = SqlitePartidoRepositorio(db_conexion)
-    nuevo_juego = juego_rep.guardar_partido(
-        fecha="2023-01-01", estadio="Estadio Principal", idCompetencia=1, idClubLocal=1, idClubVisitante=2
+    partido_aux = Partido(
+        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=2, idCompetencia=1
     )
+    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
     assert nuevo_juego is not None
     assert nuevo_juego.idPartido is not None
     assert nuevo_juego.fecha == "2023-01-01"
 
+    partido_aux = Partido(
+        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=12, idClubVisitante=2, idCompetencia=1
+    )
+    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
+    assert nuevo_juego is None
 
-def guardar_boxscore(db_conexion):
+    partido_aux = Partido(
+        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=304, idCompetencia=1
+    )
+    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
+    assert nuevo_juego is None
+
+    partido_aux = Partido(
+        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=2, idCompetencia=205
+    )
+    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
+    assert nuevo_juego is None
+
+
+def test_guardar_boxscore(db_conexion):
     juego_rep = SqlitePartidoRepositorio(db_conexion)
-    nuevo_boxscore = juego_rep.guardar_boxscore(
+    aux_boxscore = JugadorPartido(
         idJugador=1,
-        idPartido=1,
+        idPartido=2,
         idClub=1,
-        minutosJugados=30,
-        puntos=25,
-        t2c=5,
-        t2l=10,
-        t3c=3,
-        t3l=5,
-        t1c=6,
-        t1l=8,
+        minutosJugados=random.randint(0, 40),
+        puntos=random.randint(1, 25),
+        t2c=random.randint(1, 2),
+        t2l=random.randint(5, 10),
+        t3c=random.randint(1, 2),
+        t3l=random.randint(5, 10),
+        t1c=random.randint(1, 2),
+        t1l=random.randint(5, 10),
         rebotesDef=4,
         rebotesOf=2,
         asistencias=5,
@@ -49,9 +71,83 @@ def guardar_boxscore(db_conexion):
         taponesRecibidos=1,
         taponesRealizados=2,
         faltasRecibidas=4,
-        FaltasCometidas=3,
+        faltasCometidas=3,
     )
+    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
     assert nuevo_boxscore is not None
-    assert nuevo_boxscore.idJugador == 1
-    assert nuevo_boxscore.idPartido == 1
-    assert nuevo_boxscore.idClub == 1
+
+    aux_boxscore = JugadorPartido(
+        idJugador=40000,
+        idPartido=1,
+        idClub=1,
+        minutosJugados=random.randint(0, 40),
+        puntos=random.randint(1, 25),
+        t2c=random.randint(1, 2),
+        t2l=random.randint(1, 10),
+        t3c=random.randint(1, 2),
+        t3l=random.randint(1, 10),
+        t1c=random.randint(1, 2),
+        t1l=random.randint(5, 10),
+        rebotesDef=4,
+        rebotesOf=2,
+        asistencias=5,
+        recuperos=3,
+        perdidas=2,
+        taponesRecibidos=1,
+        taponesRealizados=2,
+        faltasRecibidas=4,
+        faltasCometidas=3,
+    )
+    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
+    assert nuevo_boxscore is None
+
+    aux_boxscore = JugadorPartido(
+        idJugador=1,
+        idPartido=300,
+        idClub=1,
+        minutosJugados=random.randint(0, 40),
+        puntos=random.randint(1, 25),
+        t2c=random.randint(1, 2),
+        t2l=random.randint(5, 10),
+        t3c=random.randint(1, 2),
+        t3l=random.randint(5, 10),
+        t1c=random.randint(1, 2),
+        t1l=random.randint(5, 10),
+        rebotesDef=4,
+        rebotesOf=2,
+        asistencias=5,
+        recuperos=3,
+        perdidas=2,
+        taponesRecibidos=1,
+        taponesRealizados=2,
+        faltasRecibidas=4,
+        faltasCometidas=3,
+    )
+
+    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
+    assert nuevo_boxscore is None
+    aux_boxscore = JugadorPartido(
+        idJugador=1,
+        idPartido=1,
+        idClub=400,
+        minutosJugados=random.randint(0, 40),
+        puntos=random.randint(1, 25),
+        t2c=random.randint(1, 2),
+        t2l=random.randint(5, 10),
+        t3c=random.randint(1, 2),
+        t3l=random.randint(5, 10),
+        t1c=random.randint(1, 2),
+        t1l=random.randint(5, 10),
+        rebotesDef=4,
+        rebotesOf=2,
+        asistencias=5,
+        recuperos=3,
+        perdidas=2,
+        taponesRecibidos=1,
+        taponesRealizados=2,
+        faltasRecibidas=4,
+        faltasCometidas=3,
+    )
+
+    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
+    assert nuevo_boxscore is None
