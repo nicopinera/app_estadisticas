@@ -21,3 +21,7 @@ pre_commit:
 	pip install pre-commit
 	pre-commit
 	pre-commit run --all-files
+
+docker_test:
+	docker build -f Dockerfile.test -t app-estadisticas-tests .
+	docker run --rm app-estadisticas-tests
