@@ -195,6 +195,36 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             with self.conexion:
                 cursor = self.conexion.cursor()
 
+                # --- Validación Previa ---
+                # 1. Validar que la competencia y los clubes del partido existan.
+                cursor.execute("SELECT 1 FROM competencia WHERE idCompetencia = ?", (partido.idCompetencia,))
+                if cursor.fetchone() is None:
+                    raise sqlite3.IntegrityError(f"La competencia con id {partido.idCompetencia} no existe.")
+
+                cursor.execute("SELECT COUNT(idClub) FROM club WHERE idClub IN (?, ?)", (partido.idClubLocal, partido.idClubVisitante))
+                if cursor.fetchone()[0] < 2:
+                    raise sqlite3.IntegrityError("El club local o visitante no existe.")
+
+                # 2. Validar que todos los jugadores y clubes del boxscore existan.
+                jugadores_ids = {bs.idJugador for bs in boxscore}
+                
+                if jugadores_ids: # Solo validar si la lista no está vacía
+                    placeholders = ','.join('?' for _ in jugadores_ids)
+                    cursor.execute(
+                        f"SELECT idJugador FROM jugador WHERE idJugador IN ({placeholders})",
+                        tuple(jugadores_ids),
+                    )
+                    jugadores_existentes_ids = {row[0] for row in cursor.fetchall()}
+
+                    jugadores_faltantes = sorted(jugadores_ids - jugadores_existentes_ids)
+
+                    if jugadores_faltantes:
+                        raise sqlite3.IntegrityError(
+                            f"Jugadores faltantes en boxscore (idJugador): {jugadores_faltantes}"
+                        )
+
+                # --- Fin Validación ---
+
                 # Insertar cabecera del partido
                 cursor.execute(
                     """
@@ -282,5 +312,18 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             return (partido_guardado, filas_guardadas)
 
         except sqlite3.Error as e:
-            logger.error(f"Error en save_with_boxscore (transacción revertida): {e}", exc_info=True)
+            logger.error(
+                "Error en save_with_boxscore (transacción revertida): %s | "
+                "partido(fecha=%s, competencia=%s, local=%s, visitante=%s) | "
+                "filas_boxscore=%s",
+                e,
+                partido.fecha,
+                partido.idCompetencia,
+                partido.idClubLocal,
+                partido.idClubVisitante,
+                len(boxscore),
+                exc_info=True,
+            )
+
+
             return None
