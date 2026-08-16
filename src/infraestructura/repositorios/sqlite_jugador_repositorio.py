@@ -2,6 +2,7 @@ import sqlite3
 
 from dominio.entidades.club import Club
 from dominio.entidades.jugador import Jugador, JugadorClub
+from dominio.exceptions import DNIDuplicadoError
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
 from infraestructura.logger import get_logger
 
@@ -78,6 +79,13 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             )
             self.conexion.commit()
             id_jugador = cursor.lastrowid
+        except sqlite3.IntegrityError as e:
+            if "UNIQUE" in str(e) and "jugador.dni" in str(e):
+                raise DNIDuplicadoError(
+                    f"Ya existe un jugador con DNI {jugador.dni}"
+                ) from e
+            logger.error(f"Error de integridad al guardar Jugador: {e}", exc_info=True)
+            return None
         except sqlite3.Error as e:
             logger.error(f"Error al guardar Jugador: {e}", exc_info=True)
             return None

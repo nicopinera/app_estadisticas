@@ -59,15 +59,6 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             row = cursor.fetchall()
             if not row or len(row) < 2:
                 return None
-            """
-            query = """
-            # SELECT * FROM club WHERE idClub = ?;
-            """
-            cursor.execute(query,(partido.idClubVisitante,))
-            row = cursor.fetchone()
-            if row is None:
-                return None
-            """
 
             query = """
             INSERT INTO partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante)
@@ -190,3 +181,106 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         except TypeError as e:
             logger.critical(f"""Boxscore guardado pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
+
+    def save_with_boxscore(
+        self, partido: Partido, boxscore: list[JugadorPartido]
+    ) -> tuple[Partido, list[JugadorPartido]] | None:
+        """Guarda el partido y su boxscore en una única transacción atómica.
+
+        Utiliza el context manager de sqlite3 (`with self.conexion:`) que realiza
+        COMMIT automático al salir sin error o ROLLBACK ante cualquier excepción.
+        Si falla cualquier fila del boxscore, el partido tampoco queda guardado.
+        """
+        try:
+            with self.conexion:
+                cursor = self.conexion.cursor()
+
+                # Insertar cabecera del partido
+                cursor.execute(
+                    """
+                    INSERT INTO partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        partido.fecha,
+                        partido.estadio,
+                        partido.idCompetencia,
+                        partido.idClubLocal,
+                        partido.idClubVisitante,
+                    ),
+                )
+                id_partido = cursor.lastrowid
+
+                # Insertar cada fila del boxscore
+                filas_guardadas: list[JugadorPartido] = []
+                for bs in boxscore:
+                    cursor.execute(
+                        """
+                        INSERT INTO jugadorPartido
+                        (idJugador, idPartido, idClub, minutosJugados, puntos,
+                         T2C, T2L, T3C, T3L, T1C, T1L,
+                         rebotesDef, rebotesOf, asistencias, recuperos, perdidas,
+                         taponesRecibidos, taponesRealizados, faltasRecibidas, faltasCometidas)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            bs.idJugador,
+                            id_partido,
+                            bs.idClub,
+                            bs.minutosJugados,
+                            bs.puntos,
+                            bs.t2c,
+                            bs.t2l,
+                            bs.t3c,
+                            bs.t3l,
+                            bs.t1c,
+                            bs.t1l,
+                            bs.rebotesDef,
+                            bs.rebotesOf,
+                            bs.asistencias,
+                            bs.recuperos,
+                            bs.perdidas,
+                            bs.taponesRecibidos,
+                            bs.taponesRealizados,
+                            bs.faltasRecibidas,
+                            bs.faltasCometidas,
+                        ),
+                    )
+                    filas_guardadas.append(
+                        JugadorPartido(
+                            idJugador=bs.idJugador,
+                            idPartido=id_partido,
+                            idClub=bs.idClub,
+                            minutosJugados=bs.minutosJugados,
+                            puntos=bs.puntos,
+                            t2c=bs.t2c,
+                            t2l=bs.t2l,
+                            t3c=bs.t3c,
+                            t3l=bs.t3l,
+                            t1c=bs.t1c,
+                            t1l=bs.t1l,
+                            rebotesDef=bs.rebotesDef,
+                            rebotesOf=bs.rebotesOf,
+                            asistencias=bs.asistencias,
+                            recuperos=bs.recuperos,
+                            perdidas=bs.perdidas,
+                            taponesRecibidos=bs.taponesRecibidos,
+                            taponesRealizados=bs.taponesRealizados,
+                            faltasRecibidas=bs.faltasRecibidas,
+                            faltasCometidas=bs.faltasCometidas,
+                        )
+                    )
+
+            partido_guardado = Partido(
+                fecha=partido.fecha,
+                estadio=partido.estadio,
+                idCompetencia=partido.idCompetencia,
+                idClubLocal=partido.idClubLocal,
+                idClubVisitante=partido.idClubVisitante,
+                idPartido=id_partido,
+            )
+            return (partido_guardado, filas_guardadas)
+
+        except sqlite3.Error as e:
+            logger.error(f"Error en save_with_boxscore (transacción revertida): {e}", exc_info=True)
+            return None

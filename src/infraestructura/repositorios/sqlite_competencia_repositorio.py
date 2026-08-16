@@ -70,7 +70,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         cursor.execute(query)
         rows = cursor.fetchall()
         if not rows:
-            return None
+            return []
         lista_competencias = []
         for r in rows:
             aux = self._row_to_entity_Competencia(r)
@@ -104,7 +104,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         cursor.execute(query)
         rows = cursor.fetchall()
         if not rows:
-            return None
+            return []
         lista_categorias = []
         for r in rows:
             aux = self._row_to_entity_Categoria(r)
@@ -152,13 +152,13 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         cursor.execute(query, (idClub,))
         row = cursor.fetchall()
         if not row:
-            return None
+            return []
 
         query = "SELECT * FROM inscripcion WHERE idClub = ?;"
         cursor.execute(query, (idClub,))
         row = cursor.fetchall()
         if not row:
-            return None
+            return []
         lista_inscripciones = []
         for r in row:
             aux = self._row_to_entity_Inscripciones(r)
@@ -246,7 +246,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         cursor.execute(query, (idListaBuenaFe,))
         rows = cursor.fetchall()
         if not rows:
-            return None
+            return []
 
         return [
             JugadorListaBuenaFe(
