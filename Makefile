@@ -25,3 +25,6 @@ pre_commit:
 docker_test:
 	docker build -f Dockerfile.test -t app-estadisticas-tests .
 	docker run --rm app-estadisticas-tests
+
+static_check:
+	mypy src/ --strict --explicit-package-bases

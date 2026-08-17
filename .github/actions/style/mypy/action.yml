@@ -1,0 +1,23 @@
+name: "MyPy"
+description: "Verificacion de tipos estaticos para Python"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+        cache: "pip"
+
+    - name: Instalar Ruff
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install mypy
+
+    - name: Ejecutar Ruff
+      shell: bash
+      run: mypy src/ --strict --explicit-package-bases
+      env:
+        PYTHONPATH: src

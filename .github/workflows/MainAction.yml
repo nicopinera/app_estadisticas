@@ -6,6 +6,19 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
+  check_dep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run pip-audit check
+        uses: pypa/pip-audit-action@v1.6.0
+        with:
+          inputs: requerimientos.txt
+
   lint:
     runs-on: ubuntu-latest
 
@@ -16,7 +29,19 @@ jobs:
           submodules: recursive
 
       - name: Run style check
-        uses: ./.github/actions/style
+        uses: ./.github/actions/style/ruff
+
+  static:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run static check
+        uses: ./.github/actions/style/mypy
 
   tests-linux:
     runs-on: ubuntu-latest

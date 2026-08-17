@@ -1,3 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "statspro-basketball"
+version = "0.1.0"
+description = "Aplicación de estadísticas de básquet, ejecución local (offline-first)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find-namespace]
+where = ["src"]
+
 [tool.ruff]
 line-length = 120
 
@@ -7,3 +37,9 @@ select = ["E501", "I"]
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 72
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+strict = true
+explicit_package_bases = true
