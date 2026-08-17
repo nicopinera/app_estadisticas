@@ -32,7 +32,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             idListaBuenaFe=row["idListaBuenaFe"],
         )
 
-    def guardar_competencia(self, compe: Competencia) -> Competencia:
+    def guardar_competencia(self, compe: Competencia) -> Competencia | None:
         try:
             cursor = self.conexion.cursor()
             query = """
@@ -52,7 +52,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
                                 pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia:
+    def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia | None:
         cursor = self.conexion.cursor()
         query = """
         SELECT * FROM competencia WHERE idCompetencia = ?;
@@ -77,7 +77,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             lista_competencias.append(aux)
         return lista_competencias
 
-    def guardar_categoria(self, cat: Categoria) -> Categoria:
+    def guardar_categoria(self, cat: Categoria) -> Categoria | None:
         "Registra una Categoria"
         try:
             cursor = self.conexion.cursor()
@@ -111,7 +111,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             lista_categorias.append(aux)
         return lista_categorias
 
-    def guardar_inscripcion(self, inscripcion: Inscripcion) -> Inscripcion:
+    def guardar_inscripcion(self, inscripcion: Inscripcion) -> Inscripcion | None:
         "Guarda una inscripcion"
         cursor = self.conexion.cursor()
         try:
@@ -134,7 +134,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion:
+    def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion | None:
         "Devuelve informacion de una inscripcion por ID"
         cursor = self.conexion.cursor()
         query = "SELECT * FROM inscripcion WHERE idInscripcion = ?;"
@@ -165,7 +165,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             lista_inscripciones.append(aux)
         return lista_inscripciones
 
-    def guardar_lista_buena_fe(self, listaBF: ListaBuenaFe) -> ListaBuenaFe:
+    def guardar_lista_buena_fe(self, listaBF: ListaBuenaFe) -> ListaBuenaFe | None:
         "Genera una lista de buena fe vacia"
         cursor = self.conexion.cursor()
         try:
@@ -235,7 +235,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             logger.critical(f"""Jugador agregado a la lista pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe] | None:
+    def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe]:
         "Obtiene todos los jugadores de una lista de buena fe"
         cursor = self.conexion.cursor()
         query = """

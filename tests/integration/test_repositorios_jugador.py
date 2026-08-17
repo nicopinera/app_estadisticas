@@ -25,7 +25,6 @@ def test_buscar_por_dni(db_conexion):
 
 
 def test_buscar_por_club(db_conexion):
-
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     # creamos la persona Jugador para vincularla a un determinado club
     nombre = "Carlos"

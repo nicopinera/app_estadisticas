@@ -8,7 +8,7 @@ class Usuario:
     pw: str
     idUsuario: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if not isinstance(self.email, str):

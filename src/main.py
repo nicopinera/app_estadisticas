@@ -5,7 +5,7 @@ from infraestructura.persistencia.database_manager import SQLiteManager
 logger = get_logger(__name__)
 
 
-def main():
+def main() -> None:
     """Orquesta el flujo principal de la aplicación.
 
     Crea una instancia de :class:`SQLiteManager`, establece la conexión con la

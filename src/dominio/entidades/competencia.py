@@ -8,7 +8,7 @@ class Competencia:
     tipo: str | None = None
     idCompetencia: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if not isinstance(self.anio, int):
@@ -24,7 +24,7 @@ class Categoria:
     nombre: str
     idCategoria: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if self.idCategoria is not None and not isinstance(self.idCategoria, int):
@@ -38,7 +38,7 @@ class Inscripcion:
     idCompetencia: int
     idInscripcion: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.idClub, int):
             raise TypeError(f"idClub debe ser int, recibido {type(self.idClub).__name__}")
         if not isinstance(self.idCategoria, int):
@@ -55,7 +55,7 @@ class ListaBuenaFe:
     idInscripcion: int
     idListaBuenaFe: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.fechaPresentacion, str):
             raise TypeError(f"fechaPresentacion debe ser str, recibido {type(self.fechaPresentacion).__name__}")
         if not isinstance(self.idInscripcion, int):
@@ -69,7 +69,7 @@ class JugadorListaBuenaFe:
     idJugador: int
     idListaBuenaFe: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.idJugador, int):
             raise TypeError(f"idJugador debe ser int, recibido {type(self.idJugador).__name__}")
         if not isinstance(self.idListaBuenaFe, int):

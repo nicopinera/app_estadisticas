@@ -6,7 +6,7 @@ class Club:
     nombre: str
     idClub: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if self.idClub is not None and not isinstance(self.idClub, int):
@@ -19,7 +19,7 @@ class UsuarioClub:
     idUsuario: int | None = None
     idClub: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.rol, str):
             raise TypeError(f"rol debe ser str, recibido {type(self.rol).__name__}")
         if self.idUsuario is not None and not isinstance(self.idUsuario, int):

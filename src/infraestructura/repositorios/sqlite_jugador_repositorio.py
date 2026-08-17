@@ -59,7 +59,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
 
         rows = cursor.fetchall()
         if not rows:
-            return None
+            return []
 
         resultado = []
         for r in rows:

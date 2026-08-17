@@ -9,7 +9,7 @@ class Jugador:
     anioNacimiento: int
     idJugador: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if not isinstance(self.apellido, str):
@@ -29,7 +29,7 @@ class JugadorClub:
     idJugador: int | None = None
     idClub: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.fechaDesde, str):
             raise TypeError(f"fechaDesde debe ser str, recibido {type(self.fechaDesde).__name__}")
         if self.fechaHasta is not None and not isinstance(self.fechaHasta, str):
