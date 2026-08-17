@@ -1,0 +1,52 @@
+name: MainAction
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run style check
+        uses: ./.github/actions/style
+
+  tests-linux:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run tests and coverage on Linux
+        uses: ./.github/actions/coverage/linux
+
+  tests-docker:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run tests inside Docker
+        uses: ./.github/actions/coverage/docker
+
+  tests-windows:
+    runs-on: windows-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run tests and coverage on Windows
+        uses: ./.github/actions/coverage/windows

@@ -1,0 +1,15 @@
+name: "Test Docker"
+description: "Corre la suite de tests dentro de Docker"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build imagen de tests
+      shell: bash
+      run: |
+        docker build -f Dockerfile.test -t app-estadisticas-tests .
+
+    - name: Ejecutar tests en contenedor
+      shell: bash
+      run: |
+        docker run --rm app-estadisticas-tests
