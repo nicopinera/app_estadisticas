@@ -1,170 +1,204 @@
-# Vistas SQL: Simplificando el Análisis de Datos
-
-## 1. ¿Qué es una Vista SQL?
-
-Una **Vista** es, esencialmente, una "tabla virtual". No almacena datos físicamente por sí misma, sino que guarda una consulta `SELECT` predefinida. Cuando consultas una vista, la base de datos ejecuta esa consulta en tiempo real sobre las tablas base.
-
-En nuestro sistema, las vistas son el puente entre los **datos crudos** (puntos, rebotes de un partido) y las **estadísticas útiles** (promedios por temporada, totales históricos).
+# Vistas SQL — Documentación Técnica
 
 ---
 
-## 2. ¿Por qué usar Vistas en StatsPro Basketball?
+## 1. Introducción y Propósito
 
-### A. Consistencia de Cálculos (DRY - Don't Repeat Yourself)
+### ¿Qué es una vista SQL?
 
-En lugar de escribir la lógica para sumar puntos en cada parte del código Python, la escribimos una vez en la base de datos.
+Una **vista** es una consulta `SELECT` con nombre, almacenada en la base de datos y tratable como si fuera una tabla. No almacena datos propios: cada vez que se la consulta, SQLite ejecuta la query subyacente en tiempo real sobre las tablas base.
 
-- _Sin vista:_ Python tiene que pedir todos los partidos y sumar uno por uno.
-- _Con vista:_ Python simplemente hace `SELECT * FROM v_jugador_totales`.
+### Rol de las vistas en StatsPro Basketball
 
-### B. Desacoplamiento (Capa de Infraestructura)
+Las vistas cumplen una función de **contrato estable entre la base de datos y la capa de análisis**. Actúan como una interfaz pública del modelo relacional hacia:
 
-Si decidimos cambiar el nombre de una columna en la tabla `jugadorPartido`, solo actualizamos la Vista. El motor de Pandas en Python ni siquiera se enterará, porque sigue leyendo la misma Vista.
+- **Motor analítico de Pandas:** los DataFrames se construyen directamente desde las vistas. Pandas recibe datos ya estructurados, renombrados y con columnas calculadas listas para graficar.
+- **Futura interfaz de usuario:** los listados de partidos, boxscores y habilitados se renderizan desde estas vistas sin lógica adicional de transformación en Python.
 
-### C. Preparación para Pandas
+```text
+tablas base (jugadorPartido, partido, jugador, …)
+          │
+          ▼
+  ┌───────────────────┐
+  │   vistas SQL      │  ← contrato estable, nombres snake_case, tipos resueltos
+  └───────────────────┘
+          │
+          ▼
+pandas.read_sql(…)  /  cursor.execute("SELECT * FROM v_…")
+```
 
-Pandas es excelente procesando datos estructurados. Al usar vistas, le entregamos a Pandas un "DataFrame" ya pre-filtrado y limpio, lo que ahorra memoria y tiempo de CPU en la aplicación local/móvil.
+**Beneficios clave:**
+
+| Beneficio           | Detalle                                                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DRY en cálculos** | Los porcentajes y acumulados se calculan una vez en SQL, no en cada función de Python.                                                               |
+| **Desacoplamiento** | Cambiar el nombre de una columna interna solo requiere actualizar la vista; Python sigue leyendo el mismo alias snake_case.                          |
+| **Eficiencia**      | Pandas recibe el resultado pre-agregado y pre-filtrado; no itera filas crudas en memoria.                                                            |
+| **Legibilidad**     | Las columnas expuestas tienen nombres descriptivos (`total_puntos`, `porcentaje_t2`) en lugar de los nombres técnicos de la tabla (`puntos`, `T2C`). |
 
 ---
 
-## 3. Implementación en SQLite
+## 2. Catálogo de Vistas Operativas
 
-La sintaxis básica es:
+El sistema dispone de **4 vistas operativas**, creadas en el orden indicado al final de `views.sql`:
 
-```sql
-CREATE VIEW nombre_de_la_vista AS
-SELECT columnas
-FROM tablas
-WHERE condiciones;
-```
-
-### Ejemplo Práctico: Totales por Jugador
-
-Para calcular cuántos puntos y tiros lleva un jugador sin tener que sumar manualmente en Python:
-
-```sql
-CREATE VIEW v_jugador_totales AS
-SELECT
-    idJugador,
-    COUNT(idPartido) as partidos_jugados,
-    SUM(puntos) as total_puntos,
-    SUM(T3C) as t3_convertidos,
-    SUM(T3L) as t3_lanzados,
-    -- Cálculo de porcentaje básico (evitando división por cero)
-    CASE
-        WHEN SUM(T3L) > 0 THEN ROUND(CAST(SUM(T3C) AS FLOAT) / SUM(T3L) * 100, 2)
-        ELSE 0
-    END as porcentaje_t3
-FROM jugadorPartido
-GROUP BY idJugador;
-```
+| Vista                         | Propósito principal                                               |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `v_partidos_resumen`          | Listado de partidos con nombres legibles (sin IDs)                |
+| `v_boxscore_completo`         | Estadísticas individuales por partido (fuente primaria de Pandas) |
+| `v_jugador_totales_temporada` | Acumulados y porcentajes por jugador y año de competencia         |
+| `v_listas_detalle`            | Jugadores habilitados por inscripción (listas de buena fe)        |
 
 ---
 
-## 4. Uso desde la Aplicación (Python)
-
-Desde el código, tratamos a la vista exactamente como si fuera una tabla:
-
-```python
-# En el repositorio de infraestructura
-cursor.execute("SELECT * FROM v_jugador_totales WHERE idJugador = ?", (jugador_id,))
-datos = cursor.fetchone()
-```
+## 3. Detalle de Cada Vista
 
 ---
 
-## 6. Catálogo de Vistas del Sistema
+### 3.1 `v_partidos_resumen`
 
-A continuación se detallan las vistas que implementaremos para alimentar el motor de estadísticas y la interfaz de usuario.
+#### Descripción funcional
 
-### A. Resumen de Partidos (`v_partidos_resumen`)
+Expone cada partido con los nombres legibles de competencia, club local y club visitante. Elimina la necesidad de hacer JOINs en la capa de aplicación para construir listados de partidos en la UI. Cada fila representa **un partido único**.
 
-Ideal para listados en la UI. Reemplaza los IDs de clubes y competencias por sus nombres reales.
+#### Tablas involucradas
 
-```sql
-CREATE VIEW v_partidos_resumen AS
-SELECT
-    p.idPartido,
-    p.fecha,
-    p.estadio,
-    comp.nombre AS competencia,
-    comp.anio,
-    cl.nombre AS club_local,
-    cv.nombre AS club_visitante
-FROM partido p
-JOIN competencia comp ON p.idCompetencia = comp.idCompetencia
-JOIN club cl ON p.idClubLocal = cl.idClub
-JOIN club cv ON p.idClubVisitante = cv.idClub;
+```txt
+partido  →  competencia  (INNER JOIN por idCompetencia)
+partido  →  club (alias cl)  (INNER JOIN por idClubLocal)
+partido  →  club (alias cv)  (INNER JOIN por idClubVisitante)
 ```
 
-### B. Box Score Detallado (`v_boxscore_completo`)
+#### Columnas expuestas
 
-Esta vista une la estadística básica con los nombres de los jugadores. Es la fuente principal para el análisis por partido en Pandas.
+| Columna            | Tipo SQLite         | Origen / Cálculo           | Descripción                          |
+| ------------------ | ------------------- | -------------------------- | ------------------------------------ |
+| `id_partido`       | `INTEGER`           | `partido.idPartido`        | Clave primaria del partido           |
+| `fecha_partido`    | `TEXT`              | `partido.fecha`            | Fecha en formato `YYYY-MM-DD`        |
+| `estadio`          | `TEXT` _(nullable)_ | `partido.estadio`          | Nombre del estadio; puede ser `NULL` |
+| `competencia`      | `TEXT`              | `competencia.nombre`       | Nombre de la competencia             |
+| `anio_competencia` | `INTEGER`           | `competencia.anio`         | Año de la competencia (> 1900)       |
+| `club_local`       | `TEXT`              | `club.nombre` (alias `cl`) | Nombre del club que juega de local   |
+| `club_visitante`   | `TEXT`              | `club.nombre` (alias `cv`) | Nombre del club visitante            |
 
-```sql
-CREATE VIEW v_boxscore_completo AS
-SELECT
-    jp.idPartido,
-    j.idJugador,
-    j.nombre || ' ' || j.apellido AS nombre_jugador,
-    cl.nombre AS nombre_club,
-    jp.minutosJugados,
-    jp.puntos,
-    jp.T2C, jp.T2L,
-    jp.T3C, jp.T3L,
-    jp.T1C, jp.T1L,
-    (jp.rebotesDef + jp.rebotesOf) AS rebotes_totales,
-    jp.asistencias,
-    jp.recuperos,
-    jp.perdidas,
-    jp.faltasCometidas
-FROM jugadorPartido jp
-JOIN jugador j ON jp.idJugador = j.idJugador
-JOIN club cl ON jp.idClub = cl.idClub;
+> **Nota:** Esta vista no incluye `idClubLocal` ni `idClubVisitante`. Los partidos sin estadio asignado retornan `NULL` en la columna `estadio`.
+
+---
+
+### 3.2 `v_boxscore_completo`
+
+#### Descripción funcional
+
+Es la **fuente primaria de datos para el análisis con Pandas**. Une la tabla `jugadorPartido` con `jugador` y `club` para exponer toda la estadística individual de un jugador en un partido, reemplazando los IDs por nombres legibles y normalizando los nombres de columna a snake_case. Cada fila representa **la actuación de un jugador en un partido específico**.
+
+#### Tablas involucradas
+
+```txt
+jugadorPartido  →  jugador  (INNER JOIN por idJugador)
+jugadorPartido  →  club     (INNER JOIN por idClub)
 ```
 
-### C. Acumulados por Temporada (`v_jugador_totales_temporada`)
+#### Columnas expuestas
 
-Agrupa el desempeño de los jugadores por año de competencia. Fundamental para ver la evolución histórica.
+| Columna              | Tipo SQLite | Origen / Cálculo                   | Descripción                   |
+| -------------------- | ----------- | ---------------------------------- | ----------------------------- |
+| `id_partido`         | `INTEGER`   | `jugadorPartido.idPartido`         | FK al partido                 |
+| `id_jugador`         | `INTEGER`   | `jugadorPartido.idJugador`         | FK al jugador                 |
+| `id_club`            | `INTEGER`   | `jugadorPartido.idClub`            | FK al club con el que jugó    |
+| `nombre_jugador`     | `TEXT`      | `nombre \|\| ' ' \|\| apellido`    | Nombre completo concatenado   |
+| `nombre_club`        | `TEXT`      | `club.nombre`                      | Nombre del club               |
+| `minutos_jugados`    | `REAL`      | `jugadorPartido.minutosJugados`    | Entre 0 y 48                  |
+| `puntos`             | `INTEGER`   | `jugadorPartido.puntos`            | Puntos totales anotados       |
+| `t2c`                | `INTEGER`   | `jugadorPartido.T2C`               | Tiros de 2 puntos convertidos |
+| `t2l`                | `INTEGER`   | `jugadorPartido.T2L`               | Tiros de 2 puntos lanzados    |
+| `t3c`                | `INTEGER`   | `jugadorPartido.T3C`               | Tiros de 3 puntos convertidos |
+| `t3l`                | `INTEGER`   | `jugadorPartido.T3L`               | Tiros de 3 puntos lanzados    |
+| `t1c`                | `INTEGER`   | `jugadorPartido.T1C`               | Tiros libres convertidos      |
+| `t1l`                | `INTEGER`   | `jugadorPartido.T1L`               | Tiros libres lanzados         |
+| `rebotes_def`        | `INTEGER`   | `jugadorPartido.rebotesDef`        | Rebotes defensivos            |
+| `rebotes_of`         | `INTEGER`   | `jugadorPartido.rebotesOf`         | Rebotes ofensivos             |
+| `rebotes_totales`    | `INTEGER`   | `rebotesDef + rebotesOf`           | Suma calculada en SQL         |
+| `asistencias`        | `INTEGER`   | `jugadorPartido.asistencias`       | Asistencias                   |
+| `recuperos`          | `INTEGER`   | `jugadorPartido.recuperos`         | Recuperos de balón            |
+| `perdidas`           | `INTEGER`   | `jugadorPartido.perdidas`          | Pérdidas de balón             |
+| `tapones_recibidos`  | `INTEGER`   | `jugadorPartido.taponesRecibidos`  | Tapones recibidos             |
+| `tapones_realizados` | `INTEGER`   | `jugadorPartido.taponesRealizados` | Tapones realizados            |
+| `faltas_recibidas`   | `INTEGER`   | `jugadorPartido.faltasRecibidas`   | Faltas recibidas              |
+| `faltas_cometidas`   | `INTEGER`   | `jugadorPartido.faltasCometidas`   | Faltas cometidas              |
 
-```sql
-CREATE VIEW v_jugador_totales_temporada AS
-SELECT
-    j.idJugador,
-    j.nombre || ' ' || j.apellido AS nombre_jugador,
-    comp.anio,
-    COUNT(jp.idPartido) as partidos_jugados,
-    SUM(jp.puntos) as total_puntos,
-    SUM(jp.T2C) as t2_convertidos,
-    SUM(jp.T2L) as t2_lanzados,
-    SUM(jp.T3C) as t3_convertidos,
-    SUM(jp.T3L) as t3_lanzados,
-    SUM(jp.asistencias) as total_asistencias,
-    SUM(jp.rebotesDef + jp.rebotesOf) as total_rebotes
-FROM jugadorPartido jp
-JOIN jugador j ON jp.idJugador = j.idJugador
-JOIN partido p ON jp.idPartido = p.idPartido
-JOIN competencia comp ON p.idCompetencia = comp.idCompetencia
-GROUP BY j.idJugador, comp.anio;
+> **Importante:** Esta vista no incluye porcentajes de tiro. Los porcentajes individuales por partido se calculan en Pandas o se consumen desde `v_jugador_totales_temporada` para acumulados.
+
+---
+
+### 3.3 `v_jugador_totales_temporada`
+
+#### Descripción funcional
+
+Agrega toda la producción estadística de cada jugador **por año de competencia**. Incluye sumas de todas las categorías estadísticas y los tres porcentajes de tiro calculados de forma segura ante divisiones por cero. Cada fila representa **el acumulado de un jugador en un año de competencia**.
+
+#### Tablas involucradas
+
+```
+jugadorPartido  →  jugador     (INNER JOIN por idJugador)
+jugadorPartido  →  partido     (INNER JOIN por idPartido)
+partido         →  competencia (INNER JOIN por idCompetencia)
+GROUP BY jugador.idJugador, competencia.anio
 ```
 
-### D. Listas de Buena Fe por Inscripción (`v_listas_detalle`)
+#### Columnas expuestas
 
-Permite consultar rápidamente qué jugadores están habilitados para una competencia específica.
+| Columna                    | Tipo SQLite | Origen / Cálculo                    | Descripción                            |
+| -------------------------- | ----------- | ----------------------------------- | -------------------------------------- |
+| `nombre_jugador`           | `TEXT`      | `nombre \|\| ' ' \|\| apellido`     | Nombre completo del jugador            |
+| `anio_competencia`         | `INTEGER`   | `competencia.anio`                  | Año de la temporada                    |
+| `partidos_jugados`         | `INTEGER`   | `COUNT(jp.idPartido)`               | Partidos en los que registró actuación |
+| `total_puntos`             | `INTEGER`   | `SUM(puntos)`                       | Puntos totales acumulados              |
+| `total_t2c`                | `INTEGER`   | `SUM(T2C)`                          | Tiros de 2 convertidos acumulados      |
+| `total_t2l`                | `INTEGER`   | `SUM(T2L)`                          | Tiros de 2 lanzados acumulados         |
+| `total_t3c`                | `INTEGER`   | `SUM(T3C)`                          | Tiros de 3 convertidos acumulados      |
+| `total_t3l`                | `INTEGER`   | `SUM(T3L)`                          | Tiros de 3 lanzados acumulados         |
+| `total_t1c`                | `INTEGER`   | `SUM(T1C)`                          | Tiros libres convertidos acumulados    |
+| `total_t1l`                | `INTEGER`   | `SUM(T1L)`                          | Tiros libres lanzados acumulados       |
+| `total_rebotes_def`        | `INTEGER`   | `SUM(rebotesDef)`                   | Rebotes defensivos acumulados          |
+| `total_rebotes_of`         | `INTEGER`   | `SUM(rebotesOf)`                    | Rebotes ofensivos acumulados           |
+| `total_rebotes`            | `INTEGER`   | `SUM(rebotesDef + rebotesOf)`       | Total de rebotes (def + of)            |
+| `total_asistencias`        | `INTEGER`   | `SUM(asistencias)`                  | Asistencias acumuladas                 |
+| `total_recuperos`          | `INTEGER`   | `SUM(recuperos)`                    | Recuperos acumulados                   |
+| `total_perdidas`           | `INTEGER`   | `SUM(perdidas)`                     | Pérdidas acumuladas                    |
+| `total_tapones_realizados` | `INTEGER`   | `SUM(taponesRealizados)`            | Tapones realizados acumulados          |
+| `total_tapones_recibidos`  | `INTEGER`   | `SUM(taponesRecibidos)`             | Tapones recibidos acumulados           |
+| `total_faltas_cometidas`   | `INTEGER`   | `SUM(faltasCometidas)`              | Faltas cometidas acumuladas            |
+| `total_faltas_recibidas`   | `INTEGER`   | `SUM(faltasRecibidas)`              | Faltas recibidas acumuladas            |
+| `porcentaje_t2`            | `REAL`      | `CASE WHEN SUM(T2L) > 0 … ELSE 0.0` | % efectividad tiros de 2               |
+| `porcentaje_t3`            | `REAL`      | `CASE WHEN SUM(T3L) > 0 … ELSE 0.0` | % efectividad tiros de 3               |
+| `porcentaje_t1`            | `REAL`      | `CASE WHEN SUM(T1L) > 0 … ELSE 0.0` | % efectividad tiros libres             |
 
-```sql
-CREATE VIEW v_listas_detalle AS
-SELECT
-    i.idInscripcion,
-    cl.nombre AS club,
-    cat.nombre AS categoria,
-    comp.nombre AS competencia,
-    j.nombre || ' ' || j.apellido AS jugador
-FROM inscripcion i
-JOIN club cl ON i.idClub = cl.idClub
-JOIN categoria cat ON i.idCategoria = cat.idCategoria
-JOIN competencia comp ON i.idCompetencia = comp.idCompetencia
-JOIN listaBuenaFe lbf ON lbf.idInscripcion = i.idInscripcion
-JOIN jugadorListaBuenaFe jlbf ON jlbf.idListaBuenaFe = lbf.idListaBuenaFe
-JOIN jugador j ON jlbf.idJugador = j.idJugador;
+---
+
+### 3.4 `v_listas_detalle`
+
+#### Descripción funcional
+
+Recorre la cadena completa de habilitación: inscripción → lista de buena fe → jugadores de esa lista. Permite verificar qué jugadores están habilitados para competir en una inscripción específica. Cada fila representa **un jugador habilitado en una inscripción a una competencia**.
+
+#### Tablas involucradas
+
 ```
+inscripcion
+  → club              (INNER JOIN por idClub)
+  → categoria         (INNER JOIN por idCategoria)
+  → competencia       (INNER JOIN por idCompetencia)
+  → listaBuenaFe      (INNER JOIN por idInscripcion)
+      → jugadorListaBuenaFe  (INNER JOIN por idListaBuenaFe)
+          → jugador          (INNER JOIN por idJugador)
+```
+
+#### Columnas expuestas
+
+| Columna              | Tipo SQLite | Origen / Cálculo                | Descripción                                         |
+| -------------------- | ----------- | ------------------------------- | --------------------------------------------------- |
+| `id_inscripcion`     | `INTEGER`   | `inscripcion.idInscripcion`     | Clave de la inscripción; usar como filtro principal |
+| `nombre_club`        | `TEXT`      | `club.nombre`                   | Nombre del club inscripto                           |
+| `nombre_categoria`   | `TEXT`      | `categoria.nombre`              | Categoría de la inscripción (ej. "U21")             |
+| `nombre_competencia` | `TEXT`      | `competencia.nombre`            | Nombre de la competencia                            |
+| `nombre_jugador`     | `TEXT`      | `nombre \|\| ' ' \|\| apellido` | Nombre completo del jugador habilitado              |

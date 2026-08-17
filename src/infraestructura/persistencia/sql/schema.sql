@@ -19,12 +19,12 @@ CREATE TABLE IF NOT EXISTS usuario (
     nombre text NOT NULL,
     email text NOT NULL UNIQUE,
     contrasenia text NOT NULL
-);
+) STRICT;
 -- Tabla Club
 CREATE TABLE IF NOT EXISTS club (
     idCLub integer PRIMARY KEY AUTOINCREMENT,
     nombre text NOT NULL UNIQUE
-);
+) STRICT;
 -- Tabla usuarioClub
 CREATE TABLE IF NOT EXISTS usuarioClub (
     idUsuario integer NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS usuarioClub (
     PRIMARY KEY (idUsuario, idClub),
     FOREIGN KEY (idUsuario) REFERENCES usuario (idUsuario) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
-);
+) STRICT;
 -- Tabla jugador
 CREATE TABLE IF NOT EXISTS jugador (
     idJugador integer PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS jugador (
     apellido text NOT NULL,
     dni integer null UNIQUE,
     anioNacimiento integer NULL
-);
+) STRICT;
 -- JugadorClub
 CREATE TABLE IF NOT EXISTS jugadorClub (
     idJugador integer NOT NULL,
@@ -55,19 +55,19 @@ CREATE TABLE IF NOT EXISTS jugadorClub (
     ),
     FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
-);
+) STRICT;
 -- Tabla competencia
 CREATE TABLE IF NOT EXISTS competencia (
     idCompetencia integer PRIMARY KEY AUTOINCREMENT,
     nombre text NOT NULL,
     anio integer NOT NULL CHECK(anio > 1900),
     tipo text NULL
-);
+) STRICT;
 -- Tabla categoria
 CREATE TABLE IF NOT EXISTS categoria (
     idCategoria integer PRIMARY KEY AUTOINCREMENT,
     nombre text NOT NULL
-);
+) STRICT;
 -- Tabla inscripcion
 CREATE TABLE IF NOT EXISTS inscripcion (
     idInscripcion integer PRIMARY KEY AUTOINCREMENT,
@@ -77,14 +77,14 @@ CREATE TABLE IF NOT EXISTS inscripcion (
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idCategoria) REFERENCES categoria (idCategoria) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE on UPDATE CASCADE
-);
+) STRICT;
 -- Tabla Lista de buena Fe
 CREATE TABLE IF NOT EXISTS listaBuenaFe (
     idListaBuenaFe integer PRIMARY KEY AUTOINCREMENT,
     fechaPresentacion text NOT NULL,
     idInscripcion integer NOT NULL UNIQUE,
     FOREIGN KEY (idInscripcion) REFERENCES inscripcion (idInscripcion) ON DELETE CASCADE on UPDATE CASCADE
-);
+) STRICT;
 -- Tabla Jugador Lista Buena Fe
 CREATE TABLE IF NOT EXISTS jugadorListaBuenaFe (
     idJugador integer NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS jugadorListaBuenaFe (
     PRIMARY KEY (idJugador, idListaBuenaFe),
     FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idListaBuenaFe) REFERENCES listaBuenaFe (idListaBuenaFe) ON DELETE CASCADE on UPDATE CASCADE
-);
+) STRICT;
 -- Tabla Partido
 CREATE TABLE IF NOT EXISTS partido (
     idPartido integer PRIMARY KEY AUTOINCREMENT,
@@ -105,13 +105,13 @@ CREATE TABLE IF NOT EXISTS partido (
     FOREIGN KEY (idCompetencia) REFERENCES competencia (idCompetencia) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idClubLocal) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idClubVisitante) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
-);
+) STRICT;
 -- Tabla jugador Partido
 CREATE TABLE IF NOT EXISTS jugadorPartido (
     idJugador integer NOT NULL,
     idPartido integer NOT NULL,
     idClub integer NOT NULL,
-    minutosJugados integer NOT NULL DEFAULT 0 CHECK(
+    minutosJugados real NOT NULL DEFAULT 0 CHECK(
         minutosJugados BETWEEN 0 AND 48
     ),
     puntos integer NOT NULL DEFAULT 0 CHECK(puntos >= 0),
@@ -137,5 +137,5 @@ CREATE TABLE IF NOT EXISTS jugadorPartido (
     FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE RESTRICT ON UPDATE RESTRICT,
     FOREIGN KEY (idPartido) REFERENCES partido (idPartido) ON DELETE RESTRICT ON UPDATE RESTRICT,
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE RESTRICT ON UPDATE RESTRICT
-);
+) STRICT;
 COMMIT;

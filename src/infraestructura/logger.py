@@ -48,17 +48,13 @@ def configuracion_log():
 
     logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     # A diferencia del FileHandler simple, este no llena el disco.
     # Cuando el archivo app.log llega a 10MB, se cierra.
     # backupCount=5; El sistema renombra el viejo a app.log.1, app.log.2. y así hasta 5
     # Cuando llega al 6 borra el mas viejo
-    app_handler = RotatingFileHandler(
-        r.APP_LOG_FILE, maxBytes=10_000_000, backupCount=5, encoding="utf-8"
-    )
+    app_handler = RotatingFileHandler(r.APP_LOG_FILE, maxBytes=10_000_000, backupCount=5, encoding="utf-8")
     app_handler.setLevel(logging.INFO)
     app_handler.setFormatter(formatter)
 

@@ -2,10 +2,14 @@ import sqlite3
 
 from dominio.entidades.club import Club
 from dominio.entidades.jugador import Jugador, JugadorClub
+from dominio.exceptions import DNIDuplicadoError
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
+from infraestructura.logger import get_logger
+
+logger = get_logger(__name__)
 
 
-class SquliteJugadorRepositorio(JugadorRepositorio):
+class SqliteJugadorRepositorio(JugadorRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
         self.conexion = conexion
 
@@ -63,17 +67,32 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
             resultado.append(j_aux)
         return resultado
 
-    def guardar(self, jugador: Jugador) -> Jugador:
+    def guardar(self, jugador: Jugador) -> Jugador | None:
         cursor = self.conexion.cursor()
         try:
-            query = "INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) VALUES (?, ?, ?, ?);"
+            query = """
+            SELECT * FROM jugador WHERE dni = ?;
+            """
+            cursor.execute(query, (jugador.dni,))
+            r = cursor.fetchall()
+            if r:
+                logger.error(f"Ya existe un jugador con DNI {jugador.dni}", exc_info=True)
+                raise DNIDuplicadoError(f"Ya existe un jugador con DNI {jugador.dni}")
+
+            query = """
+            INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) VALUES (?, ?, ?, ?);
+            """
             cursor.execute(
                 query,
                 (jugador.nombre, jugador.apellido, jugador.dni, jugador.anioNacimiento),
             )
             self.conexion.commit()
             id_jugador = cursor.lastrowid
+        except sqlite3.Error as e:
+            logger.error(f"Error al guardar Jugador: {e}", exc_info=True)
+            return None
 
+        try:
             return Jugador(
                 nombre=jugador.nombre,
                 apellido=jugador.apellido,
@@ -81,17 +100,31 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
                 anioNacimiento=jugador.anioNacimiento,
                 idJugador=id_jugador,
             )
-        except sqlite3.Error:
+        except TypeError as e:
+            logger.critical(f"""Jugador guardado (idJugador={id_jugador})
+                                pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
+
+    def link_to_club(self, jc: JugadorClub) -> JugadorClub | None:
+        try:
+            cursor = self.conexion.cursor()
+            query = "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
+            cursor.execute(query, (jc.idJugador, jc.idClub, jc.fechaDesde))
+            self.conexion.commit()
+        except sqlite3.Error as e:
+            logger.error(f"Error al linkear jugador con club: {e}", exc_info=True)
             return None
 
-    def link_to_club(self, jc: JugadorClub) -> None:
-        cursor = self.conexion.cursor()
-
-        query = (
-            "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
-        )
-        cursor.execute(query, (jc.id_jugador, jc.id_club, jc.fechaDesde))
-        self.conexion.commit()
+        try:
+            return JugadorClub(
+                fechaDesde=jc.fechaDesde,
+                fechaHasta=None,
+                idJugador=jc.idJugador,
+                idClub=jc.idClub,
+            )
+        except TypeError as e:
+            logger.critical(f"""Jugador linkeado pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
 
     def club_activo(self, id_jugador: int) -> Club | None:
         cursor = self.conexion.cursor()
@@ -108,7 +141,4 @@ class SquliteJugadorRepositorio(JugadorRepositorio):
         if row is None:
             return None
 
-        return Club(
-            nombre=row["nombre"],
-            idClub=row["idClub"],
-        )
+        return Club(nombre=row["nombre"], idClub=row["idClub"])

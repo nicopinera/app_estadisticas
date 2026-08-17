@@ -3,6 +3,18 @@ name: Python test
 on: pull_request
 
 jobs:
+  test_docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -f Dockerfile.test -t app-estadisticas-tests .
+
+      - name: Run Test inside Docker
+        run: docker run --rm app-estadisticas-tests
+
   test_linux:
     runs-on: ubuntu-latest
 
@@ -28,15 +40,8 @@ jobs:
         # Usamos `set -o pipefail` para que el paso falle si pytest falla,
         # pero el archivo seguirá existiendo y podrá subirse en el paso `if: always()`.
         run: |
-          set -o pipefail
-          pytest --cov=src --cov-report=html 2>&1 | tee test_output.txt
+          pytest -v --cov=src --cov-report=html
 
-      - name: Subir artefacto de logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-logs
-          path: test_output.txt
   test_windows:
     runs-on: windows-latest
 
@@ -63,12 +68,4 @@ jobs:
         # `exit $LASTEXITCODE` asegura que el paso devuelva el código de pytest.
         shell: pwsh
         run: |
-          pytest --cov=src --cov-report=html 2>&1 | Tee-Object -FilePath test_output.txt
-          exit $LASTEXITCODE
-
-      - name: Subir artefacto de logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-logs-windows
-          path: test_output.txt
+          pytest --cov=src --cov-report=html

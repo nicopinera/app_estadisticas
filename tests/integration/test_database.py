@@ -6,21 +6,6 @@ import config.rutas as ruta
 from infraestructura.persistencia.database_manager import SQLiteManager
 
 
-@pytest.fixture
-def db_conexion():
-    conexion = sqlite3.connect(":memory:")
-    cursor = conexion.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON;")
-
-    with open(ruta.SCHEMA_SQL, "r") as schema:
-        cursor.executescript(schema.read())
-
-    with open(ruta.VISTA_SQL, "r") as schema:
-        cursor.executescript(schema.read())
-
-    return conexion
-
-
 def test_schema_sql_ejecuta_sin_errores():
     """
     Testea que se ejecute el schema en una DB vacia sin generar excepciones
@@ -43,9 +28,6 @@ def test_view_sql_ejecuta_sin_errores():
     with open(ruta.VISTA_SQL, "r", encoding="utf-8") as f:
         conexion.executescript(f.read())
     conexion.close()
-
-
-# test/test_database.py
 
 
 def test_schema_sql_ejecuta_sin_errores():
@@ -76,7 +58,7 @@ def test_seed_sql_ejecuta_sin_errores():
     manager.close_connection()
 
 
-def test_database_schema(db_conexion):
+def test_database_schema(db_conexion_sin_seed):
     """
     Test destinado a verificar que se creen las tablas especificadas en en schenma
     """
@@ -96,7 +78,7 @@ def test_database_schema(db_conexion):
         "categoria",
     }
 
-    cursor = db_conexion.cursor()
+    cursor = db_conexion_sin_seed.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
 
     tablas_existentes = {row[0] for row in cursor.fetchall()}
@@ -105,7 +87,7 @@ def test_database_schema(db_conexion):
     assert not faltan, f"Error: No se encontraron las tablas: {faltan}"
 
 
-def test_database_schema_view(db_conexion):
+def test_database_schema_view(db_conexion_sin_seed):
     """
     Test destinado a verificar que se generen las vistas especificadas en el archivo sql
     """
@@ -117,7 +99,7 @@ def test_database_schema_view(db_conexion):
         "v_partidos_resumen",
     }
 
-    cursor = db_conexion.cursor()
+    cursor = db_conexion_sin_seed.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='view';")
 
     vistas_existentes = {row[0] for row in cursor.fetchall()}
@@ -126,10 +108,10 @@ def test_database_schema_view(db_conexion):
     assert not faltan, f"Error: No se encontraron las vistas: {faltan}"
 
 
-def test_referential_integrity(db_conexion):
+def test_referential_integrity(db_conexion_sin_seed):
     # Intentar insertar un registro con una categoría que NO existe (id: 999)
     # Debe lanzar un sqlite3.IntegrityError
-    db_cursor = db_conexion.cursor()
+    db_cursor = db_conexion_sin_seed.cursor()
     with pytest.raises(sqlite3.IntegrityError):
         db_cursor.execute(
             "INSERT INTO listaBuenaFe (fechaPresentacion, idInscripcion) VALUES (?, ?)",
@@ -137,12 +119,12 @@ def test_referential_integrity(db_conexion):
         )
 
 
-def test_check_constraints(db_conexion):
+def test_check_constraints(db_conexion_sin_seed):
     """
     Test destinado a verificar que se cumplan los CHECK definidos en la DB
     """
 
-    db_cursor = db_conexion.cursor()
+    db_cursor = db_conexion_sin_seed.cursor()
     db_cursor.execute("PRAGMA foreign_keys = OFF;")
 
     # 1. Probar puntos negativos
@@ -187,24 +169,18 @@ def test_limpieza_elimina_datos_de_seed():
     Test que verifica la limpieza correcta de los datos seed
     """
 
-    manager = SQLiteManager(
-        ":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL, ruta.CLEAR_SQL
-    )
+    manager = SQLiteManager(":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL, ruta.CLEAR_SQL)
     conexion = manager.connect()
     manager.inicializar_schema()
     manager.cargar_seed()
 
     cursor = conexion.cursor()
-    cursor.execute(
-        "SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",)
-    )
+    cursor.execute("SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",))
     assert cursor.fetchone()[0] == 1
 
     manager.limpieza()
 
-    cursor.execute(
-        "SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",)
-    )
+    cursor.execute("SELECT COUNT(*) FROM usuario WHERE nombre = ?", ("juan salvatierra",))
     assert cursor.fetchone()[0] == 0
 
 
@@ -288,15 +264,13 @@ def test_division_by_zero_devuelve_cero_en_vistas():
     assert porcentaje_t1 == 0.0
 
 
-def test_business_constraints(db_conexion):
-    db_cursor = db_conexion.cursor()
+def test_business_constraints(db_conexion_sin_seed):
+    db_cursor = db_conexion_sin_seed.cursor()
 
     # Pre-requisitos: Clubes y Competencia
     db_cursor.execute("INSERT INTO club (nombre) VALUES ('Atenas')")
     db_cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")
-    db_cursor.execute(
-        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)"
-    )
+    db_cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)")
 
     # 1. Probar que el local no sea igual al visitante
     with pytest.raises(sqlite3.IntegrityError):
@@ -310,9 +284,7 @@ def test_business_constraints(db_conexion):
 
     # 2. Probar que tiros convertidos no superen a los lanzados (T2C <= T2L)
     # Pre-requisito: Jugador y Partido
-    db_cursor.execute(
-        "INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')"
-    )
+    db_cursor.execute("INSERT INTO jugador (nombre, apellido) VALUES ('Facundo', 'Campazzo')")
     db_cursor.execute(
         """
         INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
@@ -339,16 +311,14 @@ def test_business_constraints(db_conexion):
         )
 
 
-def test_foreign_key_behavior(db_conexion):
-    cursor = db_conexion.cursor()
+def test_foreign_key_behavior(db_conexion_sin_seed):
+    cursor = db_conexion_sin_seed.cursor()
 
     # Setup datos iniciales
     cursor.execute("INSERT INTO club (nombre) VALUES ('Atenas')")
     cursor.execute("INSERT INTO categoria (nombre) VALUES ('U21')")
     cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026', 2026)")
-    cursor.execute(
-        "INSERT INTO inscripcion (idClub, idCategoria, idCompetencia) VALUES (1, 1, 1)"
-    )
+    cursor.execute("INSERT INTO inscripcion (idClub, idCategoria, idCompetencia) VALUES (1, 1, 1)")
 
     # 1. CASCADE: Al borrar competencia, se debe borrar la inscripción automáticamente
     cursor.execute("DELETE FROM competencia WHERE idCompetencia = 1")
@@ -358,9 +328,7 @@ def test_foreign_key_behavior(db_conexion):
     # 2. RESTRICT: No se puede borrar un club si tiene registros en jugadorPartido
     # Re-insertamos datos necesarios
     cursor.execute("INSERT INTO club (nombre) VALUES ('Instituto')")  # idClub = 2
-    cursor.execute(
-        "INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)"
-    )  # idCompetencia = 2
+    cursor.execute("INSERT INTO competencia (nombre, anio) VALUES ('Liga 2026 B', 2026)")  # idCompetencia = 2
     cursor.execute(
         """
         INSERT INTO partido (fecha, idCompetencia, idClubLocal, idClubVisitante)
@@ -381,7 +349,7 @@ def test_foreign_key_behavior(db_conexion):
         cursor.execute("DELETE FROM club WHERE idClub = 1")
 
 
-def test_view_semantics_and_cardinality(db_conexion):
+def test_view_semantics_and_cardinality():
     # Setup: Inicializar con datos semilla
     manager = SQLiteManager(":memory:", ruta.SCHEMA_SQL, ruta.VISTA_SQL, ruta.SEED_SQL)
     conexion = manager.connect()

@@ -25,9 +25,7 @@ class SQLiteManager:
             datos; ``None`` mientras no se haya llamado a :meth:`connect`.
     """
 
-    def __init__(
-        self, db_path, schema_path, views_path, seed_path=None, limpieza_path=None
-    ):
+    def __init__(self, db_path, schema_path, views_path, seed_path=None, limpieza_path=None):
         self.db_path = db_path
         self.schema_path = schema_path
         self.views_path = views_path
@@ -50,12 +48,8 @@ class SQLiteManager:
         """
         if self.conexion is None:
             self.conexion = sqlite3.connect(self.db_path)
-            self.conexion.execute(
-                "PRAGMA foreign_keys = ON;"
-            )  # Activo las claves foraneas
-            self.conexion.row_factory = (
-                sqlite3.Row
-            )  # Habilito acceso por nombre de columnas
+            self.conexion.execute("PRAGMA foreign_keys = ON;")  # Activo las claves foraneas
+            self.conexion.row_factory = sqlite3.Row  # Habilito acceso por nombre de columnas
         return self.conexion
 
     def inicializar_schema(self):
