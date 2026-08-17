@@ -1,0 +1,11 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY requerimientos.txt .
+
+RUN pip install -r requerimientos.txt
+
+COPY . .
+
+CMD ["pytest", "-v", "--cov=src", "--cov-report=term"]

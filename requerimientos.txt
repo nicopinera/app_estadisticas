@@ -1,3 +1,6 @@
 pytest
 pytest-cov
 pandas
+ruff
+sphinx
+sphinx-rtd-theme
