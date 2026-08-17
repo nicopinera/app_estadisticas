@@ -71,6 +71,15 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         cursor = self.conexion.cursor()
         try:
             query = """
+            SELECT * FROM jugador WHERE dni = ?;
+            """
+            cursor.execute(query, (jugador.dni,))
+            r = cursor.fetchall()
+            if r:
+                logger.error(f"Ya existe un jugador con DNI {jugador.dni}", exc_info=True)
+                raise DNIDuplicadoError(f"Ya existe un jugador con DNI {jugador.dni}")
+
+            query = """
             INSERT INTO jugador (nombre, apellido, dni, anioNacimiento) VALUES (?, ?, ?, ?);
             """
             cursor.execute(
@@ -79,13 +88,6 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             )
             self.conexion.commit()
             id_jugador = cursor.lastrowid
-        except sqlite3.IntegrityError as e:
-            if "UNIQUE" in str(e) and "jugador.dni" in str(e):
-                raise DNIDuplicadoError(
-                    f"Ya existe un jugador con DNI {jugador.dni}"
-                ) from e
-            logger.error(f"Error de integridad al guardar Jugador: {e}", exc_info=True)
-            return None
         except sqlite3.Error as e:
             logger.error(f"Error al guardar Jugador: {e}", exc_info=True)
             return None

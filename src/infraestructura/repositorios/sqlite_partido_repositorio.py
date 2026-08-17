@@ -185,9 +185,10 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
     def save_with_boxscore(
         self, partido: Partido, boxscore: list[JugadorPartido]
     ) -> tuple[Partido, list[JugadorPartido]] | None:
-        """Guarda el partido y su boxscore en una única transacción atómica.
+        """Guarda el partido y el boxscore de todos los jugadores en una
+        única transacción atómica.
 
-        Utiliza el context manager de sqlite3 (`with self.conexion:`) que realiza
+        Utiliza el context manager de sqlite3  que realiza
         COMMIT automático al salir sin error o ROLLBACK ante cualquier excepción.
         Si falla cualquier fila del boxscore, el partido tampoco queda guardado.
         """
@@ -195,22 +196,22 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             with self.conexion:
                 cursor = self.conexion.cursor()
 
-                # --- Validación Previa ---
-                # 1. Validar que la competencia y los clubes del partido existan.
-                cursor.execute("SELECT 1 FROM competencia WHERE idCompetencia = ?", (partido.idCompetencia,))
+                # Validar que la competencia y los clubes del partido existan.
+                cursor.execute("SELECT * FROM competencia WHERE idCompetencia = ?", (partido.idCompetencia,))
                 if cursor.fetchone() is None:
                     raise sqlite3.IntegrityError(f"La competencia con id {partido.idCompetencia} no existe.")
 
-                cursor.execute("SELECT COUNT(idClub) FROM club WHERE idClub IN (?, ?)", (partido.idClubLocal,
-                                                                                          partido.idClubVisitante))
+                cursor.execute(
+                    "SELECT COUNT(*) FROM club WHERE idClub IN (?, ?)", (partido.idClubLocal, partido.idClubVisitante)
+                )
                 if cursor.fetchone()[0] < 2:
                     raise sqlite3.IntegrityError("El club local o visitante no existe.")
 
                 # 2. Validar que todos los jugadores y clubes del boxscore existan.
                 jugadores_ids = {bs.idJugador for bs in boxscore}
-                
-                if jugadores_ids: # Solo validar si la lista no está vacía
-                    placeholders = ','.join('?' for _ in jugadores_ids)
+
+                if jugadores_ids:  # Solo validar si la lista no está vacía
+                    placeholders = ",".join("?" for _ in jugadores_ids)
                     cursor.execute(
                         f"SELECT idJugador FROM jugador WHERE idJugador IN ({placeholders})",
                         tuple(jugadores_ids),
@@ -243,7 +244,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
                 id_partido = cursor.lastrowid
 
                 # Insertar cada fila del boxscore
-                filas_guardadas: list[JugadorPartido] = []
+                filas_guardadas = []
                 for bs in boxscore:
                     cursor.execute(
                         """
@@ -277,30 +278,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
                             bs.faltasCometidas,
                         ),
                     )
-                    filas_guardadas.append(
-                        JugadorPartido(
-                            idJugador=bs.idJugador,
-                            idPartido=id_partido,
-                            idClub=bs.idClub,
-                            minutosJugados=bs.minutosJugados,
-                            puntos=bs.puntos,
-                            t2c=bs.t2c,
-                            t2l=bs.t2l,
-                            t3c=bs.t3c,
-                            t3l=bs.t3l,
-                            t1c=bs.t1c,
-                            t1l=bs.t1l,
-                            rebotesDef=bs.rebotesDef,
-                            rebotesOf=bs.rebotesOf,
-                            asistencias=bs.asistencias,
-                            recuperos=bs.recuperos,
-                            perdidas=bs.perdidas,
-                            taponesRecibidos=bs.taponesRecibidos,
-                            taponesRealizados=bs.taponesRealizados,
-                            faltasRecibidas=bs.faltasRecibidas,
-                            faltasCometidas=bs.faltasCometidas,
-                        )
-                    )
+                    filas_guardadas.append(bs)
 
             partido_guardado = Partido(
                 fecha=partido.fecha,
@@ -325,6 +303,5 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
                 len(boxscore),
                 exc_info=True,
             )
-
 
             return None
