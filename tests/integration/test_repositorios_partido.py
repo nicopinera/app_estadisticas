@@ -220,8 +220,6 @@ def test_save_with_boxscore_rollback_no_deja_partido_huerfano(db_conexion):
 
     # El partido NO debe haber quedado guardado (sin partido huérfano)
     cursor = db_conexion.cursor()
-    cursor.execute(
-        "SELECT COUNT(*) FROM partido WHERE fecha = '2026-01-01' AND estadio = 'Estadio Test Rollback'"
-    )
+    cursor.execute("SELECT COUNT(*) FROM partido WHERE fecha = '2026-01-01' AND estadio = 'Estadio Test Rollback'")
     count = cursor.fetchone()[0]
-    assert count == 0, "El partido no debería haberse persistido tras el rollback"
+    assert count == 0
