@@ -50,6 +50,10 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             cursor.execute(query, (partido.idCompetencia,))
             row = cursor.fetchone()
             if row is None:
+                logger.warning(
+                "No se pudo guardar partido: competencia inexistente (idCompetencia=%s)",
+                partido.idCompetencia,
+                )
                 return None
 
             query = """
@@ -58,8 +62,13 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             cursor.execute(query, (partido.idClubLocal, partido.idClubVisitante))
             row = cursor.fetchall()
             if not row or len(row) < 2:
+                logger.warning(
+                "No se pudo guardar partido: club local o visitante inexistente "
+                "(idClubLocal=%s, idClubVisitante=%s)",
+                partido.idClubLocal,
+                partido.idClubVisitante,
+            )
                 return None
-
             query = """
             INSERT INTO partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante)
             VALUES (?, ?, ?, ?, ?)
