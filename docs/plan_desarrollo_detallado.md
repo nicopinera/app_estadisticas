@@ -536,9 +536,22 @@ src/infraestructura/repositorios/
   - **DTOs:** `JugadorDTO`, `ClubDTO`, `CompetenciaDTO`, `CrearJugadorDTO`, `PartidoResumenDTO`,
     `InscripcionDTO`.
 - **Capa de Infraestructura:**
-  - **Comandos CLI** (`src/infraestructura/ui/cli/commands/`, a crear): `player_add.py`,
-    `club_add.py`, `player_link.py`, `game_list.py`, `player_list.py`, `club_list.py`.
+  - **`main_cli.py`** (`src/infraestructura/ui/cli/main_cli.py`, a crear): composition root de la
+    CLI. **Nace en esta US** (no en la US-106 — ver nota más abajo), con el parser raíz y los
+    subparsers de `club` y `player`; US-104 y US-106 le agregan subparsers encima, sin
+    recrearlo.
+  - **Comandos CLI** (`src/infraestructura/ui/cli/commands/`, a crear), agrupados por entidad
+    (un archivo por sustantivo, no por verbo — así lo pide el AC1 de la US-106 y evita archivos
+    de una sola función): `club_commands.py` (`add`, `list`), `player_commands.py` (`add`,
+    `list`, `link`), `game_commands.py` (solo `list` por ahora — `add`/`boxscore` se agregan en
+    US-105/US-106, cuando exista el caso de uso de carga de partidos).
+  - **`formatters/table_formatter.py`** (a crear): wrapper de `tabulate` — nace acá porque el AC4
+    de esta misma US ya exige formatear listas como tabla.
   - Command Pattern con `argparse`; prompts interactivos (`input()`); formateo con `tabulate`.
+  - > **Nota:** la versión anterior de esta sección tenía archivos por verbo (`player_add.py`,
+    > `club_add.py`, etc.) que no coincidían con la convención por entidad de la US-106, y daba a
+    > entender que `main_cli.py` recién se creaba en la US-106 pese a que esta US ya necesita
+    > `argparse`/`tabulate` para su propio AC4. Corregido — ver sección 20.
 - **Criterios de Aceptación:**
   - **AC1 — Independencia de Dominio:** los archivos en `dominio/entidades/` no importan
     librerías externas.
@@ -587,6 +600,15 @@ src/aplicacion/use_cases/  (❌ ninguno existe todavía — capa aplicación no 
 ├── listar_jugadores_club.py
 ├── listar_partidos_por_club.py
 └── cambiar_club_activo.py
+
+src/infraestructura/ui/cli/  (❌ no existe todavía)
+├── main_cli.py
+├── commands/
+│   ├── club_commands.py      (add, list)
+│   ├── player_commands.py    (add, list, link)
+│   └── game_commands.py      (list)
+└── formatters/
+    └── table_formatter.py
 ```
 
 > **Nota de organización real:** el PRD prevé un archivo por entidad/caso de uso; el código
@@ -624,7 +646,10 @@ src/aplicacion/use_cases/  (❌ ninguno existe todavía — capa aplicación no 
   - **Gestión de sesión:** `SessionManager` persiste `usuario_id` y `club_activo_id` en un JSON
     oculto (`~/.statspro/session.json` o `~/.statspro_session.json`).
   - **CLI:** `stats auth register`, `stats auth login`, `stats auth logout`,
-    `stats club select <id>`.
+    `stats club select <id>`. Se registran como subparsers nuevos sobre el `main_cli.py` que ya
+    existe desde la US-103 (no se crea uno nuevo): `commands/auth_commands.py` (a crear en esta
+    US) para `register`/`login`/`logout`, y se agrega el verbo `select` al `club_commands.py` ya
+    existente.
 - **Base de Datos:** tabla `usuario` (`idUsuario`, `nombre`, `email`, `contrasenia` — nombre real
   de columna, ver nota sobre el campo `pw` en sección 20).
 - **Criterios de Aceptación:**
@@ -731,8 +756,12 @@ test/
 - **Esfuerzo:** M (3-5 días) · **Prioridad:** Alta · **Dependencias:** US-103, US-104, US-105
 - **Narrativa:** Como administrador, quiero una CLI estructurada con subcomandos claros para
   gestionar todas las entidades, que muestre los datos en tablas formateadas.
-- **Objetivo Funcional:** construir una CLI extensible y mantenible con subcomandos desacoplados
-  que consolide todo el flujo operativo de v0.1, sin bloques monolíticos `if/else`.
+- **Objetivo Funcional:** **no crea la CLI desde cero** — `main_cli.py` y la mayoría de
+  `commands/` ya existen desde la US-103 (club/player/game-list) y la US-104
+  (auth/club-select). Esta US cierra lo que falta (`game add`, `game boxscore`, una vez que
+  US-105 tenga el caso de uso de carga de partidos) y hace el pulido final: confirma que el
+  patrón de subcomandos desacoplados se sostuvo sin bloques `if/else` a lo largo de las tres
+  historias.
 - **Comandos (usar `argparse`):**
 
 ```text
@@ -751,19 +780,20 @@ stats game list                     → tabla con v_partidos_resumen
 stats game boxscore <id_partido>    → tabla con v_boxscore_completo
 ```
 
-- **Archivos a crear:**
+- **Archivos a crear (la mayoría ya existe de US-103/US-104 — acá solo se extiende):**
 
 ```text
 src/infraestructura/ui/cli/
-├── main_cli.py                     ← punto de entrada / composition root
+├── main_cli.py                     ✅ existe desde US-103 — se le agregan subparsers, no se recrea
 ├── commands/
 │   ├── __init__.py
-│   ├── auth_commands.py            ← register, login, logout
-│   ├── club_commands.py            ← add, list, select
-│   ├── player_commands.py          ← add, list, link
-│   └── game_commands.py            ← add (interactivo), list, boxscore
+│   ├── auth_commands.py            ✅ existe desde US-104 (register, login, logout)
+│   ├── club_commands.py            ✅ existe desde US-103 (add, list) + `select` de US-104
+│   ├── player_commands.py          ✅ existe desde US-103 (add, list, link)
+│   └── game_commands.py            ⚠️ existe desde US-103 (solo `list`) — acá se le agregan
+│                                       `add` (interactivo) y `boxscore`
 └── formatters/
-    └── table_formatter.py          ← TableFormatter (wrapper de tabulate)
+    └── table_formatter.py          ✅ existe desde US-103 (wrapper de tabulate)
 ```
 
 - **Criterios de Aceptación:**
@@ -1786,6 +1816,14 @@ agregó a cada US está en las propias US-202, US-203, US-301 y US-303 (Hito 2 y
   `ruff` real) — ya corregido en la transcripción.
 - **La tabla "Estructura de Repositorios"** (sección 17) le faltaba la fila de Competencia en
   ambas fuentes originales — corregida acá.
+- **US-103, US-104 y US-106 se contradecían sobre `src/infraestructura/ui/cli/`**: US-103 listaba
+  archivos de comando por verbo (`player_add.py`, `club_add.py`...) mientras US-106 usaba
+  convención por entidad (`player_commands.py`, `club_commands.py`...) para la misma carpeta, y
+  las tres historias daban a entender que creaban `main_cli.py` desde cero pese a que US-106
+  depende de que US-103 y US-104 ya estén terminadas. Corregido: `main_cli.py`, `commands/` y
+  `formatters/table_formatter.py` nacen en US-103 (que ya necesita `argparse`/`tabulate` para su
+  propio AC4), con convención por entidad en las tres historias; US-104 y US-106 quedan
+  documentadas como extensión sobre lo existente, no como creación nueva.
 
 ### Lo que ya está sólido
 
