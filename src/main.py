@@ -1,8 +1,36 @@
+import argparse
+
 import config.rutas as r
 from infraestructura.logger import get_logger
 from infraestructura.persistencia.database_manager import SQLiteManager
+from infraestructura.ui.cli.commands import jugador_add
 
 logger = get_logger(__name__)
+
+
+def construir_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="stats")
+    subparser = parser.add_subparsers(dest="comando")
+
+    # Rama "jugador"
+    parser_jugador = subparser.add_parser("jugador", help="Operaciones sobre jugadores")
+    jugador_subparsers = parser_jugador.add_subparsers(dest="subcomando")
+
+    parser_jugador_add = jugador_subparsers.add_parser("add", help="Registra un jugador nuevo")
+    parser_jugador_add.add_argument("--nombre", required=True, help="NOMBRE: nombre del jugador - OBLIGATORIO")
+    parser_jugador_add.add_argument("--apellido", required=True, help="APELLIDO: Apellido del jugador - OBLIGATORIO")
+    parser_jugador_add.add_argument("--dni", type=int, required=True, help="DNI: DNI del jugador - OBLIGATORIO")
+    parser_jugador_add.add_argument("--anio", type=int, required=True, help="AÑO: Año de nacimiento del jugador")
+    parser_jugador_add.set_defaults(func=jugador_add.ejecutar)
+
+    return parser
+
+
+def inicializar_db() -> None:
+    db = SQLiteManager(r.DB_FILE, r.SCHEMA_SQL, r.VISTA_SQL)
+    db.connect()
+    db.inicializar_schema()
+    db.close_connection()
 
 
 def main() -> None:
@@ -16,13 +44,14 @@ def main() -> None:
         None
     """
     logger.info("Ejecutando orquestador principal")
-    pruebaSQL = SQLiteManager(r.DB_FILE, r.SCHEMA_SQL, r.VISTA_SQL, r.SEED_SQL, r.CLEAR_SQL)
-    conexion_test = pruebaSQL.connect()  # Genero conexion a DB
-    pruebaSQL.inicializar_schema()  # Inicio db
-    pruebaSQL.cargar_seed()
-    # pruebaSQL.limpieza()
-    pruebaSQL.close_connection()  # Cierro conexion con DB
-    del conexion_test
+    inicializar_db()
+
+    parser = construir_parser()
+    args = parser.parse_args()
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
     logger.info("Fin de programa")
 
 

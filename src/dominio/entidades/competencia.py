@@ -17,6 +17,8 @@ class Competencia:
             raise TypeError(f"tipo debe ser str o None, recibido {type(self.tipo).__name__}")
         if self.idCompetencia is not None and not isinstance(self.idCompetencia, int):
             raise TypeError(f"idCompetencia debe ser int o None, recibido {type(self.idCompetencia).__name__}")
+        if self.anio <= 2000:
+            raise ValueError(f"Año no puede ser menor que 2000")
 
 
 @dataclass
