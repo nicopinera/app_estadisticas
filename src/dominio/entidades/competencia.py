@@ -9,6 +9,14 @@ class Competencia:
     idCompetencia: int | None = None
 
     def __post_init__(self) -> None:
+        """ Funcion que valida los tipos de los atributos de la clase Competencia
+        Raises:
+            TypeError: Si algún atributo no es del tipo esperado.
+            TypeError: Si el año no es un entero.
+            TypeError: Si el tipo no es una cadena de caracteres o None.
+            TypeError: Si el ID de la competencia no es un entero o None.
+            ValueError: Si el año es menor que 2000.
+        """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if not isinstance(self.anio, int):
@@ -27,6 +35,12 @@ class Categoria:
     idCategoria: int | None = None
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que valida los tipos de los atributos de la clase Categoria
+        Raises:
+            TypeError: Si el nombre no es una cadena de caracteres.
+            TypeError: Si el ID de la categoria no es un entero o None.
+        """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if self.idCategoria is not None and not isinstance(self.idCategoria, int):
@@ -41,6 +55,14 @@ class Inscripcion:
     idInscripcion: int | None = None
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que valida los tipos de los atributos de la clase Inscripcion
+        Raises:
+            TypeError: Si el ID del club no es un entero.
+            TypeError: Si el ID de la categoria no es un entero.
+            TypeError: Si el ID de la competencia no es un entero.
+            TypeError: Si el ID de la inscripcion no es un entero o None.
+        """
         if not isinstance(self.idClub, int):
             raise TypeError(f"idClub debe ser int, recibido {type(self.idClub).__name__}")
         if not isinstance(self.idCategoria, int):
@@ -58,6 +80,13 @@ class ListaBuenaFe:
     idListaBuenaFe: int | None = None
 
     def __post_init__(self) -> None:
+        """ Funcion que valida los tipos de los atributos de la clase ListaBuenaFe
+
+        Raises:
+            TypeError: Si la fecha de presentacion no es una cadena de caracteres.
+            TypeError: Si el ID de la inscripcion no es un entero.
+            TypeError: Si el ID de la lista de buena fe no es un entero o None.
+        """
         if not isinstance(self.fechaPresentacion, str):
             raise TypeError(f"fechaPresentacion debe ser str, recibido {type(self.fechaPresentacion).__name__}")
         if not isinstance(self.idInscripcion, int):
@@ -71,7 +100,15 @@ class JugadorListaBuenaFe:
     idJugador: int
     idListaBuenaFe: int
 
+    """Clase que representa un jugador en una lista de buena fe."""
+
     def __post_init__(self) -> None:
+        """ Funcion que valida los tipos de los atributos de la clase JugadorListaBuenaFe.
+        Raises:
+            TypeError: Si algún atributo no es del tipo esperado.
+            TypeError: Si el ID del jugador no es un entero.
+            TypeError: Si el ID de la lista de buena fe no es un entero.
+        """
         if not isinstance(self.idJugador, int):
             raise TypeError(f"idJugador debe ser int, recibido {type(self.idJugador).__name__}")
         if not isinstance(self.idListaBuenaFe, int):

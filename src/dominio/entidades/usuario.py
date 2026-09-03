@@ -9,6 +9,14 @@ class Usuario:
     idUsuario: int | None = None
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que se encarga de validar los datos del usuario.
+        Raises:
+            TypeError: Si el nombre no es una cadena de caracteres.
+            TypeError: Si el email no es una cadena de caracteres.
+            TypeError: Si el password no es una cadena de caracteres.
+            TypeError: Si el ID del usuario no es un entero o None.
+        """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if not isinstance(self.email, str):

@@ -11,6 +11,16 @@ class Partido:
     idPartido: int | None = None
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que se encarga de validar los datos del partido.
+        Raises:
+            TypeError: Si la fecha no es una cadena de caracteres.
+            TypeError: Si el estadio no es una cadena de caracteres o None.
+            TypeError: Si el ID de la competencia no es un entero.
+            TypeError: Si el ID del club local no es un entero.
+            TypeError: Si el ID del club visitante no es un entero.
+            TypeError: Si el ID del partido no es un entero o None.
+        """
         if not isinstance(self.fecha, str):
             raise TypeError(f"fecha debe ser str, recibido {type(self.fecha).__name__}")
         if self.estadio is not None and not isinstance(self.estadio, str):
@@ -49,6 +59,29 @@ class JugadorPartido:
     faltasCometidas: int = 0
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que se encarga de validar los datos del jugador del partido.
+        Raises:
+            TypeError: Si el ID del jugador no es un entero.
+            TypeError: Si el ID del partido no es un entero.
+            TypeError: Si el ID del club no es un entero.
+            TypeError: Si los minutos jugados no son un float.
+            ValueError: Si los minutos jugados son negativos o mayores a 48.
+            ValueError: Si los puntos son negativos o distintos de T2C*2 + T3C*3 + T1C.
+            ValueError: Si T2C es mayor que T2L.
+            ValueError: Si T3C es mayor que T3L.
+            ValueError: Si T1C es mayor que T1L.
+            ValueError: Si los rebotes defensivos son negativos.
+            ValueError: Si los rebotes ofensivos son negativos.
+            ValueError: Si las asistencias son negativas.
+            ValueError: Si los recuperos son negativos.
+            ValueError: Si las perdidas son negativas.
+            ValueError: Si los tapones recibidos son negativos.
+            ValueError: Si los tapones realizados son negativos.
+            ValueError: Si las faltas recibidas son negativas.
+            ValueError: Si las faltas cometidas son negativas.
+
+        """
         if not isinstance(self.idJugador, int):
             raise TypeError(f"idJugador debe ser int, recibido {type(self.idJugador).__name__}")
         if not isinstance(self.idPartido, int):

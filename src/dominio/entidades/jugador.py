@@ -10,6 +10,15 @@ class Jugador:
     idJugador: int | None = None
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que se encarga de validar los datos del jugador.
+        Raises:
+            TypeError: Si el nombre no es una cadena de caracteres.
+            TypeError: Si el apellido no es una cadena de caracteres.
+            TypeError: Si el DNI no es un entero.
+            TypeError: Si el año de nacimiento no es un entero.
+            TypeError: Si el ID del jugador no es un entero o None.
+        """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if not isinstance(self.apellido, str):
@@ -30,6 +39,14 @@ class JugadorClub:
     idClub: int | None = None
 
     def __post_init__(self) -> None:
+        """ 
+        Funcion que se encarga de validar los datos del jugador del club.
+        Raises:
+            TypeError: Si la fecha desde no es una cadena de caracteres.
+            TypeError: Si la fecha hasta no es una cadena de caracteres o None.
+            TypeError: Si el ID del jugador no es un entero o None.
+            TypeError: Si el ID del club no es un entero o None.
+        """
         if not isinstance(self.fechaDesde, str):
             raise TypeError(f"fechaDesde debe ser str, recibido {type(self.fechaDesde).__name__}")
         if self.fechaHasta is not None and not isinstance(self.fechaHasta, str):
