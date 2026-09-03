@@ -1,0 +1,73 @@
+site_name: App Estadística Básquet Córdoba
+site_description: Documentación técnica del sistema de estadísticas de básquetbol.
+
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+    - scheme: slate
+      primary: indigo
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_root_heading: true
+            show_source: true
+            heading_level: 3
+            docstring_style: google
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+nav:
+  - Inicio: index.md
+  - Plan de Desarrollo: plan_desarrollo_detallado.md
+  - Código y Referencia:
+      - Interfaces Dominio: repositorios_dominio.md
+      - Persistencia SQLite: repositorios_infraestructura.md
+  - Arquitectura y Diagramas:
+      - Patrón Repositorio: arquitectura/01-repository-pattern.md
+      - Diagramas: diagramas/diagramas.md
+  - Guías Técnicas:
+      - Arquitectura General: guias/arquitectura.md
+      - Guía Arquitectura App: guias/Guia_Arquitectura_AppEstadistica.md
+      - Patrón Command: guias/Guia_del_Patron_Command.md
+      - Testing: guias/testing.md
+      - Docker para Tests: guias/docker-para-tests.md
+      - Protocolos: guias/info_protocolos.md
+      - Vistas SQL: guias/vistas_sql.md
+  - Información de Módulos:
+      - Logger: info_modulo/01-logger.md
+      - Reglas: info_modulo/02-reglas.md
+  - Contexto IA e Hitos:
+      - Exploración Inicial: context_ia/2026-07-31-exploracion-inicial.md
+      - Transcripción PRD: context_ia/2026-08-08-transcripcion-completa-prd-y-hallazgos.md
+      - US103 en Profundidad: context_ia/2026-08-17-us103-explicada-en-profundidad.md
+      - US103 Flujo Argparse: context_ia/2026-08-29-us103-argparse-comandos-flujo-completo.md
+      - Ideas y Aprendizaje: ideas-aprendizaje.md
