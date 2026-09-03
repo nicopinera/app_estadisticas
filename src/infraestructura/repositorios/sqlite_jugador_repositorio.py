@@ -11,9 +11,23 @@ logger = get_logger(__name__)
 
 class SqliteJugadorRepositorio(JugadorRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
+        """ 
+        Inicializa el repositorio de jugadores con una conexión a la base de datos SQLite.
+
+        Args:
+            conexion (sqlite3.Connection):  Conexion a la base de datos SQLite.
+        """
         self.conexion = conexion
 
     def _row_to_entity(self, row: sqlite3.Row) -> Jugador:
+        """Convierte una fila de la base de datos en una entidad Jugador.
+
+        Args:
+            row (sqlite3.Row): Fila de la base de datos que representa un jugador.
+
+        Returns:
+            Jugador: Entidad Jugador construida a partir de la fila.
+        """
         return Jugador(
             nombre=row["nombre"],
             apellido=row["apellido"],
@@ -23,6 +37,15 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         )
 
     def buscar_por_id(self, id_jugador: int) -> Jugador | None:
+        """Funcion que se encarga de buscar un jugador por su ID en la base de datos en el cual fue registrado,
+        en el caso de que exista, retorna el jugador, sino retorna None si no se encuentra
+
+        Args:
+            id_jugador (int): ID del jugador a buscar.
+
+        Returns:
+            Jugador | None: Retorna el jugador encontrado o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM jugador WHERE idJugador = ?"
@@ -35,6 +58,15 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         return self._row_to_entity(row)
 
     def buscar_por_dni(self, dni_jugador: int) -> Jugador | None:
+        """Funcion que se encarga de buscar un jugador por su DNI en la base de datos en el cual fue registrado,
+        en el caso de que exista, retorna el jugador, sino retorna None si no se encuentra
+        en la base de datos.
+        Args:
+            dni_jugador (int): DNI del jugador a buscar.
+
+        Returns:
+            Jugador | None: Retorna el jugador encontrado o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM jugador WHERE dni = ?"
@@ -47,6 +79,14 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         return self._row_to_entity(row)
 
     def buscar_por_club(self, idClub: int) -> list[Jugador]:
+        """Funcion que se encarga de buscar todos los jugadores de un club en la base de datos.
+
+        Args:
+            idClub (int): ID del club del cual se quieren buscar los jugadores.
+
+        Returns:
+            list[Jugador]: Lista de jugadores del club.
+        """
         cursor = self.conexion.cursor()
 
         query = """
@@ -68,6 +108,14 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         return resultado
 
     def guardar(self, jugador: Jugador) -> Jugador | None:
+        """Funcion que se encarga de guardar un jugador en la BD
+
+        Args:
+            jugador (Jugador): Entidad Jugador a guardar.
+
+        Returns:
+            Jugador | None: Retorna el jugador guardado con su ID asignado en la BD o None si ocurre un error.
+            """
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -106,6 +154,15 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             raise
 
     def link_to_club(self, jc: JugadorClub) -> JugadorClub | None:
+        """  
+        Funcion que se encarga de linkear un jugador con un club en la base de datos.
+
+        Args:
+            jc (JugadorClub): Entidad JugadorClub a linkear.
+
+        Returns:
+            JugadorClub | None: Retorna el jugador linkeado con el club o None si ocurre un error.
+        """
         try:
             cursor = self.conexion.cursor()
             query = "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
@@ -127,6 +184,14 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             raise
 
     def club_activo(self, id_jugador: int) -> Club | None:
+        """
+        Funcion que se encarga de buscar el club activo de un jugador en la base de datos.
+        
+        Args:
+            id_jugador (int): ID del jugador del cual se quiere buscar el club activo.
+        Returns:
+            Club | None: Retorna el club activo del jugador o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
 
         query = """

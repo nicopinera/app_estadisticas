@@ -9,15 +9,37 @@ logger = get_logger(__name__)
 
 class SqliteClubRepositorio(ClubRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
+        """Inicializa el repositorio de clubes con una conexión a la base de datos.
+
+        Args:
+            conexion (sqlite3.Connection): Conexión a la base de datos SQLite.
+        
+        """
         self.conexion = conexion
 
     def _row_to_entity_Club(self, row: sqlite3.Row) -> Club:
+        """Convierte una fila de la base de datos en una entidad Club.
+
+        Args:
+            row (sqlite3.Row): Fila de la base de datos que representa un club.
+
+        Returns:
+            Club: Entidad Club construida a partir de la fila.
+        """
         return Club(
             idClub=row["idClub"],
             nombre=row["nombre"],
         )
 
     def _row_to_entity_UsuarioClub(self, row: sqlite3.Row) -> UsuarioClub:
+        """Convierte una fila de la base de datos en una entidad UsuarioClub.
+
+        Args:
+            row (sqlite3.Row): Fila de la base de datos que representa un usuario en un club.
+
+        Returns:
+            UsuarioClub: Entidad UsuarioClub construida a partir de la fila.
+        """
         return UsuarioClub(
             idClub=row["idClub"],
             idUsuario=row["idUsuario"],
@@ -25,6 +47,14 @@ class SqliteClubRepositorio(ClubRepositorio):
         )
 
     def buscar_por_id_usuario(self, id_usuario: int) -> list[Club] | None:
+        """Funcion que se encarga de buscar los clubes a los que pertenece un usuario
+
+        Args:
+            id_usuario (int): ID del usuario para el cual se buscan los clubes.
+
+        Returns:
+            list[Club] | None: Lista de clubes a los que pertenece el usuario o None si no se encuentra ninguno.
+        """
         cursor = self.conexion.cursor()
 
         query = """
@@ -44,6 +74,14 @@ class SqliteClubRepositorio(ClubRepositorio):
         return lista_clubes
 
     def buscar_por_id(self, id_club: int) -> Club | None:
+        """Funcion que se encarga de buscar un club por su ID en la base de datos.
+
+        Args:
+            id_club (int): ID del club que se desea buscar.
+
+        Returns:
+            Club | None: Entidad Club correspondiente al ID proporcionado o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM club WHERE idClub = ?;"
@@ -54,6 +92,14 @@ class SqliteClubRepositorio(ClubRepositorio):
         return self._row_to_entity_Club(row)
 
     def buscar_por_nombre(self, nombre: str) -> list[Club] | None:
+        """Funcion que se encarga de buscar clubes por su nombre en la base de datos.
+
+        Args:
+            nombre (str): Nombre del club que se desea buscar.
+
+        Returns:
+            list[Club] | None: Lista de clubes que coinciden con el nombre proporcionado o None si no se encuentra ninguno.
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM club WHERE nombre LIKE ?;"
@@ -68,6 +114,14 @@ class SqliteClubRepositorio(ClubRepositorio):
         return resultados
 
     def guardar(self, club: Club) -> Club | None:
+        """Función para guardar un club en la base de datos.
+        
+        Args:
+            club (Club): Entidad Club que se desea guardar en la base de datos.
+
+        Returns:
+            Club | None: Entidad Club guardada en la base de datos o None si ocurre un error.
+        """
         cursor = self.conexion.cursor()
 
         try:
@@ -87,8 +141,16 @@ class SqliteClubRepositorio(ClubRepositorio):
             raise
 
     def link_user_to_club(self, us_club: UsuarioClub) -> UsuarioClub | None:
+        """Funcion para linkear un usuario a un club especifico
+        
+        Args:
+            us_club (UsuarioClub): Entidad UsuarioClub que representa la relación entre un usuario y un club.
+
+        Returns:
+            UsuarioClub | None: Entidad UsuarioClub guardada en la base de datos o None si ocurre un error.
+        """
         cursor = self.conexion.cursor()
-        # Funcion para linkear un usuario a un club especifico
+        
         try:
             query = """
             SELECT * FROM usuario WHERE idUsuario = ?;

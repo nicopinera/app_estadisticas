@@ -9,15 +9,45 @@ logger = get_logger(__name__)
 
 class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
+        """Implementamos la interfaz CompetenciaRepositorio, la cual encarga de realizar operaciones CRUD
+        (Create, Read, Update, Delete) en la tabla competencia de la base de datos sqlite
+
+        Args:
+            conexion (sqlite3.Connection): Conexion a la base de datos SQLite.
+        """
         self.conexion = conexion
 
     def _row_to_entity_Competencia(self, row: sqlite3.Row) -> Competencia:
+        """Funcion que se encarga de convertir una fila de la tabla competencia en una entidad Competencia
+
+        Args:
+            row (sqlite3.Row): Fila de la tabla competencia de la base de datos.
+
+        Returns:
+            Competencia: Entidad Competencia construida a partir de la fila de la base de datos.
+        """
         return Competencia(nombre=row["nombre"], anio=row["anio"], tipo=row["tipo"], idCompetencia=row["idCompetencia"])
 
     def _row_to_entity_Categoria(self, row: sqlite3.Row) -> Categoria:
+        """Funcion que se encarga de convertir una fila de la tabla categoria en una entidad Categoria
+
+        Args:
+            row (sqlite3.Row): Fila de la tabla categoria de la base de datos.
+
+        Returns:
+            Categoria: Entidad Categoria construida a partir de la fila de la base de datos.
+        """
         return Categoria(nombre=row["nombre"], idCategoria=row["idCategoria"])
 
     def _row_to_entity_Inscripciones(self, row: sqlite3.Row) -> Inscripcion:
+        """Funcion que se encarga de convertir una fila de la tabla inscripciones en una entidad Inscripcion.
+
+        Args:
+            row (sqlite3.Row): Fila de la tabla inscripciones de la base de datos.
+
+        Returns:
+            Inscripcion: Entidad Inscripcion construida a partir de la fila de la base de datos.
+        """
         return Inscripcion(
             idClub=row["idClub"],
             idCategoria=row["idCategoria"],
@@ -26,6 +56,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         )
 
     def _row_to_entity_ListaBuenaFe(self, row: sqlite3.Row) -> ListaBuenaFe:
+        """Funcion que se encarga de convertir una fila de la tabla listaBuenaFe en una entidad ListaBuenaFe
+
+        Args:
+            row (sqlite3.Row): Fila de la tabla listaBuenaFe de la base de datos.
+
+        Returns:
+            ListaBuenaFe: Entidad ListaBuenaFe construida a partir de la fila de la base de datos.
+        """
         return ListaBuenaFe(
             fechaPresentacion=row["fechaPresentacion"],
             idInscripcion=row["idInscripcion"],
@@ -33,6 +71,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         )
 
     def guardar_competencia(self, compe: Competencia) -> Competencia | None:
+        """Funcion que se encarga de guardar una competencia en la base de datos.
+
+        Args:
+            compe (Competencia): Entidad Competencia a guardar.
+
+        Returns:
+            Competencia | None: Retorna la competencia guardada con su ID asignado en la BD o None si ocurre un error.
+        """
         try:
             cursor = self.conexion.cursor()
             query = """
@@ -53,6 +99,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             raise
 
     def buscar_competencia_por_id(self, idCompetencia: int) -> Competencia | None:
+        """Funcion que se encarga de buscar una competencia por su ID
+        
+        Args:
+            idCompetencia (int): ID de la competencia a buscar.
+
+        Returns:
+            Competencia | None: Retorna la competencia encontrada o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
         query = """
         SELECT * FROM competencia WHERE idCompetencia = ?;
@@ -64,7 +118,12 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         return self._row_to_entity_Competencia(rows)
 
     def obtener_todas_competencias(self) -> list[Competencia]:
-        "Devuelve todas las competencias existentes"
+        """Funcion que se encarga de obtener todas las competencias existentes en la base de datos
+
+        Returns:
+            list[Competencia]: Lista de competencias existentes en la base de datos.
+        """
+        
         cursor = self.conexion.cursor()
         query = "SELECT * FROM competencia;"
         cursor.execute(query)
@@ -78,7 +137,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         return lista_competencias
 
     def guardar_categoria(self, cat: Categoria) -> Categoria | None:
-        "Registra una Categoria"
+        """Funcion que se encarga de guardar una categoria en la base de datos
+        
+        Args:
+            cat (Categoria): Entidad Categoria a guardar.
+
+        Returns:
+            Categoria | None: Retorna la categoria guardada con su ID asignado en la BD o None si ocurre un error.
+        """
         try:
             cursor = self.conexion.cursor()
             query = """
@@ -98,7 +164,11 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             raise
 
     def obtener_categorias(self) -> list[Categoria]:
-        "Devuelve todas las categorias existentes"
+        """ Funcion que se encarga de obtener todas las categorias existentes en la base de datos.
+
+        Returns:
+            list[Categoria]: Lista de categorias existentes en la base de datos.
+        """
         cursor = self.conexion.cursor()
         query = "SELECT * FROM categoria;"
         cursor.execute(query)
@@ -112,7 +182,13 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         return lista_categorias
 
     def guardar_inscripcion(self, inscripcion: Inscripcion) -> Inscripcion | None:
-        "Guarda una inscripcion"
+        """ Funcion que se encarga de guardar una inscripcion en la base de datos
+        Args:
+            inscripcion (Inscripcion): Entidad Inscripcion a guardar.
+
+        Returns:
+            Inscripcion | None: Retorna la inscripcion guardada con su ID asignado en la BD o None si ocurre un error.
+        """
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -135,7 +211,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             raise
 
     def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion | None:
-        "Devuelve informacion de una inscripcion por ID"
+        """Funcion que se encarga de devolver informacion de una inscripcion por ID
+
+        Args:
+            idInscripcion (int): ID de la inscripcion a buscar.
+
+        Returns:
+            Inscripcion | None: Retorna la inscripcion encontrada o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
         query = "SELECT * FROM inscripcion WHERE idInscripcion = ?;"
         cursor.execute(query, (idInscripcion,))
@@ -145,7 +228,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         return self._row_to_entity_Inscripciones(row)
 
     def obtener_inscripciones_por_club(self, idClub: int) -> list[Inscripcion]:
-        "Devuelve todas las inscripciones de un club"
+        """ Funcion que se encarga de devolver todas las inscripciones de un club
+
+        Args:
+            idClub (int): ID del club del cual se desean obtener las inscripciones.
+
+        Returns:
+            list[Inscripcion]: Lista de inscripciones del club especificado. Retorna una lista vacía si no se encuentran inscripciones.
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM club WHERE idClub = ?;"
@@ -166,7 +256,13 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         return lista_inscripciones
 
     def guardar_lista_buena_fe(self, listaBF: ListaBuenaFe) -> ListaBuenaFe | None:
-        "Genera una lista de buena fe vacia"
+        """ 
+        Funcion que se encarga de guardar una lista de buena fe en la base de datos
+        Args:
+            listaBF (ListaBuenaFe): Entidad ListaBuenaFe a guardar.
+        Returns:
+            ListaBuenaFe | None: Retorna la lista de buena fe guardada con su ID asignado en la BD o None si ocurre un error.
+        """
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -191,7 +287,15 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             raise
 
     def obtener_lista_por_inscripcion(self, idInscripcion: int) -> ListaBuenaFe | None:
-        "Obtiene informacion de la lista de buena fe de una inscripcion"
+        """Funcion que se encarga de devolver la lista de buena fe de una inscripcion
+
+        Args:
+            idInscripcion (int): ID de la inscripcion de la cual se desea obtener la lista de buena fe.
+
+        Returns:
+            ListaBuenaFe | None: Retorna la lista de buena fe correspondiente a la inscripcion especificada o None si no se encuentra.
+        """
+        
         cursor = self.conexion.cursor()
 
         query = """
@@ -212,7 +316,16 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         return self._row_to_entity_ListaBuenaFe(rows)
 
     def agregar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> JugadorListaBuenaFe | None:
-        "Agrega un jugador a una lista de buena fe"
+        """Funcion que se encarga de agregar un jugador a una lista de buena fe
+
+        Args:
+            idJugador (int): ID del jugador a agregar.
+            idListaBuenaFe (int): ID de la lista de buena fe a la cual se desea agregar el jugador.
+
+        Returns:
+            JugadorListaBuenaFe | None: Retorna la entidad JugadorListaBuenaFe correspondiente al jugador agregado 
+            a la lista de buena fe o None si ocurre un error.
+            """
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -236,7 +349,14 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             raise
 
     def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe]:
-        "Obtiene todos los jugadores de una lista de buena fe"
+        """Funcion que se encarga de devolver todos los jugadores de una lista de buena fe
+        
+        Args:
+            idListaBuenaFe (int): ID de la lista de buena fe de la cual se desean obtener los jugadores.
+
+        Returns:
+            list[JugadorListaBuenaFe]: Lista de entidades JugadorListaBuenaFe correspondientes a los jugadores de la lista de buena fe.
+        """
         cursor = self.conexion.cursor()
         query = """
             SELECT *
@@ -255,3 +375,4 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             )
             for row in rows
         ]
+    
