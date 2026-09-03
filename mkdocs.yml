@@ -78,3 +78,5 @@ nav:
       - US103 en Profundidad: context_ia/2026-08-17-us103-explicada-en-profundidad.md
       - US103 Flujo Argparse: context_ia/2026-08-29-us103-argparse-comandos-flujo-completo.md
       - Ideas y Aprendizaje: ideas-aprendizaje.md
+
+use_directory_urls: false
