@@ -7,6 +7,11 @@ from infraestructura.repositorios.sqlite_partido_repositorio import SqlitePartid
 
 
 def test_buscar_por_club(db_conexion):
+    """ Funcion que Busca partidos por club  
+
+    Args:
+        db_conexion (): conexion a la base de datos     
+    """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     juego_encontrado = juego_rep.buscar_por_club(1)
     assert juego_encontrado is not None
@@ -14,6 +19,11 @@ def test_buscar_por_club(db_conexion):
 
 
 def test_buscar_por_id(db_conexion):
+    """ Funcion que Busca partidos por id
+
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     juego_encontrado = juego_rep.buscar_por_id(1)
     assert juego_encontrado is not None
@@ -21,6 +31,11 @@ def test_buscar_por_id(db_conexion):
 
 
 def test_guardar_partido(db_conexion):
+    """ Funcion que guarda partido en la Base de Datos
+
+    Args:
+        db_conexion (_type_): Conexion a la base de datos
+    """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     partido_aux = Partido(
         estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=2, idCompetencia=1
@@ -55,14 +70,14 @@ def test_guardar_boxscore(db_conexion):
         idJugador=1,
         idPartido=2,
         idClub=1,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(5, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(5, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
+        minutosJugados=20.0,
+        puntos=9,
+        t2c=2,
+        t2l=5,
+        t3c=1,
+        t3l=5,
+        t1c=2,
+        t1l=5,
         rebotesDef=4,
         rebotesOf=2,
         asistencias=5,
@@ -80,14 +95,14 @@ def test_guardar_boxscore(db_conexion):
         idJugador=40000,
         idPartido=1,
         idClub=1,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(1, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(1, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
+        minutosJugados=20.0,
+        puntos=9,
+        t2c=2,
+        t2l=5,
+        t3c=1,
+        t3l=5,
+        t1c=2,
+        t1l=5,
         rebotesDef=4,
         rebotesOf=2,
         asistencias=5,
@@ -105,14 +120,14 @@ def test_guardar_boxscore(db_conexion):
         idJugador=1,
         idPartido=300,
         idClub=1,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(5, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(5, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
+        minutosJugados=20.0,
+        puntos=9,
+        t2c=2,
+        t2l=5,
+        t3c=1,
+        t3l=5,
+        t1c=2,
+        t1l=5,
         rebotesDef=4,
         rebotesOf=2,
         asistencias=5,
@@ -130,14 +145,14 @@ def test_guardar_boxscore(db_conexion):
         idJugador=1,
         idPartido=1,
         idClub=400,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(5, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(5, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
+        minutosJugados=20.0,
+        puntos=9,
+        t2c=2,
+        t2l=5,
+        t3c=1,
+        t3l=5,
+        t1c=2,
+        t1l=5,
         rebotesDef=4,
         rebotesOf=2,
         asistencias=5,
@@ -170,8 +185,8 @@ def test_save_with_boxscore_rollback_no_deja_partido_huerfano(db_conexion):
         idJugador=1,
         idPartido=0,  # será sobreescrito por save_with_boxscore
         idClub=1,
-        minutosJugados=30,
-        puntos=10,
+        minutosJugados=30.0,
+        puntos=9,
         t2c=2,
         t2l=5,
         t3c=1,
@@ -194,8 +209,8 @@ def test_save_with_boxscore_rollback_no_deja_partido_huerfano(db_conexion):
         idJugador=999999,  # FK inválida: jugador no existe
         idPartido=0,
         idClub=1,
-        minutosJugados=25,
-        puntos=8,
+        minutosJugados=25.0,
+        puntos=4,
         t2c=1,
         t2l=3,
         t3c=0,

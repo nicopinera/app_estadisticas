@@ -8,6 +8,11 @@ from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugado
 
 
 def test_buscar_por_id(db_conexion):
+    """ Funcion que busca a un jugador por un determinado ID
+
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     jugador_encontrado = jugador_rep.buscar_por_id(1)
     assert jugador_encontrado.nombre == "pepe"
@@ -17,6 +22,11 @@ def test_buscar_por_id(db_conexion):
 
 
 def test_buscar_por_dni(db_conexion):
+    """ Funcion que busca a un jugador por su DNI
+
+    Args:
+        db_conexion (_type_): conexion a la base de datos 
+    """
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     jugador_encontrado = jugador_rep.buscar_por_dni(12351689)
     assert jugador_encontrado.nombre == "pepe"
@@ -25,6 +35,11 @@ def test_buscar_por_dni(db_conexion):
 
 
 def test_buscar_por_club(db_conexion):
+    """ Funcion que busca a un jugador por su club
+
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     # creamos la persona Jugador para vincularla a un determinado club
     nombre = "Carlos"
@@ -50,8 +65,13 @@ def test_buscar_por_club(db_conexion):
     assert jugadores_encontrados[0].apellido == "Mona Jimenez"
     # esto es para corregir, estuve probando de varias formas y no funciona, es para revisar
 
+ 
 
 def test_guardar(db_conexion):
+    """ Funcion que guarda a un jugador en la base de datos
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     nombre = "Carlos"
     apellido = "Mona Jimenez"
@@ -67,6 +87,11 @@ def test_guardar(db_conexion):
 
 
 def test_link_to_club(db_conexion):
+    """ 
+
+    Args:
+        db_conexion (_type_): _description_
+    """
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     jugador_aux = Jugador(nombre="Lionel", apellido="Messi", dni=33016244, anioNacimiento=1987)
     jugador_guardado = jugador_rep.guardar(jugador_aux)

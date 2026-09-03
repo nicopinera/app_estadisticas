@@ -7,6 +7,11 @@ from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugado
 
 
 def test_buscar_competencia_por_id(db_conexion):
+    """ 
+    Funcion que busca una competencia por su ID
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     comp_encontrada = comp_rep.buscar_competencia_por_id(1)
     assert comp_encontrada.nombre == "PROVINCIAL U21"
@@ -15,6 +20,11 @@ def test_buscar_competencia_por_id(db_conexion):
 
 
 def test_obtener_todas_competencias(db_conexion):
+    """ Test que obtiene todas las competencias de la base de datos
+
+    Args:
+        db_conexion (): conexion a la base de datos 
+    """
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     comp_encontrada = comp_rep.obtener_todas_competencias()
     assert comp_encontrada is not None
