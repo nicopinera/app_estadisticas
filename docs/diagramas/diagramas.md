@@ -9,7 +9,7 @@ classDiagram
     SquliteJugadorRepositorio --|> JugadorRepositorio : Implementa
     SqliteUsuarioRepositorio --|> UsuarioRepositorio : Implementa
     SqliteCompetenciaRepositorio --|> CompetenciaRepositorio : Implementa
-    
+
     ClubRepositorio ..> Club : usa
     ClubRepositorio ..> UsuarioClub : usa
     CompetenciaRepositorio ..> Competencia : usa
@@ -213,7 +213,7 @@ flowchart LR
     repoJuego["SqliteJuegoRepositorio"]
     repoClub["SqliteClubRepositorio"]
     repoCompetencias["SQL Repositorio Competencia"]
-    
+
     U[(USUARIO)]
     C[(CLUB)]
     UC[(USUARIOCLUB)]

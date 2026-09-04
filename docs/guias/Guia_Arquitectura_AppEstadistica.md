@@ -1,8 +1,8 @@
 # 🏛️ Guía Teórica y Práctica de Arquitectura: App Estadistica
 
-Bienvenidos a la guía definitiva de arquitectura para **App Estadistica**. Como Arquitecto de Software, mi objetivo aquí no es solo dictar reglas, sino explicar el **"porqué"** detrás de cada decisión. 
+Bienvenidos a la guía definitiva de arquitectura para **App Estadistica**. Como Arquitecto de Software, mi objetivo aquí no es solo dictar reglas, sino explicar el **"porqué"** detrás de cada decisión.
 
-Adoptamos **Clean Architecture** (Arquitectura Limpia) y **Arquitectura Hexagonal** (Puertos y Adaptadores). Estas no son simples modas, son estrategias de supervivencia para que nuestro software no se convierta en código espagueti inantenible a medida que crece. 
+Adoptamos **Clean Architecture** (Arquitectura Limpia) y **Arquitectura Hexagonal** (Puertos y Adaptadores). Estas no son simples modas, son estrategias de supervivencia para que nuestro software no se convierta en código espagueti inantenible a medida que crece.
 
 A lo largo de este documento combinaremos rigor técnico con analogías cotidianas para dominar el diseño en Python.
 
@@ -18,7 +18,7 @@ En Clean Architecture, un Caso de Uso (Capa de Aplicación) es el **orquestador 
 Al implementar un Caso de Uso, podemos usar una función suelta (`def registrar_jugador(...)`) o una Clase (con un método `.execute()` o `__call__`). **En StatsPro, utilizaremos Clases.** Veamos por qué.
 
 #### La Inyección de Dependencias y el *Composition Root*
-Imagina que un Caso de Uso es un carpintero. Para hacer una silla (ejecutar su acción), necesita un martillo y clavos (Repositorios y Servicios). 
+Imagina que un Caso de Uso es un carpintero. Para hacer una silla (ejecutar su acción), necesita un martillo y clavos (Repositorios y Servicios).
 
 - **Enfoque Funcional (Malo para orquestación compleja):** Le entregas el martillo y los clavos al carpintero **cada vez** que le pides que haga una silla.
   ```python
@@ -29,7 +29,7 @@ Imagina que un Caso de Uso es un carpintero. Para hacer una silla (ejecutar su a
   ```python
   # Instancias una vez (Composition Root)
   caso_uso = RegistrarJugador(jugador_repo, email_service, logger)
-  
+
   # Lo usas muchas veces, pasándole SOLO los datos de la acción
   caso_uso.execute(datos1)
   caso_uso.execute(datos2)
@@ -56,16 +56,16 @@ class RegistrarJugadorUseCase:
     # Inyección de dependencias por constructor
     def __init__(self, repositorio: JugadorRepositorio):
         self._repositorio = repositorio
-        
+
     # Solo recibe los datos específicos de la acción
     def execute(self, input_dto: 'RegistrarJugadorInputDTO') -> 'JugadorOutputDTO':
         if self._repositorio.existe_email(input_dto.email):
             raise ValueError("El email ya está registrado")
-            
+
         # Orquestación: Crea la entidad, llama al repo, devuelve DTO...
         nuevo_jugador = Jugador.crear(input_dto.nombre, input_dto.email)
         self._repositorio.guardar(nuevo_jugador)
-        
+
         return JugadorOutputDTO(id=nuevo_jugador.id, nombre=nuevo_jugador.nombre)
 ```
 
@@ -78,7 +78,7 @@ class RegistrarJugadorUseCase:
 - **DTO (Aplicación):** Es un mensajero tonto. Un **objeto plano** sin lógica ni comportamiento. Su único trabajo es transportar datos de una capa a otra.
 
 ### La Diferencia Práctica (Python `@dataclass`)
-En Python, solemos usar `@dataclass` para ambos. Entonces, ¿por qué no son lo mismo? 
+En Python, solemos usar `@dataclass` para ambos. Entonces, ¿por qué no son lo mismo?
 Una `@dataclass` en el dominio encapsula reglas y métodos que validan su integridad. Una `@dataclass` como DTO permite que sus atributos se mapeen y envíen libremente porque solo viajan en el cable (son inmutables por naturaleza transitiva, típicamente `frozen=True`).
 
 ### 🛂 La Analogía Cotidiana: El Pasaporte vs. El Formulario
@@ -111,7 +111,7 @@ class Jugador:
         if "@" not in email:
             raise ValueError("Email inválido") # Invariante
         return cls(id=uuid4(), nombre=nombre, email=email)
-        
+
     def reportar_lesion(self):
         self._lesionado = True # Comportamiento
 
@@ -166,7 +166,7 @@ A medida que el proyecto crezca, el diseño orientado a Casos de Uso brilla, por
 ## 4. Interfaces de Casos de Uso: ¿En la Capa de Dominio?
 
 ### La Respuesta Definitiva
-**NO.** Las interfaces (Protocols/ABCs) de los Casos de Uso **jamás** deben existir en la capa de Dominio. 
+**NO.** Las interfaces (Protocols/ABCs) de los Casos de Uso **jamás** deben existir en la capa de Dominio.
 
 ### La Regla de Dependencias (El flujo unidireccional)
 En Clean Architecture, la regla de oro es que **las dependencias siempre apuntan hacia adentro**:
@@ -174,7 +174,7 @@ En Clean Architecture, la regla de oro es que **las dependencias siempre apuntan
 
 El Dominio es el centro del universo. El Dominio sabe qué es un "Tiro Libre" o un "Jugador", pero **no tiene idea** de que existe un botón en una pantalla, ni sabe que existe un "Caso de Uso" que orquesta cosas, ni le importa si los datos se guardan en SQLite o en un archivo de texto.
 
-Si pones una interfaz como `IRegistrarJugadorUseCase` dentro de la carpeta `src/dominio/`, estás obligando al Dominio a saber sobre la existencia de la orquestación (Aplicación), violando la regla de dependencias. 
+Si pones una interfaz como `IRegistrarJugadorUseCase` dentro de la carpeta `src/dominio/`, estás obligando al Dominio a saber sobre la existencia de la orquestación (Aplicación), violando la regla de dependencias.
 
 ### Entonces, ¿Qué "Puertos" (Interfaces) SÍ van en el Dominio?
 El Dominio necesita hablar con el mundo exterior (ej. guardar en la BD), pero no puede depender de SQL. Para resolverlo, el Dominio define **Interfaces (Puertos de Salida)**.
