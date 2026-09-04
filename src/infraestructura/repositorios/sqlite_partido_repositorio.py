@@ -9,7 +9,7 @@ logger = get_logger(__name__)
 
 class SqlitePartidoRepositorio(PartidoRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
-        """ 
+        """
         Funcion que se encarga de inicializar el repositorio de partidos
 
         Args:
@@ -18,7 +18,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         self.conexion = conexion
 
     def _row_to_entity_Partido(self, row: sqlite3.Row) -> Partido:
-        """ 
+        """
         Esta funcion toma una fila de la tabla partido de la base de datos y la convierte en una instancia,
         que es una entidad del dominio de la aplicacion, en este caso un objeto de la clase Partido
 
@@ -38,7 +38,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         )
 
     def buscar_por_club(self, id_club: int) -> list[Partido] | None:
-        """ 
+        """
         Funcion que se encarga de buscar los partidos en los cuales participo un determinado club
 
         Args:
@@ -58,7 +58,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         return [self._row_to_entity_Partido(row) for row in rows]
 
     def buscar_por_id(self, idPartido: int) -> Partido | None:
-        """ 
+        """
         Funcion que se encarga de buscar un partido por su ID en el cual fue registrado en la BD
         en el caso de que exista, retorna el partido, sino retorna None si no se encuentra
         Args:
@@ -77,7 +77,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         return self._row_to_entity_Partido(row)
 
     def guardar_partido(self, partido: Partido) -> Partido | None:
-        """ 
+        """
         Funcion que se encarga de guardar un partido en la BD
         Args:
             partido (Partido): Entidad Partido a guardar.
@@ -94,8 +94,8 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             row = cursor.fetchone()
             if row is None:
                 logger.warning(
-                "No se pudo guardar partido: competencia inexistente (idCompetencia=%s)",
-                partido.idCompetencia,
+                    "No se pudo guardar partido: competencia inexistente (idCompetencia=%s)",
+                    partido.idCompetencia,
                 )
                 return None
 
@@ -106,11 +106,11 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             row = cursor.fetchall()
             if not row or len(row) < 2:
                 logger.warning(
-                "No se pudo guardar partido: club local o visitante inexistente "
-                "(idClubLocal=%s, idClubVisitante=%s)",
-                partido.idClubLocal,
-                partido.idClubVisitante,
-            )
+                    "No se pudo guardar partido: club local o visitante inexistente "
+                    "(idClubLocal=%s, idClubVisitante=%s)",
+                    partido.idClubLocal,
+                    partido.idClubVisitante,
+                )
                 return None
             query = """
             INSERT INTO partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante)
@@ -142,7 +142,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             raise
 
     def guardar_boxscore(self, boxscore: JugadorPartido) -> JugadorPartido | None:
-        """ 
+        """
         Funcion que se encarga de guardar un boxscore de un jugador en un partido especifico en la BD
         Args:
             boxscore (JugadorPartido): Entidad JugadorPartido a guardar.
@@ -245,7 +245,7 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
     def save_with_boxscore(
         self, partido: Partido, boxscore: list[JugadorPartido]
     ) -> tuple[Partido, list[JugadorPartido]] | None:
-        """ 
+        """
             Función que se encarga de guardar el partido y el boxscore de todos los jugadores en una
             única transacción atómica.
 

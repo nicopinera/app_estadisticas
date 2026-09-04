@@ -9,7 +9,7 @@ class Competencia:
     idCompetencia: int | None = None
 
     def __post_init__(self) -> None:
-        """ Funcion que valida los tipos de los atributos de la clase Competencia
+        """Funcion que valida los tipos de los atributos de la clase Competencia
         Raises:
             TypeError: Si algún atributo no es del tipo esperado.
             TypeError: Si el año no es un entero.
@@ -35,7 +35,7 @@ class Categoria:
     idCategoria: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que valida los tipos de los atributos de la clase Categoria
         Raises:
             TypeError: Si el nombre no es una cadena de caracteres.
@@ -55,7 +55,7 @@ class Inscripcion:
     idInscripcion: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que valida los tipos de los atributos de la clase Inscripcion
         Raises:
             TypeError: Si el ID del club no es un entero.
@@ -80,7 +80,7 @@ class ListaBuenaFe:
     idListaBuenaFe: int | None = None
 
     def __post_init__(self) -> None:
-        """ Funcion que valida los tipos de los atributos de la clase ListaBuenaFe
+        """Funcion que valida los tipos de los atributos de la clase ListaBuenaFe
 
         Raises:
             TypeError: Si la fecha de presentacion no es una cadena de caracteres.
@@ -103,7 +103,7 @@ class JugadorListaBuenaFe:
     """Clase que representa un jugador en una lista de buena fe."""
 
     def __post_init__(self) -> None:
-        """ Funcion que valida los tipos de los atributos de la clase JugadorListaBuenaFe.
+        """Funcion que valida los tipos de los atributos de la clase JugadorListaBuenaFe.
         Raises:
             TypeError: Si algún atributo no es del tipo esperado.
             TypeError: Si el ID del jugador no es un entero.

@@ -10,7 +10,7 @@ class Jugador:
     idJugador: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del jugador.
         Raises:
             TypeError: Si el nombre no es una cadena de caracteres.
@@ -39,7 +39,7 @@ class JugadorClub:
     idClub: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del jugador del club.
         Raises:
             TypeError: Si la fecha desde no es una cadena de caracteres.

@@ -7,7 +7,7 @@ class Club:
     idClub: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del club.
         Raises:
             TypeError: Si el nombre no es una cadena de caracteres.
@@ -26,7 +26,7 @@ class UsuarioClub:
     idClub: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del usuario del club.
         Raises:
             TypeError: Si el rol no es una cadena de caracteres.

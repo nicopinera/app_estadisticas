@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 class SqliteJugadorRepositorio(JugadorRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
-        """ 
+        """
         Inicializa el repositorio de jugadores con una conexión a la base de datos SQLite.
 
         Args:
@@ -115,7 +115,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
 
         Returns:
             Jugador | None: Retorna el jugador guardado con su ID asignado en la BD o None si ocurre un error.
-            """
+        """
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -154,7 +154,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             raise
 
     def link_to_club(self, jc: JugadorClub) -> JugadorClub | None:
-        """  
+        """
         Funcion que se encarga de linkear un jugador con un club en la base de datos.
 
         Args:
@@ -186,7 +186,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
     def club_activo(self, id_jugador: int) -> Club | None:
         """
         Funcion que se encarga de buscar el club activo de un jugador en la base de datos.
-        
+
         Args:
             id_jugador (int): ID del jugador del cual se quiere buscar el club activo.
         Returns:

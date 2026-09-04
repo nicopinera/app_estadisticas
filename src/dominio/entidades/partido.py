@@ -11,7 +11,7 @@ class Partido:
     idPartido: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del partido.
         Raises:
             TypeError: Si la fecha no es una cadena de caracteres.
@@ -59,7 +59,7 @@ class JugadorPartido:
     faltasCometidas: int = 0
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del jugador del partido.
         Raises:
             TypeError: Si el ID del jugador no es un entero.

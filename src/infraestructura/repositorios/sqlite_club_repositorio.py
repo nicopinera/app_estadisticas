@@ -13,7 +13,7 @@ class SqliteClubRepositorio(ClubRepositorio):
 
         Args:
             conexion (sqlite3.Connection): Conexión a la base de datos SQLite.
-        
+
         """
         self.conexion = conexion
 
@@ -98,7 +98,8 @@ class SqliteClubRepositorio(ClubRepositorio):
             nombre (str): Nombre del club que se desea buscar.
 
         Returns:
-            list[Club] | None: Lista de clubes que coinciden con el nombre proporcionado o None si no se encuentra ninguno.
+            list[Club] | None: Lista de clubes que coinciden con el nombre proporcionado 
+            o None si no se encuentra ninguno.
         """
         cursor = self.conexion.cursor()
 
@@ -115,7 +116,7 @@ class SqliteClubRepositorio(ClubRepositorio):
 
     def guardar(self, club: Club) -> Club | None:
         """Función para guardar un club en la base de datos.
-        
+
         Args:
             club (Club): Entidad Club que se desea guardar en la base de datos.
 
@@ -142,7 +143,7 @@ class SqliteClubRepositorio(ClubRepositorio):
 
     def link_user_to_club(self, us_club: UsuarioClub) -> UsuarioClub | None:
         """Funcion para linkear un usuario a un club especifico
-        
+
         Args:
             us_club (UsuarioClub): Entidad UsuarioClub que representa la relación entre un usuario y un club.
 
@@ -150,7 +151,7 @@ class SqliteClubRepositorio(ClubRepositorio):
             UsuarioClub | None: Entidad UsuarioClub guardada en la base de datos o None si ocurre un error.
         """
         cursor = self.conexion.cursor()
-        
+
         try:
             query = """
             SELECT * FROM usuario WHERE idUsuario = ?;

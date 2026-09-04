@@ -6,16 +6,16 @@ from infraestructura.logger import get_logger
 
 logger = get_logger(__name__)
 
-# importacion de la clase SqliteConexion para poder conectarse a la base de datos sqlite y realizar operaciones CRUD  
+# importacion de la clase SqliteConexion para poder conectarse a la base de datos sqlite y realizar operaciones CRUD
 # en la tabla Usuarios, tambien se importa UsuarioRepositorio para la implementacion
 
 
 class SqliteUsuarioRepositorio(UsuarioRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
-        """ 
-        Implementamos la interfaz UsuarioRepositorio, la cual encarga de realizar  
-        operaciones CRUD(Create, Read, Update, Delete) 
-        en la tabla Usuarios de la base de datos sqlite  
+        """
+        Implementamos la interfaz UsuarioRepositorio, la cual encarga de realizar
+        operaciones CRUD(Create, Read, Update, Delete)
+        en la tabla Usuarios de la base de datos sqlite
 
         Args:
             conexion (sqlite3.Connection): Conexion a la base de datos SQLite.
@@ -24,7 +24,7 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         self.conexion = conexion
 
     def _row_to_entity(self, row: sqlite3.Row) -> Usuario:
-        """Esta funcion toma una fila de la tabla Usuarios de la base de datos y la convierte en una instancia,  
+        """Esta funcion toma una fila de la tabla Usuarios de la base de datos y la convierte en una instancia,
             que es una entidad del dominio de la aplicacion, en este caso un objeto de la clase Usuario.
 
         Args:
@@ -38,12 +38,12 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
             email=row["email"],
             pw=row["contrasenia"],
             idUsuario=row["idUsuario"],
-            #  
+            #
         )
 
     def encontrar_por_id(self, id: int) -> Usuario | None:
-        """ 
-        Funcion que se encarga de buscar a un usuario por su ID en el cual fue registrado en la BD  
+        """
+        Funcion que se encarga de buscar a un usuario por su ID en el cual fue registrado en la BD
         en el caso de que exista, retorna el usuario, sino retorna None si no se encuentra
 
         Args:
@@ -52,10 +52,10 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         Returns:
             Usuario | None: Retorna el usuario encontrado o None si no se encuentra.
         """
- 
+
         cursor = self.conexion.cursor()  # con este cursor ejecutamos las consultas SQL
 
-        query = "SELECT * FROM usuario WHERE idUsuario = ?"  # esto sirve para buscar un usuario por su ID  
+        query = "SELECT * FROM usuario WHERE idUsuario = ?"  # esto sirve para buscar un usuario por su ID
         cursor.execute(query, (id,))  # ejecutamos la consulta SQL con el ID del usuario que queremos buscar
         row = cursor.fetchone()
         # acá saca la primer coincidencia que encuentra en la BD
@@ -67,7 +67,7 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         return self._row_to_entity(row)
 
     def encontrar_por_mail(self, email: str) -> Usuario | None:
-        """Funcion para buscar un determinado Usuario por su direccion de mail 
+        """Funcion para buscar un determinado Usuario por su direccion de mail
 
         Args:
             email (str): Direccion de email del usuario a buscar.
@@ -77,7 +77,7 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
         """
         cursor = self.conexion.cursor()
 
-        query = "SELECT * FROM usuario WHERE email = ?"  
+        query = "SELECT * FROM usuario WHERE email = ?"
         cursor.execute(query, (email,))
 
         row = cursor.fetchone()
@@ -113,5 +113,5 @@ class SqliteUsuarioRepositorio(UsuarioRepositorio):
                             pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
-    # Estos comentarios son de ayuda propia para poder entender que significa cada parte del codigo,  
+    # Estos comentarios son de ayuda propia para poder entender que significa cada parte del codigo,
     # que hace cada funcion y como poder implementar las logica de negocio

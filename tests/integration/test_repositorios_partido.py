@@ -7,10 +7,10 @@ from infraestructura.repositorios.sqlite_partido_repositorio import SqlitePartid
 
 
 def test_buscar_por_club(db_conexion):
-    """ Funcion que Busca partidos por club  
+    """Funcion que Busca partidos por club
 
     Args:
-        db_conexion (): conexion a la base de datos     
+        db_conexion (): conexion a la base de datos
     """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     juego_encontrado = juego_rep.buscar_por_club(1)
@@ -19,7 +19,7 @@ def test_buscar_por_club(db_conexion):
 
 
 def test_buscar_por_id(db_conexion):
-    """ Funcion que Busca partidos por id
+    """Funcion que Busca partidos por id
 
     Args:
         db_conexion (_type_): conexion a la base de datos
@@ -31,7 +31,7 @@ def test_buscar_por_id(db_conexion):
 
 
 def test_guardar_partido(db_conexion):
-    """ Funcion que guarda partido en la Base de Datos
+    """Funcion que guarda partido en la Base de Datos
 
     Args:
         db_conexion (_type_): Conexion a la base de datos

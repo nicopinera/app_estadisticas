@@ -9,7 +9,7 @@ class Usuario:
     idUsuario: int | None = None
 
     def __post_init__(self) -> None:
-        """ 
+        """
         Funcion que se encarga de validar los datos del usuario.
         Raises:
             TypeError: Si el nombre no es una cadena de caracteres.
