@@ -152,6 +152,28 @@ El sistema usa una base de datos relacional local (**SQLite**) con esquema norma
 - El historial de afiliaciones de un jugador se mantiene vía `jugadorClub` (N:M con fechas).
 - `jugadorPartido` actúa como **fact table** para el motor de análisis (Pandas lee desde acá vía las vistas SQL).
 
+### Agregados estadísticos: por jugador (existe) y por club (falta, propuesto)
+
+Hoy solo existe un agregado pre-calculado a nivel **jugador**: `v_jugador_totales_temporada`
+(suma todas sus filas de `jugadorPartido` agrupadas por año). No existe ningún agregado
+equivalente a nivel **club/equipo** — todo lo que hay hoy sobre clubes es o bien por-partido
+(`v_partidos_resumen`, un cruce puntual) o inexistente para series de tiempo/competencias.
+
+Para que la app pueda responder "¿cómo viene mi equipo en toda la competencia?" o "¿cómo viene mi
+equipo este año, sumando todas las competencias?" (ver Hito 2/3, US-202/203/301), hace falta un
+agregado análogo, sumando **todos los jugadores de un club** en vez de uno solo. Conceptualmente
+sería una vista (o un cálculo equivalente en Pandas, ver nota de US-203) con esta forma:
+
+- Agrupada por `idClub` + (`idCompetencia` **o** `anio`, según qué recorte se pida — nunca los dos
+  mezclados, para no repetir el bug ya documentado en sección 20).
+- Mismas métricas que `v_jugador_totales_temporada` (puntos, T1/T2/T3, rebotes, asistencias,
+  recuperos, pérdidas, tapones, faltas, porcentajes), sumadas a nivel equipo en vez de individual.
+- No requiere ninguna tabla ni columna nueva — sale enteramente de `jugadorPartido` join `club`,
+  igual que el agregado de jugador.
+
+**No se define el SQL exacto acá a propósito** — es una decisión de implementación para cuando se
+aborde la US-203, no algo a resolver en esta revisión del PRD.
+
 ---
 
 ## 4. Arquitectura de Software (Clean + Hexagonal)
@@ -159,7 +181,7 @@ El sistema usa una base de datos relacional local (**SQLite**) con esquema norma
 ### Capas y responsabilidades
 
 - **Dominio** (`src/dominio/`): entidades puras, reglas de negocio, excepciones e interfaces (ports), sin dependencias externas.
-- **Aplicación** (`src/aplicacion/`, a crear): casos de uso y DTOs; orquesta reglas mediante inyección de dependencias.
+- **Aplicación** (`src/aplicacion/`): casos de uso (`casos_uso/`) y DTOs (`dtos/`); orquesta reglas mediante inyección de dependencias.
 - **Infraestructura** (`src/infraestructura/`): repositorios SQLite, parser Excel (Pandas), UI CLI/GUI y generación de reportes.
 
 ### Regla de dependencias
@@ -180,19 +202,24 @@ dominio  ←  aplicación  ←  infraestructura
 
 ```text
 src/
-├── main.py
+├── main.py                    # ✅ punto de entrada y composition root de la CLI (parser + manejo de errores)
+├── utils.py                   # ✅ helpers puros compartidos (id_persistido, abortar, fecha_iso)
+├── config/
+│   └── rutas.py               # ✅ rutas de la base, scripts SQL y logs
 ├── dominio/
 │   ├── entidades/          # @dataclass puras, sin imports externos
 │   ├── repositorios/       # interfaces (ABC) de repositorios
 │   ├── exceptions.py       # excepciones de negocio
 │   └── services/           # lógica de dominio compleja (opcional)
 ├── aplicacion/
-│   ├── use_cases/           # orquestadores (reciben repos por DI)
-│   ├── dtos/                 # dataclasses de entrada/salida entre capas
-│   └── services/             # servicios de aplicación (ej. SessionManager)
+│   ├── casos_uso/           # ✅ orquestadores (reciben repos por DI), un archivo por acción
+│   ├── dtos/                 # ✅ dataclasses de entrada/salida entre capas
+│   └── services/             # servicios de aplicación (ej. SessionManager) — pendiente, US-104
 ├── infraestructura/
+│   ├── logger.py              # ✅ configuración central del logging
 │   ├── repositorios/         # implementaciones SQLite de las interfaces de dominio
 │   ├── persistencia/
+│   │   ├── database_manager.py   # SQLiteManager y abrir_conexion()
 │   │   └── sql/               # schema.sql, views.sql, seed.sql, limpieza.sql
 │   ├── analytics/             # motor Pandas
 │   ├── ingest/                 # parser Excel
@@ -200,12 +227,18 @@ src/
 │   ├── security/                 # PasswordHasher
 │   └── ui/
 │       ├── cli/                   # interfaz de línea de comandos
+│       │   ├── commands/            # ✅ un archivo por acción (club_add.py, jugador_link.py, ...)
+│       │   └── formatters/          # ✅ table_formatter.py (wrapper de tabulate)
 │       └── flet/                   # GUI
-└── tests/ (hoy: test/)
-    ├── unit/ # sin DB, con mocks
-    ├── integration/ # con DB en memoria — hoy los tests viven flat en test/
-    └── conftest.py
+tests/
+├── unit/          # ✅ sin DB, con mocks (entidades, casos de uso, comandos CLI, helpers)
+├── integration/   # ✅ con SQLite real en memoria (repositorios, esquema) y CLI de punta a punta
+└── conftest.py    # ✅ fixtures compartidas y fábricas de datos (**overrides)
 ```
+
+> **Convención de la CLI: un archivo por acción.** Cada comando vive en su propio archivo de `commands/` (`club_add.py`, `jugador_link.py`, …) y `main.py` lo registra en
+> `construir_parser()` con `set_defaults(func=...)`. Es lo que quedó construido y documentado en `docs/context_ia/2026-08-29-us103-argparse-comandos-flujo-completo.md`; reemplaza
+> la propuesta original de un archivo por entidad (`club_commands.py`, `player_commands.py`, …) y de un `main_cli.py` separado: el composition root de la CLI es `src/main.py`.
 
 ### ¿Qué va en cada capa? Guía práctica
 
@@ -218,8 +251,8 @@ src/
 
 **Capa de Aplicación (`src/aplicacion/`)** — orquesta el dominio para los casos de uso del usuario. No contiene lógica de negocio pura (eso va en dominio) ni detalles técnicos (eso va en infraestructura).
 
-- **`use_cases/`** — un archivo = una acción del usuario. Cada caso de uso recibe sus dependencias (repositorios, servicios) por constructor y expone un único método `execute(dto)`. Ejemplo: `RegistrarJugadorUseCase.execute(dto)` verifica DNI no duplicado (`player_repo.find_by_dni`), crea la entidad `Jugador`, la persiste (`player_repo.save`) y retorna un `JugadorDTO`.
-- **`dtos/`**
+- **`casos_uso/`** — un archivo = una acción del usuario. Cada caso de uso recibe sus dependencias (repositorios, servicios) por constructor y expone un único método `ejecutar(dto)`. Ejemplo: `RegistrarJugadorUseCase.ejecutar(dto)` crea la entidad `Jugador` (que valida sus tipos), la persiste con `repo.guardar` (el repositorio rechaza un DNI duplicado con `DNIDuplicadoError`) y retorna un `JugadorDTO`. Detalle de los 9 casos de uso en `docs/info_modulo/03-casos-de-uso.md`.
+- **`dtos/`** — dataclasses simples, sin lógica, que viajan entre la CLI y los casos de uso (`CrearJugadorDTO` entra, `JugadorDTO` sale). Un archivo por entidad, con los DTOs de entrada y de salida juntos.
 - **`services/`** — servicios transversales que no pertenecen a un caso de uso específico, como `SessionManager` (sesión persistente) y `ExecutionContext` (propagación de `correlation_id` para logs).
 
 **Capa de Infraestructura (`src/infraestructura/`)** — implementa los contratos del dominio con tecnologías concretas. Es la única capa que puede importar `sqlite3`, `pandas`, `flet`, `bcrypt`, etc.
@@ -276,12 +309,16 @@ La sesión local persistirá en un archivo JSON en `~/.statspro/session.json` (o
 
 ### Composition Root: cómo se ensambla la aplicación
 
-El **Composition Root** es el único lugar del sistema donde se instancian todas las dependencias y se conectan entre sí. En esta arquitectura, ese lugar será `src/infraestructura/ui/cli/main_cli.py` (CLI) y `src/infraestructura/ui/flet/app.py` (GUI, Hito 4).
+El **Composition Root** es el único lugar del sistema donde se instancian todas las dependencias y se conectan entre sí. En esta arquitectura, ese lugar es `src/main.py` (CLI) y será `src/infraestructura/ui/flet/app.py` (GUI, Hito 4).
+
+> **Cómo quedó en la CLI:** como cada ejecución de la CLI es un proceso nuevo que corre **un único comando**, `main.py` solo inicializa la base, arma el parser y despacha el comando elegido
+> (`args.func(args)`); **cada comando arma las dependencias que necesita** (`ejecutar(args, repo=None)`: si no se le inyecta un repositorio, arma el real con `abrir_conexion()`). Así no se construyen
+> repositorios que no se van a usar, y los tests inyectan repositorios falsos. Los errores de negocio (`ErrorDeDominio`) se atrapan en un único `except` de `main()`.
 
 **¿Por qué es importante?** Porque en todos los demás archivos, las clases reciben sus dependencias como argumentos (nunca las crean con instanciación directa). Esto hace el sistema
 testeable: en los tests se pueden pasar repositorios falsos (mocks) sin modificar el código de producción.
 
-**Flujo de ensamblaje esperado en `main_cli.py`** (crece con cada US):
+**Flujo de ensamblaje esperado en `main.py`** (crece con cada US):
 
 1. **US-101/102:** se instancia `SQLiteManager`, se ejecutan las migraciones/inicialización, se crean los repositorios SQLite pasando la conexión.
 2. **US-103/104:** se crean los servicios de aplicación (`SessionManager`) y los casos de uso administrativos, pasando los repositorios.
@@ -499,51 +536,83 @@ src/infraestructura/repositorios/
 - **Esfuerzo:** L (6-10 días) · **Prioridad:** Alta · **Dependencias:** US-101, US-102
 - **Objetivo Funcional:** implementar la lógica de negocio pura y la interfaz de usuario por comandos para la gestión integral de las entidades del sistema (jugadores, clubes, competencias, inscripciones), asegurando la validación de reglas deportivas y la integridad de los datos.
 - **Narrativa:** Como administrador, quiero disponer de casos de uso con lógica de negocio validada para gestionar el ciclo de vida de los jugadores y sus afiliaciones, así como la estructura de competencias y clubes.
+- **Estado:** ✅ **implementada** — los 17 casos de uso (los 9 originales más 8 agregados el 2026-09-20, ver el recuadro de abajo), sus DTOs, las validaciones de entidad y los comandos de CLI que no dependen de la sesión (US-104).
+  Pendiente dentro de esta US: solo el comando `club select` (necesita el `SessionManager` de la US-104).
+  El detalle de cada caso de uso está en `docs/info_modulo/03-casos-de-uso.md`.
+
+  > **Alcance ampliado (2026-09-20).** El pilar 2 del producto promete "gestión organizativa completa: perfil de usuario, club, **categorías**, competencias y **listas de buena fe**", pero ninguna US planificaba
+  > crear ni listar categorías, listar competencias ni administrar la lista de buena fe (las tablas y los métodos del repositorio ya existían desde la US-101/102, sin ningún caso de uso que los usara).
+  > Sin eso, `competencia inscribir` no se podía usar (necesita una categoría) y la regla "solo jugadores habilitados en lista pueden figurar en carga oficial" no tenía de dónde salir. Se incorporó a esta US:
+  > categorías (`CrearCategoriaUseCase`, `ListarCategoriasUseCase`), consultas de apoyo (`ListarCompetenciasUseCase`, `ListarInscripcionesClubUseCase`) y la lista de buena fe
+  > (`AgregarJugadorAListaBuenaFeUseCase`, `ListarListaBuenaFeUseCase`).
+  >
+  > **Auditoría de cierre (2026-09-20).** Al revisar la US contra sus propias reglas se completaron cuatro huecos más: (1) **quitar un jugador de la lista de buena fe** (`QuitarJugadorDeListaBuenaFeUseCase`;
+  > sin esto una habilitación por error no se podía deshacer), (2) **el ciclo de vida del vínculo jugador-club**: `DesvincularJugadorDeClubUseCase` cierra el vínculo vigente (antes un jugador que dejaba un club
+  > no se podía pasar a otro), con la regla de que un vínculo nuevo no puede empezar antes de que termine el anterior, (3) **validaciones de valor** en las entidades (nombres vacíos, DNI ≤ 0, año de nacimiento
+  > imposible) y (4) que `partido list` muestre **nombres** (vista `v_partidos_resumen`) en lugar de ids, además de dos propiedades calculadas (`Jugador.nombre_completo`, `JugadorPartido.rebotes_totales`).
+
 - **Capa de Dominio:**
-  - **Entidades:** `Usuario`, `Club`, `Jugador`, `JugadorClub` (historial N:M jugador-club), `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`, `Partido`, `EstadisticaJugador`. `@dataclass` puras, serializables, sin dependencias externas.
-  - **Lógica de validación:** en `__post_init__` de las entidades (ej. tiros convertidos ≤ lanzados, valores no negativos) — **pendiente, hoy las entidades son dataclasses simples sin validación** (ver sección 20).
-  - **Excepciones** (`src/dominio/exceptions.py`, a crear): `JugadorDuplicadoError`, `ClubNoEncontradoError`, `UsuarioNoEncontradoError`, `CredencialesInvalidasError`, `VinculoActivoExistenteError`.
-- **Capa de Aplicación (a crear):**
-  - **Casos de uso:** `RegistrarJugadorUseCase` (valida DNI numérico, no vacío y no duplicado), `CrearClubUseCase`, `VincularJugadorAClubUseCase` (evita vínculos activos duplicados),
-    `CrearCompetenciaUseCase`, `InscribirClubEnCompetenciaUseCase` (genera automáticamente la `listaBuenaFe` vacía asociada, 1:1 — **este caso de uso depende de que primero se corrija `SqliteCompetenciaRepositorio.obtener_lista_por_inscripcion`**: hoy la implementación devuelve `list[ListaBuenaFe]` pese a que tanto la interfaz de dominio como la relación 1:1 real dicen
-    que debería devolver `ListaBuenaFe | None`; si se construye el caso de uso contra el
-    comportamiento actual, va a tratar como "lista de listas de buena fe" algo que conceptualmente
-    es un objeto único — ver sección 20), `ListarClubesUsuarioUseCase`,
-    `ListarJugadoresClubUseCase`, `ListarPartidosPorClubUseCase` (usa `v_partidos_resumen`),
-    `CambiarClubActivoUseCase`.
-  - **DTOs:** `JugadorDTO`, `ClubDTO`, `CompetenciaDTO`, `CrearJugadorDTO`, `PartidoResumenDTO`,
-    `InscripcionDTO`.
+  - **Entidades:** `Usuario`, `Club`, `Jugador`, `JugadorClub` (historial N:M jugador-club), `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`, `Partido`, `EstadisticaJugador` (en el código: `JugadorPartido`). `@dataclass` puras, serializables, sin dependencias externas.
+  - **Lógica de validación** ✅ (en `__post_init__` de las entidades): tipos de todos los campos (`TypeError`: es un bug del programa); y **reglas de valor** (`DatoInvalidoError`: es un error del usuario, llega a la CLI
+    como mensaje): nombres de `Club`, `Jugador` (nombre y apellido), `Competencia` y `Categoria` no vacíos (ni solo espacios); `Jugador.dni` mayor a 0; `Jugador.anioNacimiento` mayor a 1900 y no posterior al año actual;
+    `Competencia.anio` mayor a 1900 (mismo criterio que el `CHECK` del schema); en `JugadorPartido`, tiros convertidos ≤ lanzados, minutos entre 0 y 48, valores no negativos y `puntos = T2C·2 + T3C·3 + T1C`.
+  - **Modelo de lectura:** `PartidoResumen` (dataclass sin validación, es lo que devuelve la vista `v_partidos_resumen`: fecha, estadio, competencia, año y nombres de los dos clubes).
+  - **Propiedades calculadas:** `Jugador.nombre_completo` y `JugadorPartido.rebotes_totales` (defensivos + ofensivos); no se guardan en la base.
+  - **Excepciones** ✅ (`src/dominio/exceptions.py`), todas hijas de `ErrorDeDominio`: `DNIDuplicadoError`, `ClubNoEncontradoError`, `JugadorNoEncontradoError`, `CompetenciaNoEncontradaError`,
+    `CategoriaNoEncontradaError`, `InscripcionDuplicadaError`, `VinculoActivoExistenteError`, `CategoriaDuplicadaError`, `InscripcionNoEncontradaError`, `ListaBuenaFeNoEncontradaError`, `JugadorYaEnListaError`,
+    `JugadorNoPerteneceAlClubError`, `JugadorNoEstaEnListaError`, `JugadorSinVinculoActivoError`, `VinculoSuperpuestoError`, `DatoInvalidoError` (además hereda de `ValueError`, para que el código que ya
+    atrapaba `ValueError` siga funcionando), `UsuarioNoEncontradoError` y `CredencialesInvalidasError` (estas dos se usan a partir de la US-104).
+- **Capa de Aplicación** ✅ (`src/aplicacion/`):
+  - **Casos de uso** (`casos_uso/`, método `ejecutar()`): `RegistrarJugadorUseCase` (crea la entidad y el repositorio rechaza el DNI duplicado), `CrearClubUseCase`, `VincularJugadorAClubUseCase` (verifica que existan
+    jugador y club, evita vínculos activos duplicados y que el vínculo nuevo se superponga con uno anterior), `CrearCompetenciaUseCase`, `InscribirClubEnCompetenciaUseCase` (valida club, competencia y categoría, evita la inscripción duplicada y genera la `listaBuenaFe`
+    vacía asociada, 1:1, **de forma atómica** con `CompetenciaRepositorio.inscribir_con_lista`), `ListarClubesUsuarioUseCase`, `ListarJugadoresClubUseCase` (solo vínculos vigentes), `ListarPartidosPorClubUseCase` (devuelve `PartidoResumenDTO` con
+    nombres, desde la vista) y `CambiarClubActivoUseCase` (valida que el club exista y pertenezca al usuario; guardar el club en la sesión es de la US-104). **Agregados el 2026-09-20:** `CrearCategoriaUseCase` (no permite nombres repetidos, sin importar
+    mayúsculas ni espacios de los extremos), `ListarCategoriasUseCase`, `ListarCompetenciasUseCase`, `ListarInscripcionesClubUseCase` (devuelve también el id de la lista de cada inscripción),
+    `AgregarJugadorAListaBuenaFeUseCase` (habilita a un jugador en la lista de una inscripción) y `ListarListaBuenaFeUseCase` (los jugadores habilitados, con su nombre). **Agregados en la auditoría de cierre:**
+    `DesvincularJugadorDeClubUseCase` (cierra el vínculo vigente con una fecha de baja no anterior a su inicio) y `QuitarJugadorDeListaBuenaFeUseCase` (deshace una habilitación).
+  - **DTOs** (`dtos/`): `CrearJugadorDTO`, `JugadorDTO`, `CrearClubDTO`, `ClubDTO`, `VincularJugadorClubDTO`, `CrearCompetenciaDTO`, `CompetenciaDTO`, `InscribirClubDTO`, `InscripcionDTO`, `PartidoResumenDTO`, `CrearCategoriaDTO`, `CategoriaDTO`, `AgregarJugadorListaDTO`, `JugadorEnListaDTO`, `DesvincularJugadorDTO`, `VinculoDTO` y `QuitarJugadorListaDTO`.
+  - **`src/utils.py`:** helpers puros compartidos (`id_persistido`, `abortar`, `fecha_iso`), sin dependencias de `infraestructura`.
 - **Capa de Infraestructura:**
-  - **Comandos CLI** (`src/infraestructura/ui/cli/commands/`, a crear): `player_add.py`,
-    `club_add.py`, `player_link.py`, `game_list.py`, `player_list.py`, `club_list.py`.
-  - Command Pattern con `argparse`; prompts interactivos (`input()`); formateo con `tabulate`.
+  - **`src/main.py`** es el composition root de la CLI (no existe un `main_cli.py` separado): arma el parser raíz con un subparser por entidad (`club`, `jugador`, `competencia`, `partido`), inicializa la base
+    y despacha el comando. Un único `except ErrorDeDominio` en `main()` muestra los errores de negocio como `Error: ...` en stderr, con código de salida 1 y sin traceback.
+  - **Comandos CLI** (`src/infraestructura/ui/cli/commands/`): **un archivo por acción** (así quedó construido, ver `docs/context_ia/2026-08-29-us103-argparse-comandos-flujo-completo.md`), con flags de `argparse`
+    (no prompts interactivos): `jugador_add.py`, `jugador_link.py`, `jugador_unlink.py`, `jugador_list.py`, `club_add.py`, `club_list.py` (con `--id-usuario` provisorio hasta que exista la sesión), `competencia_add.py`,
+    `competencia_inscribir.py`, `competencia_list.py`, `categoria_add.py`, `categoria_list.py`, `inscripcion_list.py`, `lista_add.py`, `lista_remove.py`, `lista_list.py` y `game_list.py` (`stats partido list`). Cada uno expone `ejecutar(args, repo=None)`: en producción arma el repositorio real con `abrir_conexion()`; en los tests se le inyecta uno falso.
+  - **Repositorios:** se agregaron `JugadorRepositorio.historial_vinculos` y `cerrar_vinculo`, `CompetenciaRepositorio.quitar_jugador_lista` y `PartidoRepositorio.resumen_por_club` (lee `v_partidos_resumen`,
+    que ahora también expone `id_club_local` e `id_club_visitante` para poder filtrar por club).
+  - **`formatters/table_formatter.py`** ✅: wrapper de `tabulate`; todos los listados pasan por acá (AC4).
+  - **`persistencia/database_manager.py`:** se agregó `abrir_conexion()`. Además se corrigió `schema.sql`, que empezaba con `DROP TABLE` y borraba todos los datos en cada arranque de la CLI.
+  - **Dependencias:** `tabulate` (runtime), declarada en `pyproject.toml` junto con el resto (versiones fijas, `uv.lock`, sin `requerimientos.txt`).
 - **Criterios de Aceptación:**
-  - **AC1 — Independencia de Dominio:** los archivos en `dominio/entidades/` no importan
-    librerías externas.
-  - **AC2 — Inyección de Dependencias:** todos los casos de uso reciben sus repositorios vía
-    constructor, usando las interfaces (protocolos/ABC).
-  - **AC3 — Validación Fail-Fast:** DNI duplicado o datos inválidos cortan el flujo de la CLI con
-    mensajes de error amigables, sin tracebacks.
-  - **AC4 — Formato de Salida:** la CLI siempre formatea resultados exitosos y listas con tablas
-    en consola (`tabulate`).
-  - **AC5 — Atomicidad:** operaciones complejas (inscripciones que crean listas de buena fe) son
-    atómicas.
+  - **AC1 — Independencia de Dominio:** ✅ los archivos en `dominio/entidades/` no importan librerías externas.
+  - **AC2 — Inyección de Dependencias:** ✅ todos los casos de uso reciben sus repositorios vía constructor, usando las interfaces (ABC).
+  - **AC3 — Validación Fail-Fast:** ✅ DNI duplicado o datos inválidos cortan el flujo de la CLI con mensajes de error amigables, sin tracebacks (un solo `except ErrorDeDominio` en `main()`;
+    los valores inválidos de una entidad —nombre vacío, DNI negativo, año imposible— llegan como `DatoInvalidoError`, que es un `ErrorDeDominio`, y se muestran igual).
+  - **AC4 — Formato de Salida:** ✅ los listados se formatean como tablas en consola (`tabulate`). Los comandos que crean algo imprimen una línea de confirmación.
+  - **AC5 — Atomicidad:** ✅ la inscripción y su lista de buena fe se guardan en una única transacción (`inscribir_con_lista`).
 - **Reglas de Negocio:**
-  - DNI de jugadores numérico y único.
+  - DNI de jugadores numérico, positivo y único. Nombre y apellido no vacíos. Año de nacimiento mayor a 1900 y no posterior al año actual.
   - Un jugador no puede estar vinculado activamente (sin `fecha_hasta`) a más de un club (ni al
     mismo club dos veces).
+  - **Cambio de club:** para pasar a otro club primero se cierra el vínculo vigente (`jugador unlink --fecha-hasta`); la fecha de baja no puede ser anterior al inicio del vínculo, y el vínculo nuevo no puede
+    empezar antes de la baja del anterior (no se superponen períodos). El historial completo queda en `jugadorClub`.
+    _(La regla de no superposición no estaba en el PRD original: se agregó al implementar el cierre del vínculo, porque el schema solo impide `fechaHasta < fechaDesde` dentro de una fila.)_
+  - Un club no puede inscribirse dos veces en la misma competencia y categoría.
+  - No puede haber dos categorías con el mismo nombre (se compara sin distinguir mayúsculas ni espacios de los extremos).
+  - **Lista de buena fe:** solo se puede habilitar a un jugador que **existe**, que tiene un **vínculo vigente con el club de la inscripción** y que **todavía no está** en esa lista.
+    _(La regla del vínculo vigente no estaba en el PRD original: se propuso al implementar `lista add` para evitar listas con jugadores de otros clubes; si el negocio admite préstamos u otras excepciones, se relaja en `AgregarJugadorAListaBuenaFeUseCase`.)_
+  - **Quitar de la lista:** solo se puede quitar a un jugador que **está** en la lista de esa inscripción (si no, `JugadorNoEstaEnListaError`). Quitarlo no lo borra del sistema ni del club: solo deshace la habilitación.
   - Porcentajes y totales en estadísticas se validan antes de la persistencia.
-- **Testing Mínimo:**
-  - _Unitarios:_ validar excepciones en `EstadisticaJugador` por datos incoherentes; mocks de
-    repositorios para `RegistrarJugador` (DNI duplicado) y `VincularJugadorAClub`; propiedades
-    calculadas (`nombre_completo`, `rebotes_totales`).
-  - _Integración:_ persistencia real en DB `:memory:` y validación de consultas vía DTOs.
+- **Testing Mínimo** ✅ (ver `docs/info_modulo/09-testing.md`):
+  - _Unitarios (`tests/unit/`):_ validación de entidades (tipos, valores —vacíos, rangos— y las reglas de `JugadorPartido`), propiedades calculadas, jerarquía de excepciones de dominio, los 17 casos de uso con repositorios falsos (`unittest.mock`) —camino feliz y una
+    prueba por cada excepción—, comandos de la CLI (con `capsys`) y helpers.
+  - _Integración (`tests/integration/`):_ persistencia real en DB `:memory:` (repositorios, esquema y vistas, atomicidad de la inscripción) y la CLI de punta a punta contra una base temporal.
 
-**Archivos a crear:**
+**Archivos:**
 
 ```text
 src/dominio/entidades/
-├── usuario.py                ✅ existe (simple, sin validaciones aún)
+├── usuario.py                ✅ existe (con validación de tipos)
 ├── club.py                   ✅ existe
 ├── jugador.py                ✅ existe
 ├── jugador_club.py           ✅ existe (dentro de jugador.py)
@@ -555,16 +624,45 @@ src/dominio/entidades/
 ├── partido.py                ✅ existe
 └── estadistica_jugador.py    ✅ existe (como JugadorPartido, dentro de partido.py)
 
-src/aplicacion/use_cases/  (❌ ninguno existe todavía — capa aplicación no creada)
-├── registrar_jugador.py
-├── crear_club.py
-├── vincular_jugador_club.py
-├── crear_competencia.py
-├── inscribir_club_competencia.py
-├── listar_clubes_usuario.py
-├── listar_jugadores_club.py
-├── listar_partidos_por_club.py
-└── cambiar_club_activo.py
+src/aplicacion/casos_uso/
+├── registrar_jugador.py             ✅
+├── crear_club.py                    ✅
+├── vincular_jugador_club.py         ✅
+├── desvincular_jugador_club.py      ✅ (agregado 2026-09-20)
+├── crear_competencia.py             ✅
+├── inscribir_club_competencia.py    ✅
+├── listar_clubes_usr.py             ✅
+├── listar_jugador_club.py           ✅
+├── partidos_por_club.py             ✅
+├── cambiar_club_activo.py           ✅ (solo valida; la sesión es de la US-104)
+├── crear_categoria.py               ✅ (agregado 2026-09-20)
+├── listar_categorias.py             ✅ (agregado 2026-09-20)
+├── listar_competencias.py           ✅ (agregado 2026-09-20)
+├── listar_inscripciones_club.py     ✅ (agregado 2026-09-20)
+├── agregar_jugador_lista.py         ✅ (agregado 2026-09-20)
+├── listar_lista_buena_fe.py         ✅ (agregado 2026-09-20)
+└── quitar_jugador_lista.py          ✅ (agregado 2026-09-20)
+
+src/infraestructura/ui/cli/
+├── commands/
+│   ├── jugador_add.py               ✅ stats jugador add
+│   ├── jugador_link.py              ✅ stats jugador link
+│   ├── jugador_unlink.py            ✅ stats jugador unlink
+│   ├── jugador_list.py              ✅ stats jugador list
+│   ├── club_add.py                  ✅ stats club add
+│   ├── club_list.py                 ✅ stats club list  (--id-usuario provisorio)
+│   ├── competencia_add.py           ✅ stats competencia add
+│   ├── competencia_inscribir.py     ✅ stats competencia inscribir
+│   ├── competencia_list.py          ✅ stats competencia list
+│   ├── categoria_add.py             ✅ stats categoria add
+│   ├── categoria_list.py            ✅ stats categoria list
+│   ├── inscripcion_list.py          ✅ stats inscripcion list
+│   ├── lista_add.py                 ✅ stats lista add
+│   ├── lista_remove.py              ✅ stats lista remove
+│   ├── lista_list.py                ✅ stats lista list
+│   └── game_list.py                 ✅ stats partido list
+└── formatters/
+    └── table_formatter.py           ✅
 ```
 
 > **Nota de organización real:** el PRD prevé un archivo por entidad/caso de uso; el código
@@ -602,7 +700,13 @@ src/aplicacion/use_cases/  (❌ ninguno existe todavía — capa aplicación no 
   - **Gestión de sesión:** `SessionManager` persiste `usuario_id` y `club_activo_id` en un JSON
     oculto (`~/.statspro/session.json` o `~/.statspro_session.json`).
   - **CLI:** `stats auth register`, `stats auth login`, `stats auth logout`,
-    `stats club select <id>`.
+    `stats club select <id>`. Se registran como subparsers nuevos en el `construir_parser()` de
+    `src/main.py`, que ya existe desde la US-103 (no se crea uno nuevo). Siguiendo la convención
+    **un archivo por acción** de `ui/cli/commands/`, se crean `auth_register.py`, `auth_login.py`,
+    `auth_logout.py` y `club_select.py` (este último usa `CambiarClubActivoUseCase`, que ya existe
+    desde la US-103 y solo valida; acá se le suma guardar el club en el `SessionManager`). Ese
+    mismo paso deja de usar el `--id-usuario` provisorio de `club_list.py`, que pasa a leer el
+    usuario de la sesión.
 - **Base de Datos:** tabla `usuario` (`idUsuario`, `nombre`, `email`, `contrasenia` — nombre real
   de columna, ver nota sobre el campo `pw` en sección 20).
 - **Criterios de Aceptación:**
@@ -632,7 +736,7 @@ src/infraestructura/security/
 
 src/aplicacion/
 ├── services/session_manager.py
-└── use_cases/
+└── casos_uso/
     ├── registrar_entrenador.py
     └── login_local.py
 
@@ -662,7 +766,7 @@ test/
     bugs primero, además de sumar el método combinado atómico.
 - **Capa de Aplicación:**
   - **Caso de uso:** `CargarPartidoUseCase` (orquesta validación y persistencia).
-  - **DTOs:** `PartidoDTO`, `BoxscoreDTO`, `EstadisticaInputDTO`.
+  - **DTOs:** `PartidoDTO` (de carga; el DTO de solo lectura que ya existe se llama `PartidoResumenDTO`), `BoxscoreDTO`, `EstadisticaInputDTO`.
 - **Capa de Infraestructura:**
   - **Persistencia:** `SqliteJuegoRepositorio.save_partido_completo` — debe usar un context
     manager de SQLite (`with self.connection:`) para envolver el `INSERT` de `partido` y los
@@ -682,6 +786,10 @@ test/
   - Todos los campos numéricos `≥ 0`.
   - `minutosJugados` no excede el total del partido (ej. 48 min).
   - No se puede cargar un partido si los clubes involucrados no existen en la DB.
+  - **Solo pueden figurar en el boxscore jugadores habilitados en la lista de buena fe** del club (regla de la sección 3: "solo jugadores habilitados en lista pueden figurar en carga oficial").
+    Los datos ya se pueden cargar desde la US-103 (`stats lista add`); esta US los usa para validar (`CompetenciaRepositorio.obtener_jugadores_lista`) y lanza una excepción de dominio si un jugador no está habilitado.
+    **Decisión pendiente al arrancar esta US:** el partido guarda competencia y clubes, pero **no la categoría**; si un club tiene inscripciones en más de una categoría de la misma competencia,
+    hay que definir contra qué lista se valida (por ejemplo, agregar la categoría al partido o validar contra la unión de las listas del club en esa competencia).
   - **Nota (campo propuesto, no implementado todavía):** si se agrega a `Partido` un resultado
     final (`puntosLocalFinal`/`puntosVisitanteFinal`, ver sección 20 y el DER en
     `docs/diagramas/diagramas.md`), esta US sería el lugar natural para completarlo — junto con
@@ -697,7 +805,7 @@ test/
 ```text
 src/aplicacion/
 ├── dtos/partido_dto.py
-└── use_cases/cargar_partido.py
+└── casos_uso/cargar_partido.py
 
 test/
 ├── test_use_case_cargar_partido.py
@@ -709,51 +817,72 @@ test/
 - **Esfuerzo:** M (3-5 días) · **Prioridad:** Alta · **Dependencias:** US-103, US-104, US-105
 - **Narrativa:** Como administrador, quiero una CLI estructurada con subcomandos claros para
   gestionar todas las entidades, que muestre los datos en tablas formateadas.
-- **Objetivo Funcional:** construir una CLI extensible y mantenible con subcomandos desacoplados
-  que consolide todo el flujo operativo de v0.1, sin bloques monolíticos `if/else`.
+- **Objetivo Funcional:** **no crea la CLI desde cero** — `main.py` (el composition root) y la mayoría de
+  `commands/` ya existen desde la US-103 (club, jugador, competencia y partido list) y la US-104
+  (auth y club select). Esta US cierra lo que falta (`game add`, `game boxscore`, una vez que
+  US-105 tenga el caso de uso de carga de partidos) y hace el pulido final: confirma que el
+  patrón de subcomandos desacoplados se sostuvo sin bloques `if/else` a lo largo de las tres
+  historias. **Convención adoptada:** un archivo por acción en `commands/`.
 - **Comandos (usar `argparse`):**
 
 ```text
-stats auth register / login / logout
+stats auth register / login / logout          ⬜ US-104
 
-stats club add                      → solicita nombre por input()
-stats club list                     → tabla con v_partidos_resumen (filtrado por usuario)
-stats club select <id>              → actualiza sesión
+stats club add --nombre                       ✅ US-103
+stats club list --id-usuario                  ✅ US-103 (provisorio: pasa a leer la sesión en US-104)
+stats club select <id>                        ⬜ US-104 → actualiza sesión
 
-stats player add                    → formulario interactivo campo por campo
-stats player list                   → tabla: ID | Nombre | DNI | Club Activo
-stats player link <id_jugador>      → solicita id_club y fecha_desde
+stats jugador add --nombre --apellido --dni --anio     ✅ US-103
+stats jugador list --id-club                           ✅ US-103 (pendiente: mostrar DNI y club activo)
+stats jugador link --id-jugador --id-club --fecha-desde  ✅ US-103
+stats jugador unlink --id-jugador --fecha-hasta        ✅ US-103 (cierra el vínculo vigente; permite el cambio de club)
 
-stats game add                      → formulario multi-paso
-stats game list                     → tabla con v_partidos_resumen
-stats game boxscore <id_partido>    → tabla con v_boxscore_completo
+stats competencia add --nombre --anio [--tipo]                                        ✅ US-103
+stats competencia inscribir --id-club --id-categoria --id-competencia --fecha-presentacion  ✅ US-103
+stats competencia list                                                                ✅ US-103
+
+stats categoria add --nombre                  ✅ US-103
+stats categoria list                          ✅ US-103
+
+stats inscripcion list --id-club              ✅ US-103
+stats lista add --id-inscripcion --id-jugador ✅ US-103 (lista de buena fe)
+stats lista remove --id-inscripcion --id-jugador  ✅ US-103 (deshace una habilitación)
+stats lista list --id-inscripcion             ✅ US-103
+
+stats partido list --id-club        ✅ US-103 (con nombres de clubes y competencia, desde v_partidos_resumen)
+stats partido add                   ⬜ US-105/106 → formulario multi-paso
+stats partido boxscore <id_partido> ⬜ US-106 → tabla con v_boxscore_completo
 ```
 
-- **Archivos a crear:**
+- **Archivos (la mayoría ya existe de US-103/US-104 — acá solo se extiende):**
 
 ```text
+src/main.py                         ✅ existe desde US-103 — composition root: se le agregan subparsers, no se recrea
 src/infraestructura/ui/cli/
-├── main_cli.py                     ← punto de entrada / composition root
-├── commands/
-│   ├── __init__.py
-│   ├── auth_commands.py            ← register, login, logout
-│   ├── club_commands.py            ← add, list, select
-│   ├── player_commands.py          ← add, list, link
-│   └── game_commands.py            ← add (interactivo), list, boxscore
+├── commands/                       # un archivo por acción
+│   ├── jugador_add.py, jugador_link.py, jugador_unlink.py, jugador_list.py  ✅ US-103
+│   ├── club_add.py, club_list.py                                 ✅ US-103
+│   ├── competencia_add.py, competencia_inscribir.py, competencia_list.py  ✅ US-103
+│   ├── categoria_add.py, categoria_list.py, inscripcion_list.py  ✅ US-103
+│   ├── lista_add.py, lista_remove.py, lista_list.py              ✅ US-103
+│   ├── game_list.py                                              ✅ US-103 (stats partido list)
+│   ├── auth_register.py, auth_login.py, auth_logout.py           ⬜ US-104
+│   ├── club_select.py                                            ⬜ US-104
+│   └── game_add.py (interactivo), game_boxscore.py               ⬜ US-105/US-106
 └── formatters/
-    └── table_formatter.py          ← TableFormatter (wrapper de tabulate)
+    └── table_formatter.py          ✅ existe desde US-103 (wrapper de tabulate)
 ```
 
 - **Criterios de Aceptación:**
-  - **AC1 — Command Pattern:** agregar un nuevo grupo de comandos (ej. `stats competition ...`)
-    solo requiere crear un nuevo archivo en `commands/` y registrarlo en `main_cli.py` — sin
-    modificar ningún otro archivo. Las excepciones de dominio nunca muestran tracebacks al
+  - **AC1 — Command Pattern:** agregar un nuevo comando (ej. `stats categoria add`)
+    solo requiere crear su archivo en `commands/` y registrarlo en `construir_parser()` de
+    `main.py` — sin modificar ningún otro comando. Las excepciones de dominio nunca muestran tracebacks al
     usuario final.
-  - **AC2 — Visualización con vistas SQL:** `stats game list` usa `v_partidos_resumen` (nombres
-    de clubes, no IDs); `stats game boxscore <id>` usa `v_boxscore_completo`; `stats player list`
+  - **AC2 — Visualización con vistas SQL:** `stats partido list` usa `v_partidos_resumen` (nombres
+    de clubes, no IDs); `stats partido boxscore <id>` usa `v_boxscore_completo`; `stats jugador list`
     muestra el club activo del jugador (del historial `jugadorClub`).
-  - **AC3 — Flujo de sesión:** los comandos `club`, `player` y `game` ejecutan `require_auth()`
-    al inicio; `game` y `player list` ejecutan `require_active_club()`.
+  - **AC3 — Flujo de sesión:** los comandos `club`, `jugador` y `partido` ejecutan `require_auth()`
+    al inicio; `partido` y `jugador list` ejecutan `require_active_club()`.
 - **Testing Mínimo:**
   - _Unitario:_ flujo de guards de autenticación y club activo.
   - _Integración:_ ejecución de cada subcomando con DB en memoria, verificando salida esperada;
@@ -817,33 +946,44 @@ test/
 - **Archivos a crear/existentes:**
 
 ```text
-.github/workflows/linter.yml    ✅ existe (ruff, reglas E + I)
-.github/workflows/test.yml      ✅ existe (pytest + cobertura, matriz Linux/Windows)
-pytest.ini                      ✅ existe (pythonpath=src, testpaths=test)
-.pre-commit-config.yaml         ✅ existe (check-yaml, end-of-file-fixer, trailing-whitespace, black)
-pyproject.toml                  ✅ existe (config de ruff — falta version/entrypoint del paquete)
-Makefile                        ✅ existe (instalar_dependencias_w/l, run_test, run_linter_ruf, corregir_linter, pre_commit)
+.github/workflows/MainAction.yml  ✅ existe (jobs: check_dep [pip-audit], gitleaks, lint [ruff], static [mypy],
+                                     tests-linux, tests-windows, tests-docker; matriz de Python 3.11–3.14 (Windows solo 3.13);
+                                     se dispara en PR, push a main/develop y manual;
+                                     con concurrency, permissions y timeout-minutes)
+.github/actions/style/{ruff,mypy}/action.yml                   ✅ existen (versión de ruff/mypy = la de pyproject.toml/uv.lock)
+.github/actions/coverage/{linux,windows,docker}/action.yml     ✅ existen (todas reciben `python-version`;
+                                     la de Linux exige cobertura ≥ 85 % y guarda el reporte HTML)
+.github/dependabot.yml          ✅ existe (uv, github-actions y docker; semanal)
+pytest.ini                      ✅ existe (pythonpath=src, testpaths=tests)
+.pre-commit-config.yaml         ✅ existe (check-yaml, end-of-file-fixer, trailing-whitespace y ruff check/format
+                                     ejecutados con `uv run`: misma versión de ruff que el CI)
+pyproject.toml                  ✅ existe (dependencias con versión fija + config de ruff/mypy; uv.lock; sin requerimientos.txt)
+Makefile                        ✅ existe (instalar_dependencias [uv sync], run_test, run_linter_ruf, corregir_linter, pre_commit, docker_test, static_check)
 docs/catalogo-criticidad.md     ❌ no existe — ver sección 14
-docs/guias/01-flujo-de-trabajo-git.md  ❌ no existe
+docs/info_modulo/11-flujo-de-trabajo-git.md  ❌ no existe
 ```
 
 - **Criterios de Aceptación:**
-  - **AC1.** `make test`/`run_test` ejecuta la suite completa y **debería** fallar si la
-    cobertura es < 80% en módulos no críticos — hoy no lo hace (ver sección 20).
+  - **AC1.** `make run_test` ejecuta la suite completa y falla si la cobertura baja del piso de
+    `.coveragerc` (`fail_under = 60`). El job de Linux del CI exige además **85 %** (parámetro
+    `cobertura-minima`; cumple el ≥ 80 % pedido) y guarda el reporte HTML como _artifact_.
   - **AC2.** `make lint`/`run_linter_ruf` falla ante cualquier infracción de estilo.
-  - **AC3.** El pipeline CI falla el PR ante test fallido, cobertura insuficiente o error de
-    linting.
-  - **AC4.** `pre-commit install` configura hooks locales en un único comando.
+  - **AC3.** El pipeline CI falla el PR ante test fallido, cobertura insuficiente (Linux), error
+    de linting o de tipos, dependencias con vulnerabilidades conocidas o secretos en el historial.
+  - **AC4.** `pre-commit install` configura hooks locales en un único comando (los hooks de ruff
+    se ejecutan con `uv run`: usan la versión fijada en `pyproject.toml`, la misma del CI).
   - **AC5.** `docs/catalogo-criticidad.md` inicializado con al menos los módulos de autenticación
     y persistencia.
 - **Testing Mínimo:** manual — push a rama feature dispara el workflow; error de lint
   intencional hace fallar CI; cobertura por debajo del umbral hace fallar CI con mensaje
   explicativo.
 
-> **Estado real y propuestas de ampliación:** ver `docs/ideas-aprendizaje.md` sección 7
-> ("Completar el pipeline de CI") para 8 mejoras concretas ya identificadas (cobertura que
-> bloquee de verdad, `mypy`, `ruff format --check`, `pip-audit`, `gitleaks`, Dependabot, build de
-> Docker en CI). No repetido acá para no duplicar contenido.
+> **Estado real y lo que falta:** ver `docs/ideas-aprendizaje.md` sección 8 (informe de CI). Ya
+> aplicado (2026-09-20): `mypy`, `pip-audit`, build de Docker, una sola versión de ruff/mypy
+> (`pyproject.toml`) en CI y pre-commit, matriz de Python 3.11–3.14 (Windows solo 3.13), disparo en `push`,
+> `concurrency`/`permissions`/`timeout-minutes`, cobertura mínima de 85 % con reporte guardado
+> (Linux), Dependabot y `gitleaks`. Pendiente: job agregador + _required status checks_ (8.9),
+> `ruff format --check` (8.2), smoke test de la CLI (8.14) y fijar actions por hash (8.13).
 
 ---
 
@@ -918,7 +1058,7 @@ src/infraestructura/ingest/
 └── ingest_service.py
 
 src/aplicacion/
-├── use_cases/importar_excel.py
+├── casos_uso/importar_excel.py
 └── dtos/ingest_dto.py
 
 test/
@@ -940,8 +1080,15 @@ test/
   negativos).
 - **Capa de Aplicación:**
   - **Casos de uso:** `CalcularEstadisticasAvanzadasUseCase` (aplica fórmulas sobre DataFrames),
-    `GenerarTablaComparativaUseCase` (agrupa por club, "Equipo vs Rival").
-  - **DTOs:** `MetricasAvanzadasDTO`, `ComparativaEquipoDTO`, `MetricasDTO`.
+    `GenerarTablaComparativaUseCase` (agrupa por club, "Equipo vs Rival" — **ampliado**: además de
+    la comparativa de un único `idPartido`, acepta agregar por `idCompetencia` o por año, para
+    comparar el rendimiento acumulado de dos equipos en toda una competencia/temporada, no solo en
+    un cruce puntual), `GenerarComparativaJugadoresUseCase` (**nuevo** — compara dos jugadores en
+    la misma "situación" elegida: un partido, una competencia, un año, o global/toda su carrera; y
+    también compara un jugador contra el promedio de su categoría/competencia, para saber si está
+    por encima o por debajo del resto).
+  - **DTOs:** `MetricasAvanzadasDTO`, `ComparativaEquipoDTO`, `MetricasDTO`,
+    `ComparativaJugadoresDTO` (**nuevo**).
 - **Capa de Infraestructura:** `src/infraestructura/analytics/formulas.py` — funciones puras que
   reciben un `DataFrame` y retornan serie/escalar; **sin acceso a DB, sin efectos secundarios**.
 - **Fórmulas mínimas requeridas:**
@@ -952,17 +1099,31 @@ test/
   - **% de Rebotes:** proporción de rebotes totales capturados sobre el total disponible.
 - **Criterios de Aceptación:**
   - **AC1.** Disponibilidad de eFG%, EFF, PPP, PER (simplificado) y % de Rebotes.
-  - **AC2.** Reporte comparativo "Equipo vs Rival" para un `idPartido` dado.
+  - **AC2.** Reporte comparativo "Equipo vs Rival" para un `idPartido` dado, **o agregado para un
+    `idCompetencia`/año completo** (no solo partido a partido).
   - **AC3.** Los cálculos aceptan parámetros de filtro por Temporada e `idCompetencia`
     directamente en los DataFrames.
   - **AC4.** División por cero → 0.0; exclusión de `NaN` en resultados finales.
   - **AC5.** Cada fórmula documentada con su fuente/referencia técnica.
   - **AC6.** `formulas.py` no contiene ningún acceso a base de datos ni I/O externo.
+  - **AC7 (nuevo).** `GenerarComparativaJugadoresUseCase` soporta comparar dos jugadores (mismo
+    recorte: partido/competencia/año/global) y comparar un jugador contra el promedio de su
+    categoría/competencia.
 - **Testing Mínimo:**
   - _Unitarias (`test_formulas.py`):_ cobertura del **100%** de las funciones matemáticas, con
     valores calculados a mano y casos límite (ceros).
   - _Integración:_ `GenerarTablaComparativaUseCase` con datos de dos equipos en un mismo partido
-    (semilla), verificando que los totales coinciden con el resultado final.
+    (semilla), verificando que los totales coinciden con el resultado final; y con datos de dos
+    equipos a lo largo de una competencia completa, verificando el agregado.
+  - _Integración:_ `GenerarComparativaJugadoresUseCase` jugador vs. jugador y jugador vs. promedio
+    de categoría, con datos semilla de al menos 3 jugadores.
+
+> **Por qué se agregó esto:** surge de revisar casos de uso reales de un DT (¿cómo viene mi
+> jugador vs. otro de mi equipo? ¿mi equipo mejoró de una competencia a otra?) contrastados contra
+> apps de analítica deportiva existentes (Hudl Assist, Hoopsalytics, Viziball, Basketball Stats
+> Assistant) — comparar jugadores/equipos con distintos recortes de tiempo (partido, temporada,
+> período personalizado) y contra un promedio de referencia es un feature estándar de la
+> categoría, no un agregado innecesario. Ver también sección 20.
 
 **Archivos a crear:**
 
@@ -970,8 +1131,9 @@ test/
 src/infraestructura/analytics/formulas.py
 
 src/aplicacion/
-├── use_cases/calcular_estadisticas_avanzadas.py
-├── use_cases/generar_tabla_comparativa.py
+├── casos_uso/calcular_estadisticas_avanzadas.py
+├── casos_uso/generar_tabla_comparativa.py
+├── casos_uso/generar_comparativa_jugadores.py    ← nuevo
 └── dtos/metricas_dto.py
 
 test/test_formulas.py
@@ -985,15 +1147,28 @@ test/test_formulas.py
 - **Objetivo Funcional:** conectar las Vistas SQL con DataFrames de Pandas para calcular métricas
   avanzadas automáticamente a partir de los datos cargados, sin acoplar fórmulas y persistencia.
 - **Capa de Dominio:** **Interfaz:** `AnalyticsService` (`src/dominio/repositorios/analytics_service.py`)
-  — declara `get_boxscore_partido(partido_id)`, `get_totales_temporada(club_id, temporada)`.
+  — declara `get_boxscore_partido(partido_id)`, `get_totales_temporada(club_id, temporada)`, y los
+  métodos nuevos que cubren los recortes multi-dimensionales pedidos (ver AC5):
+  `get_totales_jugador(jugador_id, *, competencia_id=None, anio=None)` (si no se pasa ningún
+  filtro, devuelve el acumulado global/de toda la carrera del jugador),
+  `get_totales_club(club_id, *, competencia_id=None, anio=None)` (**nuevo** — agregado a nivel
+  equipo, análogo al de jugador pero sumando a todos los jugadores del club; ver también sección
+  3), y `get_evolucion_jugador(jugador_id, metrica)` (**nuevo** — serie temporal partido a partido
+  de una métrica puntual, para ver tendencia/progreso, no solo un total acumulado).
 - **Capa de Aplicación:**
   - **Caso de uso:** `CalcularEstadisticasPartidoUseCase`.
-  - **DTOs:** `MetricasPartidoDTO`, `MetricasJugadorDTO`.
+  - **DTOs:** `MetricasPartidoDTO`, `MetricasJugadorDTO`, `MetricasClubDTO` (**nuevo**),
+    `EvolucionJugadorDTO` (**nuevo**).
 - **Capa de Infraestructura:** `PandasAnalyticsService`
   (`src/infraestructura/analytics/pandas_analytics_service.py`) — lee desde las vistas SQL vía
   `pandas.read_sql()`, aplica las fórmulas de `formulas.py`, retorna DataFrames con columnas
-  estandarizadas.
-- **Vistas SQL requeridas:** `v_boxscore_completo`, `v_jugador_totales_temporada`.
+  estandarizadas. Los filtros por competencia/año/global (AC5) se resuelven **acá, con `pandas`**
+  (agrupando/filtrando el DataFrame ya cargado), no creando una vista SQL nueva por cada
+  combinación posible — es la forma en que esta capa ya estaba pensada para poder cubrir estos
+  recortes sin explotar la cantidad de vistas.
+- **Vistas SQL requeridas:** `v_boxscore_completo`, `v_jugador_totales_temporada`, y el agregado
+  por club nuevo (ver sección 3 — todavía sin definir el SQL exacto, queda para cuando se
+  implemente esta US).
 - **Criterios de Aceptación:**
   - **AC1 — `formulas.py` puro:** ninguna función accede a la DB; todas aceptan `pd.DataFrame` y
     retornan resultados. Cobertura 100%.
@@ -1002,10 +1177,21 @@ test/test_formulas.py
     columnas consistentes.
   - **AC4 — Integridad de Datos:** porcentajes expresados como float entre 0-100 o como ratio
     según corresponda.
+  - **AC5 (nuevo) — Recortes multi-dimensionales:** tanto para jugador como para club, el motor
+    soporta obtener totales por partido individual, por competencia específica, por año, y
+    global/toda la carrera — sin mezclar competencias distintas jugadas en un mismo año (ver el
+    bug de `v_jugador_totales_temporada` documentado en sección 20, a corregir antes o durante
+    esta US).
+  - **AC6 (nuevo) — Evolución/tendencia:** `get_evolucion_jugador` devuelve la serie ordenada por
+    fecha de una métrica elegida, partido a partido, para poder graficar si un jugador está
+    mejorando o empeorando (consumido después por `GenerarGraficoRendimientoUseCase` en US-301).
 - **Testing Mínimo:**
   - _Unitarias:_ fórmulas con DataFrames en memoria.
   - _Integración:_ vistas reales en DB `:memory:` con datos semilla, comparadas con valores
     esperados.
+  - _Integración:_ `get_totales_jugador`/`get_totales_club` con un jugador/club que participó en
+    dos competencias distintas dentro del mismo año — confirmar que **no** se mezclan si se pide
+    por competencia, y que sí se suman si se pide por año o global.
   - _Regresión:_ test que falla si se renombra una columna consumida.
 
 #### US-205 — Consulta Estadística por CLI
@@ -1031,7 +1217,7 @@ test/test_formulas.py
 ```text
 src/dominio/repositorios/analytics_service.py
 src/infraestructura/analytics/pandas_analytics_service.py
-src/aplicacion/use_cases/calcular_estadisticas_partido.py
+src/aplicacion/casos_uso/calcular_estadisticas_partido.py
 
 src/infraestructura/ui/cli/commands/stats_commands.py
 src/infraestructura/ui/cli/formatters/stats_formatter.py
@@ -1057,7 +1243,7 @@ src/infraestructura/persistencia/sql/migrations/
 src/infraestructura/persistencia/migration_runner.py
 
 test/test_migrations.py (upgrade multi-versión y rollback)
-docs/guias/03-como-agregar-una-migracion.md
+docs/info_modulo/12-como-agregar-una-migracion.md
 ```
 
 - **Criterios de Aceptación:**
@@ -1099,8 +1285,15 @@ por el DT para tomar decisiones tácticas antes, durante y después del partido.
 - **Narrativa:** Como DT, quiero ver tablas de líderes y gráficos de tendencia en mi terminal para
   analizar el rendimiento del equipo sin salir de la CLI.
 - **Capa de Aplicación:**
-  - **Casos de uso:** `ObtenerLideresTemporadaUseCase`, `GenerarGraficoRendimientoUseCase`.
-  - **DTOs:** `LiderDTO`, `GraficoDTO`.
+  - **Casos de uso:** `ObtenerLideresTemporadaUseCase` (**ampliado**: además de filtrar por
+    temporada/año, acepta filtrar por `idCompetencia` específica y por múltiples años a la vez,
+    para comparar cómo cambió el liderazgo de una métrica entre competencias o a lo largo de
+    varias temporadas), `GenerarGraficoRendimientoUseCase` (usa `get_evolucion_jugador` de
+    `AnalyticsService`, US-203, para graficar la tendencia de un jugador en el tiempo — no solo un
+    promedio estático), `VerTrayectoriaJugadorUseCase` (**nuevo** — vista longitudinal de un mismo
+    jugador a través de distintas categorías/temporadas, ej. cómo rindió en U15 vs. cómo le va en
+    U17 este año; usa el historial de `jugadorClub` que ya existe).
+  - **DTOs:** `LiderDTO`, `GraficoDTO`, `TrayectoriaJugadorDTO` (**nuevo**).
 - **Capa de Infraestructura:**
   - **Reportería CLI:** `TablaLideresReporter` (usa `rich`), `GraficoTendenciaReporter` (usa
     `textual` o `rich.panel`).
@@ -1113,14 +1306,27 @@ por el DT para tomar decisiones tácticas antes, durante y después del partido.
   - **AC2 — Generación de Figuras:** `ChartGenerator` produce gráficos (PNG o interactivos) en
     **menos de 2 segundos** para un dataset de referencia (3 temporadas, 20 equipos, 1200 filas
     de boxscore).
-  - **AC3 — Interactividad:** filtro por temporada (`--season 2025`) en los comandos de reportes.
+  - **AC3 — Interactividad:** filtro por temporada (`--season 2025`) **y por competencia**
+    (`--competencia <id>`) en los comandos de reportes.
   - **AC4.** Valores graficados coinciden con los calculados por las vistas SQL.
+  - **AC5 (nuevo) — Split local/visitante:** los reportes de líderes y de rendimiento aceptan un
+    filtro opcional `--condicion local|visitante` para ver si un jugador/equipo rinde distinto
+    según de local o de visitante (dato ya disponible en `partido.idClubLocal`/`idClubVisitante`,
+    no requiere cambios de schema).
 - **Implementación requerida:** `stats leaders --season 2025` invoca al caso de uso
   correspondiente y muestra resultados formateados.
 - **Testing Mínimo:**
   - _Unitario:_ ordenamiento de líderes y desempate por criterio secundario; transformación de
     DataFrame a serie temporal para gráficos.
   - _Integración:_ reporter CLI + chart generator con datos semilla, verificando salida completa.
+  - _Integración:_ `VerTrayectoriaJugadorUseCase` con un jugador que participó en más de una
+    categoría/temporada en el dataset semilla.
+
+> **Por qué se agregó esto:** la investigación de mercado (sección 20) confirma que el
+> "performance trend" — aislar un jugador/métrica y ver su evolución con el tiempo, no solo un
+> promedio fijo — es un feature estándar en apps de analítica deportiva (Hudl Assist,
+> Hoopsalytics), y ya encaja con `GenerarGraficoRendimientoUseCase` que esta US ya tenía planeado;
+> solo faltaba conectarlo explícitamente con un método de evolución en `AnalyticsService`.
 
 ### Épica H3-E2: Reportería y Exportación
 
@@ -1149,7 +1355,7 @@ por el DT para tomar decisiones tácticas antes, durante y después del partido.
 **Archivos a crear (US-301 + US-302):**
 
 ```text
-src/aplicacion/use_cases/
+src/aplicacion/casos_uso/
 ├── obtener_lideres_temporada.py
 ├── generar_grafico_rendimiento.py
 └── exportar_reporte.py
@@ -1191,11 +1397,19 @@ test/
   - _Integración:_ vistas de scouting con dataset histórico de ejemplo (mínimo 10 partidos del
     rival); consistencia de filtros por competencia y ventana N.
 
+> **Nota de reuso (evitar duplicar lógica):** el pedido de "comparar mi equipo contra otro equipo
+> dentro de la misma competencia" (agregado, no un partido puntual — ver US-202 AC2 ampliado) es
+> conceptualmente el mismo problema que resuelve el Scouting acá, solo que orientado hacia el
+> propio equipo en vez de hacia el rival de un próximo partido. Conviene que
+> `GenerarTablaComparativaUseCase` (US-202) y `GenerarScoutingRivalUseCase` (esta US) compartan la
+> misma función de agregación histórica por club (`get_totales_club` de `AnalyticsService`,
+> US-203) en vez de construir dos caminos separados para calcular lo mismo.
+
 **Archivos a crear:**
 
 ```text
 src/infraestructura/persistencia/sql/views_scouting.sql
-src/aplicacion/use_cases/generar_scouting_rival.py
+src/aplicacion/casos_uso/generar_scouting_rival.py
 src/aplicacion/dtos/scouting_dto.py
 test/test_scouting_rival.py (integración)
 ```
@@ -1289,7 +1503,7 @@ test/test_flet_validators.py
 **Archivos a crear:**
 
 ```text
-src/aplicacion/use_cases/
+src/aplicacion/casos_uso/
 ├── exportar_backup.py
 └── restaurar_backup.py
 
@@ -1568,7 +1782,7 @@ fuentes, por si se prefiere consultar esta vista en vez de la de "Registro de De
 descripción` con alcance entre paréntesis — ambos formatos conviven en las fuentes, el equipo
   debería fijar uno solo.)_
 - **Interfaces de repositorio:** el proyecto usa `ABC`/`@abstractmethod` en la práctica, **no**
-  `typing.Protocol` como sugiere `docs/info_protocolos.md`. Ambas son válidas — vale un ADR corto
+  `typing.Protocol` como sugiere `docs/info_modulo/07-protocolos.md` (que compara ambas). Ambas son válidas — vale un ADR corto
   para dejarlo asentado.
 - **Logging:** `infraestructura/logger.py` ya implementado (rotación 10MB, 5 backups, nivel
   INFO+ a archivo) — ver `docs/info_modulo/01-logger.md`. Es la base sobre la que debería crecer
@@ -1581,65 +1795,146 @@ descripción` con alcance entre paréntesis — ambos formatos conviven en las f
 
 ## 20. Estado real del código vs. plan (hallazgos)
 
-Auditoría hecha releyendo `src/` completo (dominio + infraestructura + tests), `schema.sql`, `views.sql`, `seed.sql`, `docs/diagramas/diagramas.md`, y corriendo la suite real (`pytest -q`) para esta revisión del 2026-08-09. Nada de esto se corrigió en código — es diagnóstico para que el equipo decida qué hacer.
+> **Reescrita el 2026-08-17.** Las revisiones anteriores (2026-08-09 y siguientes) catalogaron una
+> cantidad grande de bugs en los 5 repositorios. **Se hizo una auditoría fresca hoy** —
+> `mypy --strict` (**0 errores**, antes 50) y `pytest -q` (**53 passed, 0 failed**), más relectura
+> completa de `sqlite_jugador_repositorio.py`, `sqlite_competencia_repositorio.py` y
+> `sqlite_partido_repositorio.py` — y **prácticamente todo lo de código quedó resuelto**. Se saca
+> de acá lo ya corregido (queda como historial en el propio historial de git, no hace falta
+> repetirlo en el plan) y se deja solo lo que sigue vigente + lo nuevo de esta revisión.
 
-### Hallazgos de código (repositorios) — actualizado 2026-08-09
+### Resuelto desde la última auditoría (ya no requiere acción — solo para que quede constancia)
 
-- ✅ **Patrón de conexión — ya resuelto, corrección de un hallazgo anterior.** Una revisión previa de este documento decía que `SqliteJugadorRepositorio` y `SqliteJuegoRepositorio` seguían importando una clase `SqliteConexion` inexistente. **Ya no es así:** las **5** implementaciones (`usuario`, `club`, `jugador`, `competencia`, `juego`) reciben `sqlite3.Connection` **crudo** directamente en el constructor, de forma uniforme. Este punto queda cerrado.
-- ⚠️ **`SqliteCompetenciaRepositorio` ya no es un gap — existe, pero con bugs reales.** Cambia el diagnóstico de fondo: el archivo `src/infraestructura/repositorios/sqlite_competencia_repositorio.py` existe y tiene sus 12 métodos, pero:
-  - `guardar_inscripcion`: el `INSERT` declara 3 columnas (`idClub,idCategoria,idCompetencia`) pero la query solo tiene **un** `?` — `sqlite3.ProgrammingError` garantizado al ejecutarse.
-  - `obtener_categorias`: `rows = cursor.fetchall` — falta el `()`; asigna el método en vez de invocarlo, y falla al intentar iterar sobre él.
-  - `agregar_jugador_lista` y `obtener_jugadores_lista`: son stubs vacíos (`pass`) — no están implementados, pese a que la interfaz y la clase que los contiene ya existen. Sin esto, no se puede poblar ni consultar quién está habilitado en una lista de buena fe a través del repositorio (hoy `seed.sql` lo hace con `INSERT` directo, saltando la capa de dominio).
-  - `obtener_lista_por_inscripcion`: tipada `-> list[ListaBuenaFe]` en la implementación, pero la interfaz de dominio la tipa `-> ListaBuenaFe` (singular) — y la relación real es 1:1 (`idInscripcion UNIQUE` en `listaBuenaFe`). La implementación contradice tanto su propia interfaz como la regla de negocio ya documentada en la sección 3.
-- ❌ **`sqlite_juego_repositorio.py` no es funcional (más allá del bug de tabla/columna ya conocido):**
-  - `_row_to_entity` y `buscar_por_id` siguen usando `Juego`/`idJuego` (la tabla real es `partido`, la columna `idPartido`) — bug ya documentado en revisiones anteriores, sigue sin corregirse.
-  - `guardar_partido` e inserta en la tabla inexistente `Juego`, y llama a `self.conexion.obtener_conexion()` — método que no existe sobre un `sqlite3.Connection` crudo → `AttributeError` apenas se invoca.
-  - `guardar_boxscore`: la lista de columnas del `INSERT` tiene 19 nombres (falta `idClub`) pero la tupla de valores tiene 20 → `sqlite3.ProgrammingError` garantizado.
-  - **Violación de Liskov — hallazgo nuevo:** la interfaz de dominio ya pide `guardar_partido(partido: Partido)` y `guardar_boxscore(boxscore: JugadorPartido)` (recibir la entidad completa), pero la implementación real sigue con parámetros sueltos (`fecha, estadio,idCompetencia, ...` y 19 parámetros respectivamente) — no cumple el contrato de la interfaz que dice implementar.
-- ⚠️ **`SquliteJugadorRepositorio.link_to_club` — bug nuevo, no documentado antes:** usa `jc.id_jugador` y `jc.id_club`, pero la dataclass real `JugadorClub` tiene los campos `idJugador`/`idClub` (sin guión bajo) → `AttributeError` garantizado al invocarlo. Además el método no retorna nada, pese a que la interfaz pide `-> JugadorClub`.
-- ✅ **`sqlite_usuario_repositorio.py` — sigue correcto:** `FROM usuario` e `idUsuario` correctos, mapeo `pw ↔ contrasenia` bien resuelto, y es el único repositorio con tests dedicados hoy.
-- ⚠️ **Patrón sistémico — funciones que deberían devolver `list[X]` y devuelven `None`.** Es el mismo tipo de problema que se charló sobre pasar dataclasses en vez de parámetros sueltos, pero del lado de las lecturas: **todos** los métodos "listar"/"buscar_por_X" de las 5 implementaciones devuelven `None` cuando no hay resultados, en vez de `[]`, pese a que la interfaz de dominio los tipa `list[X]` sin `| None`. Rompe el contrato de tipos: cualquier código futuro que llame a estos métodos y haga `for x in resultado` va a explotar con `TypeError: 'NoneType' object is not iterable` si no se blinda contra `None` primero. Afecta: `ClubRepositorio.buscar_por_id_usuario`, `.buscar_por_nombre`; `JugadorRepositorio.buscar_por_club`; `JuegoRepositorio.buscar_por_club`; `CompetenciaRepositorio.obtener_todas_competencias`, `.obtener_categorias`, `.obtener_inscripciones_por_club`, `.obtener_lista_por_inscripcion`. Recomendación a documentar (no a aplicar): devolver `[]` en el `if not rows`, nunca `None`, para que el tipo de retorno sea siempre coherente con lo declarado en la interfaz.
-- ⚠️ **Manejo de errores silencioso — patrón sistémico en todos los `guardar*`.** Las 5 implementaciones atrapan `sqlite3.Error` en sus métodos `guardar*` y devuelven `None` silenciosamente, sin loguear ni relanzar como excepción de dominio. Esto choca con las excepciones de negocio que el propio plan ya prevé (`DNIDuplicadoError`, `EmailYaRegistradoError`, etc. — sección "Reglas de Negocio Consolidadas", sección 6): hoy no hay forma de distinguir "guardado exitoso" de "falló por violar una regla real (ej. DNI duplicado)" de "falló por un bug" — las tres situaciones devuelven `None` igual. Cuando se construya la capa de aplicación (US-103 en adelante), este punto va a ser bloqueante para poder lanzar las excepciones de dominio que esas US ya dan por sentadas.
-- **Typo cosmético que persiste:** la clase se llama `SquliteJugadorRepositorio` (falta una "i"). No rompe nada porque nada la importa por nombre todavía.
-- **Divergencia menor de nombres de método:** el PRD (ambas fuentes) menciona `exists_by_email`/`UserRepository.exists_by_email` como parte del contrato de usuario; la interfaz real (`usuario_repositorio.py`) no lo tiene — solo `encontrar_por_mail`, `encontrar_por_id`, `guardar`. No es necesariamente un problema (se puede resolver llamando a `encontrar_por_mail` y chequeando `is not None`), pero vale la pena que el equipo decida si agregan el método explícito o lo dejan así.
-- **Cobertura de tests real, verificada corriendo la suite hoy (`pytest -q`): 30 tests, 29 pasan, 1 falla** (`test_guardar_usuario_con_error`, porque las entidades siguen sin validar tipos en `__post_init__` — ya documentado más abajo en "Hallazgos de organización de código"). La suite se dividió desde la última revisión en 5 archivos por repositorio (`test_repositorios_{usuario,club,jugador,juego,competencia}.py`), pero **`test_repositorios_juego.py` y `test_repositorios_competencia.py` están completamente vacíos** — cero tests. Son justamente los dos repositorios con más bugs de los listados arriba; por eso el pipeline aparece en verde (salvo el único test que falla) pese a que ninguno de esos dos repositorios funcionaría hoy si se los usara.
+Confirmado hoy, con lectura completa de cada archivo, no solo con `mypy`/`pytest` en verde:
 
-### Hallazgos del DER y diagramas (`docs/diagramas/diagramas.md`) — nuevo, 2026-08-09
+- Los 5 repositorios usan `sqlite3.Connection` crudo, de forma uniforme (patrón de conexión ya
+  unificado).
+- `SqliteCompetenciaRepositorio`: los 3 bugs (`guardar_inscripcion` con conteo de `?` mal,
+  `obtener_categorias` con `fetchall` sin invocar, y los 2 métodos sin implementar) están
+  corregidos — las 12 funciones completas y funcionales.
+- `sqlite_partido_repositorio.py` (renombrado desde `sqlite_juego_repositorio.py`): reescrito por
+  completo — tabla/columna correctas, sin el método de conexión inexistente, `INSERT` de boxscore
+  con columnas/valores alineados, `guardar_partido`/`guardar_boxscore` ya reciben la dataclass
+  completa (Liskov resuelto), y sumaron `save_with_boxscore()` — el método atómico multi-tabla que
+  pedía la US-105.
+- `sqlite_jugador_repositorio.py`: `buscar_por_club` devuelve `[]` (no `None`); `link_to_club` ya
+  usa `jc.idJugador`/`jc.idClub` (el bug de atributos está resuelto); `guardar()` ya valida DNI
+  duplicado y lanza `DNIDuplicadoError` — regla de negocio implementada, no solo documentada.
+- El patrón sistémico "`None` en vez de `[]`" en los métodos de listado: resuelto en las 5
+  implementaciones.
+- El manejo de errores silencioso: las 5 implementaciones ya loguean (`logger.error`/
+  `logger.critical`) en cada `except`, con el patrón de dos bloques (`sqlite3.Error` → log +
+  `None`; `TypeError` post-commit → log crítico + `raise`) acordado en sesiones anteriores.
+- Las 12 entidades de dominio ya tienen `__post_init__` con validación de tipos, y
+  `dominio/exceptions.py` ya existe (`ErrorDeDominio`, `DNIDuplicadoError`).
+- El typo `SquliteJugadorRepositorio` está corregido (`SqliteJugadorRepositorio`).
+- Cobertura de tests: ya no hay archivos de test vacíos — la suite completa (53 tests) cubre los 5
+  repositorios.
+- **CI evolucionó bastante desde la última auditoría:** ahora corre `pip-audit`, `gitleaks`,
+  `mypy --strict`, `ruff` (lint) y tests en Linux/Windows/Docker con una matriz de Python 3.11 a
+  3.14 (Windows solo con 3.13; `Dockerfile.test` + `.dockerignore` ya armados y correctos), y Dependabot vigila las
+  dependencias. Ruff y mypy usan en todos lados (CI, pre-commit y local) la versión de
+  `pyproject.toml`. Ver `docs/ideas-aprendizaje.md` sección 8 para el informe detallado de qué
+  falta. Las dependencias ya están fijadas en `pyproject.toml` + `uv.lock` (se eliminó
+  `requerimientos.txt`) y auditadas con `pip-audit`.
 
-Ya corregidos directamente en ese archivo (ver el DER y su nota de hallazgos ahí). Resumen:
+### Todavía vigente — vistas SQL
 
-- `categoria` tenía la PK mal nombrada (`idCompetencia` copiado por error en vez de `idCategoria`).
-- La relación `inscripcion`–`listaBuenaFe` estaba dibujada 1:N (`||--o{`) cuando el schema real la fuerza 1:1 (`idInscripcion UNIQUE`).
-- La relación `club`–`partido` estaba duplicada dos veces con la misma etiqueta, sin distinguir los roles local/visitante (dos FKs distintas: `idClubLocal`, `idClubVisitante`).
-- La PK compuesta de `jugadorClub` en el diagrama le faltaba `fechaDesde` (el schema real es `PRIMARY KEY (idJugador, idClub, fechaDesde)`).
-- Tipos de dato desalineados: `contraseña`→`contrasenia`, `dni` de `varchar`→`integer`, `partido.idCompetencia` de `varchar`→`integer`.
-- El diagrama de clases tenía las firmas de los repositorios desactualizadas (parámetros sueltos en vez de las dataclasses que ya usa la interfaz real) — corregido para que coincida con `src/dominio/repositorios/*.py`.
+- ❌ **`obtener_lista_por_inscripcion` — ya no es un bug de tipos, pero revisar si sigue el AC de
+  la interfaz.** (Verificar en el próximo repaso de `competencia_repositorio.py` vs. su
+  implementación — el resto de la clase ya está limpio, este punto puntual conviene reconfirmarlo
+  cuando se use desde un caso de uso real en US-103.)
+- ❌ **Bug de diseño en `v_jugador_totales_temporada` (`views.sql`), confirmado hoy releyendo el
+  archivo:** agrupa `GROUP BY j.idJugador, comp.anio` — **por año, no por competencia**. Si un
+  club juega dos competencias distintas en el mismo año (ej. "Liga Provincial" y "Copa de
+  Verano"), esta vista **mezcla ambas en una sola fila**, perdiendo la granularidad "por
+  competencia específica". Cobra más relevancia ahora que se documentaron explícitamente los
+  filtros por competencia en US-202/203/301 (ver más abajo) — hay que corregir esta vista (o
+  reemplazarla por agregación en Pandas, ver nota de US-203) antes de construir esos filtros
+  encima.
+- ❌ **No existe ningún agregado estadístico a nivel club/equipo** — solo existe el de jugador
+  (`v_jugador_totales_temporada`). Ya se documentó el concepto en la sección 3 (Arquitectura de
+  Datos) y se referenció en US-203; falta implementarlo cuando se llegue a esa US.
+- **Campo/tabla que falta para que el propio PRD sea implementable:** no existe ningún campo que
+  guarde el resultado final oficial del partido (ej. `puntosLocalFinal`/`puntosVisitanteFinal`).
+  Importa porque la propia **US-201 AC3** pide verificar que "la suma de puntos individuales
+  coincida con el resultado final del partido cargado", pero hoy no hay dónde guardar ese
+  resultado para comparar. Propuesta ya volcada (marcada como tal, no implementada) en el DER de
+  `docs/diagramas/diagramas.md` y anotada en US-105 y US-201.
+- Tampoco existe todavía la tabla `schema_version` que pide US-204 (Hito 2, no arrancado —
+  esperable).
 
-### Campo/tabla que falta para que el propio PRD sea implementable — nuevo, 2026-08-09
+### Nuevo — investigación de mercado para las estadísticas multi-dimensionales (2026-08-17)
 
-**No existe ningún campo que guarde el resultado final oficial del partido** (ej.`puntosLocalFinal`/`puntosVisitanteFinal`). Importa porque la propia **US-201 AC3** pide verificar que "la suma de puntos individuales coincida con el resultado final del partido cargado", pero hoy no hay dónde guardar ese resultado final para comparar contra él — solo se puede sumar el boxscore contra sí mismo. Se dejó la propuesta volcada (marcada como propuesta, no implementada) en el DER de `docs/diagramas/diagramas.md` y anotada en US-105 y US-201 de este documento. Relacionado: tampoco existe todavía la tabla `schema_version` que pide US-204 (Hito 2, no arrancado — esperable, solo se deja anotado para cuando se aborde esa US).
+Antes de sumar las ideas de estadísticas de jugador/equipo con distintos recortes (partido,
+competencia, año, global, comparativas) a US-202/203/301/303, se investigaron apps reales de
+analítica de básquet para no proponer a ciegas — confirma que estos ejes son estándar en la
+categoría, no sobrealcance: filtros por partido/temporada/período personalizado, comparativas
+jugador vs. jugador y equipo vs. equipo con distintos operadores (promedio, mediana, total), y
+"performance trends" (evolución de una métrica en el tiempo, vía media móvil). Fuentes:
+[Hudl Assist — Basketball](https://www.hudl.com/products/assist/basketball),
+[Hoopsalytics](https://hoopsalytics.com/), [Viziball](https://viziball.app/nba/en),
+[Basketball Stats Assistant](https://basketballstatsassistant.com/en/). El detalle de qué se
+agregó a cada US está en las propias US-202, US-203, US-301 y US-303 (Hito 2 y 3).
 
 ### Hallazgos de organización de código
 
-- **Entidades agrupadas en un mismo archivo:** el PRD prevé un archivo por entidad (`categoria.py`, `inscripcion.py`, `lista_buena_fe.py`, etc. separados); el código real agrupa varias entidades relacionadas en un mismo archivo (ej. `competencia.py` contiene 5 dataclasses: `Competencia`, `Categoria`, `Inscripcion`, `ListaBuenaFe`, `JugadorListaBuenaFe`). Es razonable para el tamaño actual del proyecto, pero conviene un acuerdo explícito del equipo sobre si se mantiene así.
-- **Capa de aplicación todavía no existe** (`src/aplicacion/`) — es esperable en este punto (Hito 1, US-103 en adelante no implementadas), no es un bug, solo un recordatorio de que `main.py` hoy no sigue el patrón de Composition Root descrito en la sección 4 porque todavía no hay casos de uso que orquestar.
+- **Entidades agrupadas en un mismo archivo:** el PRD prevé un archivo por entidad; el código real
+  agrupa varias entidades relacionadas en un mismo archivo (ej. `competencia.py` contiene 5
+  dataclasses). Razonable para el tamaño actual — conviene un acuerdo explícito del equipo sobre
+  si se mantiene así.
+- ✅ **Capa de aplicación implementada** (`src/aplicacion/`): los 17 casos de uso de la US-103 y sus DTOs,
+  con la CLI correspondiente. Ver `docs/info_modulo/03-casos-de-uso.md` y
+  `docs/context_ia/2026-08-17-us103-explicada-en-profundidad.md` para el detalle.
+- ✅ **Huecos de alcance detectados y cerrados (2026-09-20):** el PRD prometía "categorías y listas de buena fe" en el pilar 2, pero ninguna US planificaba crear/listar categorías, listar competencias
+  ni administrar la lista de buena fe, aunque las tablas y los métodos del repositorio existían. Se incorporaron a la US-103 (ver el recuadro "Alcance ampliado" de esa US).
+  ✅ **Auditoría de cierre de la US-103 (2026-09-20):** se cerró también el ciclo de vida del vínculo jugador-club (`jugador unlink`, regla de no superposición), **quitar un jugador de la lista** (`lista remove`),
+  las validaciones de valor de las entidades (`DatoInvalidoError`) y `partido list` con nombres (vista `v_partidos_resumen`).
+  **Decisiones que siguen abiertas:** (1) **cómo valida la US-105 la lista cuando el partido no guarda la categoría** (ver la regla agregada en la US-105); (2) si la regla "el jugador debe tener vínculo vigente
+  con el club" para habilitarlo admite excepciones (préstamos); (3) **editar o borrar** clubes, competencias y jugadores no está en ninguna US (el PRD solo pide crear, listar y vincular), por lo que un dato
+  mal cargado hoy solo se corrige en la base; (4) **`jugador historial`** (ver todos los clubes por los que pasó un jugador): el repositorio ya expone `historial_vinculos`, falta el caso de uso y el comando si se los necesita.
 
-### Hallazgos de documentación (inconsistencias entre las fuentes del PRD)
+### Hallazgos de documentación (inconsistencias entre las fuentes del PRD — no cambian con el código)
 
-- **El submódulo (`.md`) tenía Hito 3 y 4 incompletos.** Le faltaba la Épica H3-E3 (US-303, Scouting de Rival) completa, y las épicas H4-E2, H4-E3, H4-E4 (US-402 Backup, US-403 Seguridad, US-404 Empaquetado) completas. Solo estaban en el LaTeX. Ya se completó en este documento usando esa fuente.
-- **Tres versiones distintas de la Definición de "Hecho" (DoD).** Una en el LaTeX (la más completa, con Catálogo de Criticidad integrado) y **dos** dentro del mismo archivo del submódulo (una "v2" a mitad de documento, otra más corta al final). Se consolidaron en la sección 13 de este documento, usando la más completa como base.
-- **El `.md` del submódulo no tenía sección de Requisitos No Funcionales (NFR) en absoluto** — solo estaba en el LaTeX. Se agregó en la sección 7.
-- **El `.md` del submódulo no tenía el Proceso de Liberación de Versiones** (versionado semántico, estrategia de ramas, pasos de release, formato de changelog, hotfix) — solo estaba en el LaTeX. Se agregó en la sección 15.
-- **ADR-002 y ADR-008 tienen bloqueo de hito contradictorio entre fuentes:** el cuerpo narrativo del LaTeX dice que ADR-002 (Framework UI) bloquea el **Hito 2**, pero la tabla de ADRs del mismo LaTeX dice que bloquea el **Hito 4** — y el Hito 4 es, de hecho, donde se implementa la UI (US-401), lo cual sugiere que la tabla tiene razón y el texto narrativo del Hito 2 tiene un error de copy-paste. Mismo patrón con ADR-008 (Backup): el texto dice "Hito 3", la tabla dice "Hito 4", y el Hito 4 es donde vive US-402 (Backup) — la tabla parece ser la correcta en ambos casos. Se documenta la discrepancia tal cual en la sección 18 en vez de resolverla unilateralmente, para que el equipo lo confirme.
-- **El estándar de análisis estático documentado no coincide con el real:** el Acuerdo de Ingeniería original (sección 5) decía `flake8`/`pylint`; el proyecto usa `ruff` en la práctica (`pyproject.toml`, CI). Ya corregido en la transcripción.
-- **La tabla "Estructura de Repositorios"** (sección 17) le faltaba la fila de Competencia en ambas fuentes originales — es la inconsistencia que dio origen a esta revisión. Corregida acá.
+- **El submódulo (`.md`) tenía Hito 3 y 4 incompletos.** Le faltaba la Épica H3-E3 (US-303,
+  Scouting de Rival) completa, y las épicas H4-E2, H4-E3, H4-E4 (US-402 Backup, US-403 Seguridad,
+  US-404 Empaquetado) completas. Solo estaban en el LaTeX. Ya se completó en este documento
+  usando esa fuente.
+- **Tres versiones distintas de la Definición de "Hecho" (DoD).** Una en el LaTeX (la más
+  completa) y **dos** dentro del mismo archivo del submódulo. Se consolidaron en la sección 13.
+- **El `.md` del submódulo no tenía sección de Requisitos No Funcionales (NFR)** — solo estaba en
+  el LaTeX. Se agregó en la sección 7.
+- **El `.md` del submódulo no tenía el Proceso de Liberación de Versiones** — solo estaba en el
+  LaTeX. Se agregó en la sección 15.
+- **ADR-002 y ADR-008 tienen bloqueo de hito contradictorio entre fuentes** (texto narrativo dice
+  un hito, la tabla de ADRs dice otro). Documentado en la sección 18, sin resolver
+  unilateralmente — pendiente de que el equipo lo confirme.
+- **El estándar de análisis estático documentado no coincidía con el real** (`flake8`/`pylint` vs.
+  `ruff` real) — ya corregido en la transcripción.
+- **La tabla "Estructura de Repositorios"** (sección 17) le faltaba la fila de Competencia en
+  ambas fuentes originales — corregida acá.
+- **US-103, US-104 y US-106 se contradecían sobre `src/infraestructura/ui/cli/`**: US-103 listaba
+  archivos de comando por verbo (`player_add.py`, `club_add.py`...) mientras US-106 usaba
+  convención por entidad (`player_commands.py`, `club_commands.py`...) para la misma carpeta, y
+  las tres historias daban a entender que creaban `main_cli.py` desde cero pese a que US-106
+  depende de que US-103 y US-104 ya estén terminadas. Corregido: `main_cli.py`, `commands/` y
+  `formatters/table_formatter.py` nacen en US-103 (que ya necesita `argparse`/`tabulate` para su
+  propio AC4), con convención por entidad en las tres historias; US-104 y US-106 quedan
+  documentadas como extensión sobre lo existente, no como creación nueva.
+  **Decisión posterior (2026-09-20):** finalmente se adoptó **un archivo por acción** (`club_add.py`,
+  `jugador_link.py`…), tal como se construyó el 29/08, y el composition root de la CLI es `src/main.py`
+  (no existe `main_cli.py`). Las tres historias ya reflejan esa convención.
 
-### Lo que ya está sólido (para no perder de vista en medio de tanto hallazgo)
+### Lo que ya está sólido
 
-- ✅ `SQLiteManager` (`database_manager.py`): conexión, `PRAGMA foreign_keys`, `row_factory`, inicialización de schema/vistas/seed/limpieza, con manejo de errores y logging. 15 tests de integración reales.
-- ✅ Las 4 vistas SQL (`views.sql`) funcionan y están probadas, incluyendo protección contra división por cero.
-- ✅ `SqliteUsuarioRepositorio` funcional, probado, y con el mapeo `pw`↔`contrasenia` correctamente resuelto — el único repositorio con tests dedicados hoy.
-- ✅ `SqliteClubRepositorio` funcional (patrón de conexión directa, igual que los otros 4).
-- ✅ `SqliteCompetenciaRepositorio` ya existe (ya no es el gap original) — 10 de sus 12 métodos tienen implementación real, aunque con los bugs puntuales ya detallados arriba.
-- ✅ Pipeline CI real con dos workflows (`linter.yml`, `test.yml`) corriendo en cada PR — ver `docs/ideas-aprendizaje.md` sección 7 para el detalle de qué le falta para ser "completo".
+- ✅ `SQLiteManager` (`database_manager.py`): conexión, `PRAGMA foreign_keys`, `row_factory`,
+  inicialización de schema/vistas/seed/limpieza, con manejo de errores y logging.
+- ✅ Las 4 vistas SQL (`views.sql`) funcionan y están probadas, incluyendo protección contra
+  división por cero (salvo el bug de agrupación de `v_jugador_totales_temporada` ya anotado).
+- ✅ Los 5 repositorios SQLite funcionales y testeados, con manejo de errores logueado
+  consistentemente.
+- ✅ `mypy --strict` en verde (0 errores) y suite completa en verde (53 tests).
+- ✅ Pipeline CI real: `pip-audit`, `gitleaks`, `ruff` (lint), `mypy --strict` y tests en
+  Linux/Windows/Docker con matriz de Python 3.11–3.14 (Windows solo con 3.13; cobertura ≥ 85 % en Linux). Falta el job
+  agregador con _required status checks_ (ver `docs/ideas-aprendizaje.md`, 8.9).
 - ✅ Suite de tests dividida por repositorio (`test_repositorios_*.py`), más fácil de mantener que el archivo único anterior — aunque dos de esos archivos todavía están vacíos (ver arriba).

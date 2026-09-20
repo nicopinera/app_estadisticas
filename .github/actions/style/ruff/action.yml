@@ -1,0 +1,28 @@
+name: "Linter"
+description: "Corriendo linter sobre el codigo"
+
+inputs:
+  python-version:
+    description: "Version de Python con la que se instala el entorno (ej. 3.12)"
+    required: false
+    default: "3.11"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Instalar uv y Python ${{ inputs.python-version }}
+      uses: astral-sh/setup-uv@v10.1.0
+      with:
+        python-version: ${{ inputs.python-version }}
+        enable-cache: true
+
+    # Solo el grupo "dev": Ruff no necesita las dependencias de la app.
+    # La version de Ruff sale de pyproject.toml / uv.lock (la misma que usa pre-commit).
+    - name: Instalar Ruff (version fijada en el proyecto)
+      shell: bash
+      run: uv sync --locked --only-group dev
+
+    - name: Ejecutar Ruff
+      shell: bash
+      run: |
+        uv run --no-sync ruff check --select E --select I .

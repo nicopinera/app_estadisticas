@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from dominio.entidades.partido import JugadorPartido, Partido
+from dominio.entidades.partido import JugadorPartido, Partido, PartidoResumen
 
 
 class PartidoRepositorio(ABC):
@@ -29,4 +29,9 @@ class PartidoRepositorio(ABC):
         self, partido: Partido, boxscore: list[JugadorPartido]
     ) -> tuple[Partido, list[JugadorPartido]] | None:
         """Guarda el partido y su boxscore en una única transacción atómica."""
+        pass
+
+    @abstractmethod
+    def resumen_por_club(self, id_club: int) -> list[PartidoResumen]:
+        "Lista los partidos de un club (local o visitante) con los nombres de la competencia y de los clubes"
         pass

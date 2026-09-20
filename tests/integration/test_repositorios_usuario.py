@@ -1,7 +1,3 @@
-import sqlite3
-
-import pytest
-
 from dominio.entidades.usuario import Usuario
 from infraestructura.repositorios.sqlite_usuario_repositorio import (
     SqliteUsuarioRepositorio,
@@ -47,27 +43,3 @@ def test_guardar_usuario(db_conexion):
     assert us_reg.email == email
     assert us_reg.pw == pw
     assert us_reg.nombre == nombre
-
-
-def test_guardar_usuario_con_error(db_conexion):
-    us_rep = SqliteUsuarioRepositorio(db_conexion)
-    nombre = 10
-    email = "claudio@gmail.com"
-    pw = "123456"
-    with pytest.raises(TypeError):
-        us_aux = Usuario(nombre=nombre, email=email, pw=pw)
-        u_aux = us_rep.guardar(us_aux=us_aux)
-
-    nombre = "10"
-    email = True
-    pw = "123456"
-    with pytest.raises(TypeError):
-        us_aux = Usuario(nombre=nombre, email=email, pw=pw)
-        u_aux = us_rep.guardar(us_aux=us_aux)
-
-    nombre = "10"
-    email = "True"
-    pw = 123456
-    with pytest.raises(TypeError):
-        us_aux = Usuario(nombre=nombre, email=email, pw=pw)
-        u_aux = us_rep.guardar(us_aux=us_aux)

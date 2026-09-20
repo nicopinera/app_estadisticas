@@ -1,6 +1,6 @@
 import sqlite3
 
-from dominio.entidades.partido import JugadorPartido, Partido
+from dominio.entidades.partido import JugadorPartido, Partido, PartidoResumen
 from dominio.repositorios.partido_repositorio import PartidoRepositorio
 from infraestructura.logger import get_logger
 
@@ -9,9 +9,25 @@ logger = get_logger(__name__)
 
 class SqlitePartidoRepositorio(PartidoRepositorio):
     def __init__(self, conexion: sqlite3.Connection):
+        """
+        Funcion que se encarga de inicializar el repositorio de partidos
+
+        Args:
+            conexion (sqlite3.Connection): Conexion a la base de datos SQLite.
+        """
         self.conexion = conexion
 
     def _row_to_entity_Partido(self, row: sqlite3.Row) -> Partido:
+        """
+        Esta funcion toma una fila de la tabla partido de la base de datos y la convierte en una instancia,
+        que es una entidad del dominio de la aplicacion, en este caso un objeto de la clase Partido
+
+        Args:
+            row (sqlite3.Row): Fila de la tabla partido de la BD
+
+        Returns:
+            Partido: Retorna una instancia de la entidad Partido construida a partir de la fila de la base de datos.
+        """
         return Partido(
             fecha=row["fecha"],
             estadio=row["estadio"],
@@ -22,6 +38,16 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         )
 
     def buscar_por_club(self, id_club: int) -> list[Partido] | None:
+        """
+        Funcion que se encarga de buscar los partidos en los cuales participo un determinado club
+
+        Args:
+            id_club (int): ID del club para el cual se buscan los partidos.
+
+        Returns:
+            list[Partido] | None: Retorna una lista de partidos en los cuales participo el club asociado o
+            Retorna None si no encuentra ninguna
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM partido WHERE idClubLocal = ? OR idClubVisitante = ?"
@@ -32,6 +58,15 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         return [self._row_to_entity_Partido(row) for row in rows]
 
     def buscar_por_id(self, idPartido: int) -> Partido | None:
+        """
+        Funcion que se encarga de buscar un partido por su ID en el cual fue registrado en la BD
+        en el caso de que exista, retorna el partido, sino retorna None si no se encuentra
+        Args:
+            idPartido (int): ID del partido a buscar.
+
+        Returns:
+            Partido | None: Retorna el partido encontrado o None si no se encuentra.
+        """
         cursor = self.conexion.cursor()
 
         query = "SELECT * FROM partido WHERE idPartido = ?"
@@ -42,6 +77,14 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
         return self._row_to_entity_Partido(row)
 
     def guardar_partido(self, partido: Partido) -> Partido | None:
+        """
+        Funcion que se encarga de guardar un partido en la BD
+        Args:
+            partido (Partido): Entidad Partido a guardar.
+
+        Returns:
+            Partido | None: Retorna el partido guardado con su ID asignado en la BD o None si ocurre un error.
+        """
         cursor = self.conexion.cursor()
         try:
             query = """
@@ -50,6 +93,10 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             cursor.execute(query, (partido.idCompetencia,))
             row = cursor.fetchone()
             if row is None:
+                logger.warning(
+                    "No se pudo guardar partido: competencia inexistente (idCompetencia=%s)",
+                    partido.idCompetencia,
+                )
                 return None
 
             query = """
@@ -58,8 +105,13 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             cursor.execute(query, (partido.idClubLocal, partido.idClubVisitante))
             row = cursor.fetchall()
             if not row or len(row) < 2:
+                logger.warning(
+                    "No se pudo guardar partido: club local o visitante inexistente "
+                    "(idClubLocal=%s, idClubVisitante=%s)",
+                    partido.idClubLocal,
+                    partido.idClubVisitante,
+                )
                 return None
-
             query = """
             INSERT INTO partido (fecha, estadio, idCompetencia, idClubLocal, idClubVisitante)
             VALUES (?, ?, ?, ?, ?)
@@ -90,6 +142,14 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             raise
 
     def guardar_boxscore(self, boxscore: JugadorPartido) -> JugadorPartido | None:
+        """
+        Funcion que se encarga de guardar un boxscore de un jugador en un partido especifico en la BD
+        Args:
+            boxscore (JugadorPartido): Entidad JugadorPartido a guardar.
+
+        Returns:
+            JugadorPartido | None: Retorna el boxscore guardado con su ID asignado en la BD o None si ocurre un error.
+        """
         try:
             cursor = self.conexion.cursor()
 
@@ -185,12 +245,20 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
     def save_with_boxscore(
         self, partido: Partido, boxscore: list[JugadorPartido]
     ) -> tuple[Partido, list[JugadorPartido]] | None:
-        """Guarda el partido y el boxscore de todos los jugadores en una
-        única transacción atómica.
+        """
+            Función que se encarga de guardar el partido y el boxscore de todos los jugadores en una
+            única transacción atómica.
 
         Utiliza el context manager de sqlite3  que realiza
         COMMIT automático al salir sin error o ROLLBACK ante cualquier excepción.
         Si falla cualquier fila del boxscore, el partido tampoco queda guardado.
+
+        Args:
+            boxscore (JugadorPartido): Entidad JugadorPartido a guardar.
+            partido (Partido): Entidad Partido a guardar.
+
+        Returns:
+            JugadorPartido | None: Retorna el boxscore guardado con su ID asignado en la BD o None si ocurre un error.
         """
         try:
             with self.conexion:
@@ -305,3 +373,38 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             )
 
             return None
+
+    def resumen_por_club(self, id_club: int) -> list[PartidoResumen]:
+        """
+        Funcion que se encarga de listar los partidos de un club (como local o visitante) con los nombres
+        de la competencia y de los clubes, usando la vista `v_partidos_resumen`.
+
+        Args:
+            id_club (int): ID del club para el cual se buscan los partidos.
+
+        Returns:
+            list[PartidoResumen]: Partidos del club, del mas antiguo al mas reciente
+            (lista vacia si el club no tiene partidos).
+        """
+        cursor = self.conexion.cursor()
+
+        query = """
+        SELECT id_partido, fecha_partido, estadio, competencia, anio_competencia, club_local, club_visitante
+        FROM v_partidos_resumen
+        WHERE id_club_local = ? OR id_club_visitante = ?
+        ORDER BY fecha_partido, id_partido;
+        """
+        cursor.execute(query, (id_club, id_club))
+
+        return [
+            PartidoResumen(
+                idPartido=row["id_partido"],
+                fecha=row["fecha_partido"],
+                estadio=row["estadio"],
+                competencia=row["competencia"],
+                anioCompetencia=row["anio_competencia"],
+                clubLocal=row["club_local"],
+                clubVisitante=row["club_visitante"],
+            )
+            for row in cursor.fetchall()
+        ]

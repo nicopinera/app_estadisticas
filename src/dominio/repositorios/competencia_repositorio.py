@@ -43,6 +43,13 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
+    def inscribir_con_lista(
+        self, inscripcion: Inscripcion, fecha_presentacion: str
+    ) -> tuple[Inscripcion, ListaBuenaFe] | None:
+        "Guarda una inscripcion y su lista de buena fe vacia (1:1) en una unica transaccion atomica"
+        pass
+
+    @abstractmethod
     def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion | None:
         "Devuelve informacion de una inscripcion por ID"
         pass
@@ -70,4 +77,9 @@ class CompetenciaRepositorio(ABC):
     @abstractmethod
     def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe]:
         "Obtiene todos los jugadores de una lista de buena fe"
+        pass
+
+    @abstractmethod
+    def quitar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> bool:
+        "Quita a un jugador de una lista de buena fe. Devuelve True si lo quito, False si no estaba o si fallo"
         pass

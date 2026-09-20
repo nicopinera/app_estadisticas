@@ -19,7 +19,7 @@ class JugadorRepositorio(ABC):
 
     @abstractmethod
     def buscar_por_club(self, idClub: int) -> list[Jugador] | None:
-        "Busca todos los jugadores de un club"
+        "Busca los jugadores actuales de un club (vinculo vigente, sin fechaHasta)"
         pass
 
     @abstractmethod
@@ -34,4 +34,14 @@ class JugadorRepositorio(ABC):
     @abstractmethod
     def club_activo(self, id_jugador: int) -> Club | None:
         "Devuelve el club activo de un jugador"
+        pass
+
+    @abstractmethod
+    def historial_vinculos(self, id_jugador: int) -> list[JugadorClub]:
+        "Devuelve todos los vinculos de un jugador con clubes (vigentes y cerrados), del mas antiguo al mas reciente"
+        pass
+
+    @abstractmethod
+    def cerrar_vinculo(self, id_jugador: int, fecha_hasta: str) -> JugadorClub | None:
+        "Cierra el vinculo vigente de un jugador cargando su fechaHasta. None si no habia vinculo vigente o fallo"
         pass

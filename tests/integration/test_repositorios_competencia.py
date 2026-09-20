@@ -7,6 +7,11 @@ from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugado
 
 
 def test_buscar_competencia_por_id(db_conexion):
+    """
+    Funcion que busca una competencia por su ID
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     comp_encontrada = comp_rep.buscar_competencia_por_id(1)
     assert comp_encontrada.nombre == "PROVINCIAL U21"
@@ -15,6 +20,11 @@ def test_buscar_competencia_por_id(db_conexion):
 
 
 def test_obtener_todas_competencias(db_conexion):
+    """Test que obtiene todas las competencias de la base de datos
+
+    Args:
+        db_conexion (): conexion a la base de datos
+    """
     comp_rep = SqliteCompetenciaRepositorio(db_conexion)
     comp_encontrada = comp_rep.obtener_todas_competencias()
     assert comp_encontrada is not None
@@ -133,3 +143,55 @@ def test_obtener_jugadores_lista(db_conexion):
     assert jugadores_lista is not None
     assert len(jugadores_lista) > 0
     assert isinstance(jugadores_lista[0], JugadorListaBuenaFe)
+
+
+def test_inscribir_con_lista(db_conexion):
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+    nueva_compe = comp_rep.guardar_competencia(Competencia(nombre="Torneo Atomico", anio=2026, tipo="PROVINCIAL"))
+
+    resultado = comp_rep.inscribir_con_lista(
+        Inscripcion(idClub=1, idCategoria=1, idCompetencia=nueva_compe.idCompetencia), "2026-03-01"
+    )
+
+    assert resultado is not None
+    inscripcion, lista = resultado
+    assert inscripcion.idInscripcion is not None
+    assert lista.idListaBuenaFe is not None
+    assert lista.idInscripcion == inscripcion.idInscripcion
+    assert comp_rep.obtener_lista_por_inscripcion(inscripcion.idInscripcion).fechaPresentacion == "2026-03-01"
+
+
+def test_inscribir_con_lista_es_atomica(db_conexion):
+    """Si falla el guardado de la lista de buena fe, la inscripcion tampoco debe quedar guardada."""
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+    nueva_compe = comp_rep.guardar_competencia(Competencia(nombre="Torneo Rollback", anio=2026, tipo="PROVINCIAL"))
+    inscripciones_antes = len(comp_rep.obtener_inscripciones_por_club(1))
+
+    # fechaPresentacion es NOT NULL: la 2da insercion (la lista) falla despues de haberse insertado la inscripcion
+    resultado = comp_rep.inscribir_con_lista(
+        Inscripcion(idClub=1, idCategoria=1, idCompetencia=nueva_compe.idCompetencia), None
+    )
+
+    assert resultado is None
+    assert len(comp_rep.obtener_inscripciones_por_club(1)) == inscripciones_antes
+
+
+def test_quitar_jugador_lista(db_conexion):
+    """El seed deja la lista 1 con jugadores: se quita uno y ya no figura; quitarlo de nuevo devuelve False."""
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+    antes = comp_rep.obtener_jugadores_lista(1)
+    assert len(antes) > 1
+    a_quitar = antes[0].idJugador
+
+    assert comp_rep.quitar_jugador_lista(a_quitar, 1) is True
+
+    despues = [j.idJugador for j in comp_rep.obtener_jugadores_lista(1)]
+    assert a_quitar not in despues
+    assert len(despues) == len(antes) - 1
+    assert comp_rep.quitar_jugador_lista(a_quitar, 1) is False
+
+
+def test_quitar_jugador_lista_de_un_jugador_que_nunca_estuvo_devuelve_false(db_conexion):
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+
+    assert comp_rep.quitar_jugador_lista(999999, 1) is False
