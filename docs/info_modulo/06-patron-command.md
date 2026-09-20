@@ -174,6 +174,41 @@ El patrón Command constituye un pilar esencial en el diseño de arquitecturas d
 
 No obstante, la decisión de adoptar el patrón debe sopesarse cuidadosamente frente a los costos de complejidad estructural. La introducción de múltiples clases concretas para operaciones simples puede generar una sobrecarga de mantenimiento e indirección innecesaria si el sistema no requiere diferir la ejecución, encolar tareas ni mantener un historial de transacciones. Por consiguiente, la implementación del patrón Command debe reservarse para dominios donde la flexibilidad temporal, el desacoplamiento estricto y la capacidad de reversión agreguen un valor técnico justificable.
 
+## **Cómo lo aplica este proyecto (la CLI de StatsPro)**
+
+Todo lo anterior es la teoría general del patrón. En este proyecto se usa una variante **funcional y liviana**, la tercera columna de la tabla de arriba
+(*"referencia a función sin clases adicionales"*), apoyada en `argparse`. No hay una clase por comando: cada comando es una **función `ejecutar`** y el parser
+`argparse` cumple el rol de *Invoker*.
+
+| Rol del patrón | En el proyecto |
+| :--- | :--- |
+| **Command** (contrato) | La firma común `ejecutar(args: argparse.Namespace, ...) -> None` |
+| **ConcreteCommand** | Un archivo por acción en `src/infraestructura/ui/cli/commands/` (`club_add.py`, `jugador_link.py`, `competencia_inscribir.py`, ...) |
+| **Receiver** (quien hace el trabajo real) | El caso de uso (`CrearClubUseCase`, ...) que el comando invoca |
+| **Invoker** | El parser de `argparse`: `parse_args()` decide qué comando corresponde y `main()` lo ejecuta |
+| **Client / registro** | `construir_parser()` en `src/main.py`, que asocia cada subcomando con su función mediante `set_defaults(func=...)` |
+
+**Cómo se registra un comando** (sin ningún `if/elif`):
+
+```python
+parser_club_add = club_subparsers.add_parser("add", help="Crea un club nuevo")
+parser_club_add.add_argument("--nombre", required=True)
+parser_club_add.set_defaults(func=club_add.ejecutar)   # <- acá se "ata" el comando a su función
+
+# main():
+args = parser.parse_args()
+args.func(args)          # ejecuta el comando que corresponda, sea cual sea
+```
+
+**Qué se gana:** agregar un comando nuevo es (1) crear su archivo en `commands/` y (2) sumar su bloque en `construir_parser()`. No se toca ningún otro comando
+(criterio de aceptación AC1 de la US-106).
+
+**Lo que este proyecto NO usa del patrón** (por ahora): *undo/redo*, colas de comandos, macro-comandos ni historial. Como advierten las conclusiones de arriba, esos costos
+no se justifican mientras no haga falta diferir, encolar ni revertir acciones.
+
+**Manejo de errores centralizado:** los comandos no atrapan los errores de negocio: los dejan subir hasta `main()`, que los captura con un único `except ErrorDeDominio` y los muestra
+como `Error: ...` en stderr con código de salida 1. Más contexto en [04-arquitectura.md](04-arquitectura.md) (sección 10) y en el [RUNBOOK](../../RUNBOOK.md).
+
 #### **Fuentes Consultadas**
 
 1. **Command** - Refactoring.Guru: [https://refactoring.guru/design-patterns/command](https://refactoring.guru/design-patterns/command)

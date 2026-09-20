@@ -223,7 +223,7 @@ pero no es obligatorio.
 El documento del 17/08 (secciones 10-11) hablaba de un `main_cli.py` como "composition root"
 separado de `main.py`. En este proyecto real **no hace falta ese archivo nuevo**: `src/main.py`
 ya cumple ese rol — es el punto de entrada, y la guía de arquitectura
-([arquitectura.md, sección 12](../guias/arquitectura.md#12-ciclo-de-vida-en-mainpy-orquestación))
+([arquitectura.md, sección 10](../info_modulo/04-arquitectura.md#10-ciclo-de-vida-en-mainpy-orquestación))
 ya lo describe como el lugar donde se arma todo. Conclusión práctica: `construir_parser()` y
 `main()` van los dos en `src/main.py`, tal cual está hoy — no se crea un `main_cli.py` aparte.
 
@@ -374,7 +374,7 @@ def ejecutar(args: argparse.Namespace, repo: JugadorRepositorio | None = None) -
     """Traduce args de CLI -> CrearJugadorDTO -> RegistrarJugadorUseCase -> mensaje al usuario.
 
     `repo` es opcional a propósito: en producción nunca se pasa (se arma acá mismo, contra
-    SQLite real); en los tests se inyecta un repositorio falso (ver docs/guias/testing.md,
+    SQLite real); en los tests se inyecta un repositorio falso (ver docs/info_modulo/09-testing.md,
     sección 5) para no depender de una base de datos real.
     """
     if repo is None:
@@ -423,7 +423,7 @@ hace testeable a `ejecutar` sin tocar SQLite — el tipo del parámetro es la **
 (`JugadorRepositorio`), no la clase concreta (`SqliteJugadorRepositorio`): es la misma Inyección
 de Dependencias del AC2 (documento del 17/08, sección 12.2), aplicada un nivel más arriba del caso
 de uso. La sección 5 de
-[docs/guias/testing.md](../guias/testing.md#5-testeando-comandos-cli-jugador_addejecutar-etc)
+[docs/info_modulo/09-testing.md](../info_modulo/09-testing.md#9-testeando-comandos-cli-ejecutar-main-y-de-punta-a-punta)
 tiene el ejemplo completo de cómo se aprovecha esto en un test.
 
 ---
@@ -583,7 +583,7 @@ traduce el resultado o la excepción a algo legible en la terminal.
 ## 8. Cómo se testea todo esto
 
 Esta sección es un resumen corto — la explicación completa de conceptos, técnicas y ejemplos de
-código está en la guía dedicada: **[docs/guias/testing.md](../guias/testing.md)**. Léanla antes de
+código está en la guía dedicada: **[docs/info_modulo/09-testing.md](../info_modulo/09-testing.md)**. Léanla antes de
 escribir el primer test de un caso de uso, ahorra bastante prueba y error.
 
 Lo puntual para la US-103:

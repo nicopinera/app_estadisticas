@@ -15,23 +15,21 @@ El sistema centraliza la gestión deportiva y técnica de la competencia:
 
 ## Estructura de la Documentación
 
-Utilizá la barra de navegación superior para explorar los diferentes módulos:
+Estas son las secciones principales:
 
 * **[Plan de Desarrollo](plan_desarrollo_detallado.md):** Especificación técnica del producto, hitos y requerimientos funcionales.
 * **Código y Referencia:**
     * **[Interfaces de Dominio](repositorios_dominio.md):** Contratos de repositorio y entidades del negocio del básquet.
     * **[Persistencia SQLite](repositorios_infraestructura.md):** Implementaciones de acceso a base de datos local.
-* **Guías y Arquitectura:** Explicación técnica de la arquitectura Clean/Hexagonal implementada en el proyecto.
+* **[Guías técnicas](info_modulo/):** Arquitectura Clean/Hexagonal, casos de uso, patrón Command, testing, Docker y más (guías numeradas).
 
 ---
 
 ## Inicio Rápido para Desarrolladores
 
-Para ejecutar las pruebas y validar el entorno:
+Para instalar las dependencias y ejecutar las pruebas (necesitás [uv](https://docs.astral.sh/uv/); el detalle está en el [RUNBOOK](../RUNBOOK.md)):
 
 ```bash
-# Ejecutar la suite completa de pruebas unitarias
-pytest
-
-# Levantar este portal de documentación en local
-mkdocs serve
+uv sync
+uv run pytest
+```

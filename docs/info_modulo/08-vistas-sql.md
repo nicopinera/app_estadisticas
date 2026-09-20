@@ -80,8 +80,11 @@ partido  →  club (alias cv)  (INNER JOIN por idClubVisitante)
 | `anio_competencia` | `INTEGER`           | `competencia.anio`         | Año de la competencia (> 1900)       |
 | `club_local`       | `TEXT`              | `club.nombre` (alias `cl`) | Nombre del club que juega de local   |
 | `club_visitante`   | `TEXT`              | `club.nombre` (alias `cv`) | Nombre del club visitante            |
+| `id_club_local`    | `INTEGER`           | `partido.idClubLocal`      | Id del club local (para filtrar)     |
+| `id_club_visitante`| `INTEGER`           | `partido.idClubVisitante`  | Id del club visitante (para filtrar) |
 
-> **Nota:** Esta vista no incluye `idClubLocal` ni `idClubVisitante`. Los partidos sin estadio asignado retornan `NULL` en la columna `estadio`.
+> **Nota:** Los ids de los clubes se agregaron para poder filtrar por club (`WHERE id_club_local = ? OR id_club_visitante = ?`) sin perder los nombres: es lo que usa `PartidoRepositorio.resumen_por_club`
+> (y por lo tanto `stats partido list`). Los partidos sin estadio asignado retornan `NULL` en la columna `estadio`.
 
 ---
 
@@ -202,3 +205,19 @@ inscripcion
 | `nombre_categoria`   | `TEXT`      | `categoria.nombre`              | Categoría de la inscripción (ej. "U21")             |
 | `nombre_competencia` | `TEXT`      | `competencia.nombre`            | Nombre de la competencia                            |
 | `nombre_jugador`     | `TEXT`      | `nombre \|\| ' ' \|\| apellido` | Nombre completo del jugador habilitado              |
+
+---
+
+## 4. Ciclo de vida de las vistas y limitaciones conocidas
+
+### Las vistas se recrean en cada arranque
+
+`views.sql` empieza con `DROP VIEW IF EXISTS` para las cuatro vistas y luego las crea de nuevo. Como `main()` ejecuta el esquema y las vistas **cada vez que arranca la CLI**,
+las vistas siempre quedan con su definición más reciente sin necesidad de migraciones. Esto es seguro porque una vista **no guarda datos** (solo una consulta).
+Con las **tablas** es al revés: `schema.sql` **no** borra nada (solo `CREATE TABLE IF NOT EXISTS`), porque borrar una tabla borraría los datos del usuario.
+
+### Limitaciones a tener en cuenta
+
+- **`v_jugador_totales_temporada` agrupa por año, no por competencia** (`GROUP BY jugador, competencia.anio`). Si un club juega dos competencias distintas en el mismo año
+  (ej. "Liga Provincial" y "Copa de Verano"), la vista **mezcla ambas en una sola fila**. Hay que corregirla (o reemplazarla por una agregación en Pandas) antes de construir filtros por competencia.
+- **No existe ningún agregado a nivel club/equipo**: solo hay acumulados por jugador.

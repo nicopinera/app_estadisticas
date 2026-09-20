@@ -1,78 +1,93 @@
-# Guía: Docker para correr los tests (ejercicio de aprendizaje)
+# Docker para correr los tests
 
-> Esta guía explica los conceptos y qué archivos harían falta. **No incluye el Dockerfile
-> terminado** — la idea es que lo escriban ustedes como ejercicio, usando esto como mapa.
+Esta guía explica **qué problema resuelve Docker** en este proyecto, **qué hace cada línea** del `Dockerfile.test` real y cómo usarlo. Es el mismo mecanismo que corre
+en el CI (job `tests-docker` de `.github/workflows/MainAction.yml`).
 
 ## El problema que resuelve
 
-Hoy, para correr `make run_test` alguien necesita: Python instalado (¿qué versión exacta?),
-`pip install -r requerimientos.txt`, y que su sistema operativo no tenga ninguna diferencia rara
-con el de otro miembro del equipo. "En mi máquina funciona" es el síntoma clásico de no tener
-esto resuelto.
+Para correr los tests alguien necesita: Python instalado (¿qué versión exacta?), las dependencias instaladas (con las versiones correctas) y que su sistema operativo no tenga
+ninguna diferencia rara con el de otro miembro del equipo. "En mi máquina funciona" es el síntoma clásico de no tener esto resuelto.
 
-**Docker** empaqueta "el proyecto + todo lo que necesita para correr" en una **imagen** —un
-molde inmutable— que después se ejecuta como **contenedor** en cualquier máquina que tenga Docker
-instalado, sin importar qué versión de Python tenga esa máquina por fuera. Es la misma idea que
-ya vimos conceptualmente en otro proyecto (EOP): "empaquetar las dependencias exactas una vez, y
-correr siempre igual en cualquier lado".
+**Docker** empaqueta "el proyecto + todo lo que necesita para correr" en una **imagen** (un molde inmutable) que después se ejecuta como **contenedor** en cualquier máquina
+que tenga Docker instalado, sin importar qué versión de Python tenga esa máquina por fuera. La idea: *empaquetar las dependencias exactas una vez y correr siempre igual en cualquier lado*.
 
-## Los dos archivos que harían falta
+## Los archivos del proyecto
 
-### 1. `Dockerfile`
+### 1. `Dockerfile.test`
 
-Define, paso a paso, cómo se construye la imagen. Para este proyecto, a alto nivel, tendría:
+Define, paso a paso, cómo se construye la imagen. Cada instrucción crea una **capa** que Docker guarda en caché:
 
-1. **Imagen base:** algo como `python:3.13-slim` — ya trae Python instalado, sin todo el peso de
-   una distribución Linux completa (por eso `slim`).
-2. **Directorio de trabajo:** un `WORKDIR /app` para que todo lo que se copie después caiga en un
-   lugar predecible dentro del contenedor.
-3. **Copiar solo lo necesario para instalar dependencias primero:** copiar `requerimientos.txt`
-   y correr `pip install -r requerimientos.txt` **antes** de copiar el resto del código. Esto no
-   es capricho — Docker cachea cada paso (cada instrucción del Dockerfile es una "capa"); si
-   copiás el código fuente antes de instalar dependencias, cualquier cambio en un archivo `.py`
-   invalida el cache de la instalación de dependencias y hay que reinstalar todo de nuevo cada
-   vez. Copiando `requerimientos.txt` primero, mientras no cambien las dependencias, ese paso se
-   reusa cacheado y el build es mucho más rápido.
-4. **Copiar el resto del proyecto:** `src/`, `test/`, `pytest.ini`, `pyproject.toml`.
-5. **Comando por defecto:** algo como `CMD ["pytest", "-v", "--cov=src", "--cov-report=term"]` —
-   así, al correr el contenedor sin argumentos extra, automáticamente corre la suite de tests.
+```dockerfile
+FROM python:3.13-slim
+```
+**Imagen base:** ya trae Python instalado, sin todo el peso de una distribución Linux completa (por eso `slim`).
+
+```dockerfile
+COPY --from=ghcr.io/astral-sh/uv:0.12.9 /uv /usr/local/bin/uv
+```
+**Instala `uv`** (la herramienta que instala las dependencias) copiando el binario desde su imagen oficial. La versión está fijada para que el build sea reproducible.
+
+```dockerfile
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project
+```
+**Instala las dependencias primero, copiando solo dos archivos.** Esto no es un capricho: como Docker cachea cada capa, mientras `pyproject.toml` y `uv.lock` no cambien, este paso
+(el más lento) se **reusa** sin reinstalar nada. Si se copiara todo el código antes, cualquier cambio en un `.py` invalidaría el caché y habría que reinstalar todo cada vez.
+
+- `--locked`: falla si `uv.lock` no coincide con `pyproject.toml` (garantiza las versiones exactas del lockfile).
+- `--no-install-project`: instala solo las **dependencias**; el código propio se usa directo desde `src/` (así lo configura `pytest.ini` con `pythonpath = src`).
+
+```dockerfile
+ENV PATH="/app/.venv/bin:$PATH"
+COPY . .
+CMD ["pytest", "-v", "--cov=src", "--cov-report=term"]
+```
+**Deja el entorno virtual de uv en el `PATH`** (así `pytest` se resuelve sin anteponer nada), **copia el resto del proyecto** y define el **comando por defecto**: al correr el contenedor
+sin argumentos, ejecuta los tests con cobertura en la terminal.
 
 ### 2. `.dockerignore`
 
-Igual que un `.gitignore`, pero para decirle a Docker qué **no** copiar dentro de la imagen —
-evita meter basura (entorno virtual local, `__pycache__`, `.pytest_cache`, `.git`, el propio
-`estadisticas.db` de desarrollo) que infla la imagen sin necesidad y puede filtrar datos locales
-que no deberían viajar en la imagen.
+Igual que un `.gitignore`, pero para decirle a Docker qué **no** copiar dentro de la imagen. Evita meter basura que infla la imagen o **rompe** el build:
 
-## Cómo se usaría, una vez armado
+| Entrada | Por qué se excluye |
+| --- | --- |
+| `.venv/` | El entorno virtual local es de **Windows** (o de otro sistema): copiarlo a una imagen Linux no sirve y la pisaría al instalar |
+| `.git/` | Todo el historial, sin ninguna utilidad dentro de la imagen |
+| `*.db`, `logs/` | Datos locales de desarrollo que no deben viajar en la imagen |
+| `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.mypy_cache/`, `.coverage/`, `reportes_cobertura/` | Cachés y reportes generados |
+
+## Cómo se usa
 
 ```bash
-docker build -t app-estadisticas-tests .
+docker build -f Dockerfile.test -t app-estadisticas-tests .
 docker run --rm app-estadisticas-tests
 ```
 
-`docker build` lee el `Dockerfile` y arma la imagen (una sola vez, o cada vez que cambia algo).
-`docker run --rm` levanta un contenedor a partir de esa imagen, corre el comando por defecto
-(los tests), y `--rm` lo borra automáticamente al terminar (no queda un contenedor muerto
-acumulándose en el disco).
+(o `make docker_test`, que hace ambos). `docker build` lee el `Dockerfile.test` y arma la imagen (una vez, o cada vez que cambian las dependencias).
+`docker run --rm` levanta un contenedor a partir de esa imagen, corre el comando por defecto (los tests) y `--rm` lo borra al terminar para no acumular contenedores muertos.
 
-## Qué probar para saber que quedó bien armado
+Para correr **otro comando** dentro del contenedor (por ejemplo solo los unitarios), se agrega al final:
 
-- [ ] `docker build` termina sin errores y sin necesitar tocar nada del `Dockerfile` a mano
-      después.
-- [ ] `docker run --rm app-estadisticas-tests` corre los **mismos 19 tests** que corren hoy con
-      `make run_test` fuera de Docker, con el mismo resultado (todos en verde).
-- [ ] Si borrás tu entorno virtual local y corrés *solo* el contenedor, igual funciona — esa es
-      la prueba real de que la imagen no depende de nada de tu máquina por fuera de Docker mismo.
-- [ ] El tamaño de la imagen final (`docker images`) es razonable — si ronda varios GB, algo del
-      `.dockerignore` probablemente no está filtrando bien.
+```bash
+docker run --rm app-estadisticas-tests pytest tests/unit -v
+```
 
-## Una idea para más adelante (no ahora)
+## Qué verificar para saber que está bien armado
 
-Cuando el proyecto tenga `docker-compose.yml` con más de un servicio (por ejemplo, si en el
-Hito 3/4 suman algo como una base de datos aparte para pruebas, o el perfil de observabilidad que
-ya está mencionado en el PRD para Seq), un segundo contenedor liviano solo para tests es un buen
-lugar para aprender la diferencia entre una imagen de **desarrollo** (con todas las herramientas:
-`ruff`, `pytest-cov`, etc.) y una de **producción** (solo lo mínimo para que la app corra) — el
-mismo concepto de *multi-stage build* que ya vimos en el proyecto EOP, aplicable acá el día que
-quieran optimizar el tamaño de la imagen final para distribución (Hito 4, empaquetado).
+- [ ] `docker build` termina sin errores y sin tocar nada del `Dockerfile.test` a mano.
+- [ ] `docker run --rm app-estadisticas-tests` corre **los mismos tests que `uv run pytest`** fuera de Docker, con el mismo resultado (todos en verde).
+- [ ] Si borrás tu entorno virtual local y corrés *solo* el contenedor, igual funciona: esa es la prueba real de que la imagen no depende de nada de tu máquina.
+- [ ] Si cambiás un archivo `.py` y volvés a hacer `docker build`, el paso de instalar dependencias aparece como `CACHED` (el caché de capas funciona).
+- [ ] El tamaño de la imagen (`docker images`) es razonable; si ronda varios GB, algo del `.dockerignore` no está filtrando bien.
+
+## Para qué sirve además de "correr los tests"
+
+- **Es lo que valida el CI en un entorno limpio:** el job `tests-docker` construye esta imagen en cada Pull Request. Un `Dockerfile.test` roto o una dependencia mal declarada en `pyproject.toml`
+  se detecta en el PR, no cuando alguien lo necesita.
+- **Detecta dependencias no declaradas:** si el código importa una librería que solo está instalada en tu máquina pero **no** en `pyproject.toml`, en Docker el test falla con `ModuleNotFoundError`.
+
+## Una idea para más adelante
+
+Cuando el proyecto tenga un `docker-compose.yml` con más de un servicio (por ejemplo, el perfil de observabilidad con Seq mencionado en el PRD), o cuando llegue el empaquetado (Hito 4),
+conviene separar una imagen de **desarrollo** (con `pytest`, `ruff`, `mypy`) de una de **producción** (solo lo mínimo para que la app corra): es la técnica de *multi-stage build*.

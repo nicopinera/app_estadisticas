@@ -189,4 +189,30 @@ Es como si el Dominio dijera: *"No sé quién diablos va a guardar esto, pero el
 Si tu interfaz gráfica (Flet) necesita un contrato para acoplarse a los Casos de Uso sin depender de la implementación concreta (por ejemplo, para mockear la UI en tests), esas interfaces (ej. `IRegistrarJugadorUseCase`) pertenecen a la **Capa de Aplicación** (`src/aplicacion/interfaces/`). Esto es porque Flet (Infraestructura) apunta hacia Aplicación, cumpliendo la regla de dependencias de afuera hacia adentro.
 
 ---
+
+## 5. Cómo quedó aplicado en este proyecto
+
+Esta guía explica los conceptos. Los ejemplos de arriba usan nombres genéricos (`execute`, `email`, `UUID`, `Protocol`) para enseñar la idea;
+lo que sigue es el mapa entre el concepto y lo que **realmente existe** en el repositorio.
+
+| Concepto de la guía | En este proyecto |
+| :--- | :--- |
+| Caso de Uso como **clase** con un método | Clases en `src/aplicacion/casos_uso/`; el método se llama **`ejecutar()`** (no `execute`) |
+| Inyección de dependencias por constructor | `RegistrarJugadorUseCase(jugador_repo)`, `InscribirClubEnCompetenciaUseCase(repo_competencia, repo_club)` |
+| *Composition Root* | Cada **comando de la CLI** arma el repositorio real y se lo pasa al caso de uso (ver [04-arquitectura.md](04-arquitectura.md), sección 10) |
+| Puerto de salida (interfaz en el Dominio) | Clases `ABC` en `src/dominio/repositorios/` (`JugadorRepositorio`, `ClubRepositorio`, ...), no `Protocol` (ver [07-protocolos.md](07-protocolos.md)) |
+| Entidad con invariantes | `dataclass` en `src/dominio/entidades/` que valida en `__post_init__` (tipos, rangos, reglas del boxscore) |
+| DTO de entrada / salida | `dataclass` simples en `src/aplicacion/dtos/` (`CrearJugadorDTO` entra, `JugadorDTO` sale). **No** son `frozen=True` |
+| Excepciones de negocio | `src/dominio/exceptions.py`, todas hijas de `ErrorDeDominio` |
+| Regla de dependencias hacia adentro | `src/utils.py` es **puro** (no importa `infraestructura`) justamente para que `aplicacion` pueda usarlo sin violarla |
+
+**Dos decisiones que conviene conocer:**
+
+- **Los casos de uso devuelven DTOs, no entidades** (con una excepción hoy: `VincularJugadorAClubUseCase` devuelve la entidad `JugadorClub`). Así la CLI no queda acoplada a la forma interna del dominio.
+- **Las entidades declaran su ID como `int | None`** (antes de guardarse no lo tienen) pero los DTOs de salida exigen `int`. La función `id_persistido()` de `src/utils.py` deja esa garantía explícita en un solo lugar.
+
+El catálogo real de casos de uso (qué recibe y qué devuelve cada uno, paso a paso) está en [03-casos-de-uso.md](03-casos-de-uso.md). La tabla de la sección 3 de esta guía
+es el **mapa de diseño original** del proyecto y sus nombres (`CrearEquipoUseCase`, `FicharJugadorEnEquipoUseCase`, ...) no coinciden uno a uno con los implementados.
+
+---
 *Documento redactado para el equipo de App Estadistica. La excelencia técnica no se logra copiando código, sino entendiendo los fundamentos.*
