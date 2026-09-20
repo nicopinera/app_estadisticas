@@ -214,3 +214,6 @@ reportes_cobertura/
 logs/
 *.db
 .vscode/
+
+# Archivo temporal de la auditoria de dependencias (ver RUNBOOK.md, seccion 9)
+requirements-audit.txt
