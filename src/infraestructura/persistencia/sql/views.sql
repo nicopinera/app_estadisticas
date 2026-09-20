@@ -13,7 +13,9 @@ SELECT
     p.estadio,
     c.nombre AS competencia,
     c.anio AS anio_competencia,
+    p.idClubLocal AS id_club_local,
     cl.nombre AS club_local,
+    p.idClubVisitante AS id_club_visitante,
     cv.nombre AS club_visitante
 FROM partido AS p
     INNER JOIN competencia AS c ON p.idCompetencia = c.idCompetencia

@@ -1,6 +1,6 @@
 import sqlite3
 
-from dominio.entidades.partido import JugadorPartido, Partido
+from dominio.entidades.partido import JugadorPartido, Partido, PartidoResumen
 from dominio.repositorios.partido_repositorio import PartidoRepositorio
 from infraestructura.logger import get_logger
 
@@ -373,3 +373,38 @@ class SqlitePartidoRepositorio(PartidoRepositorio):
             )
 
             return None
+
+    def resumen_por_club(self, id_club: int) -> list[PartidoResumen]:
+        """
+        Funcion que se encarga de listar los partidos de un club (como local o visitante) con los nombres
+        de la competencia y de los clubes, usando la vista `v_partidos_resumen`.
+
+        Args:
+            id_club (int): ID del club para el cual se buscan los partidos.
+
+        Returns:
+            list[PartidoResumen]: Partidos del club, del mas antiguo al mas reciente
+            (lista vacia si el club no tiene partidos).
+        """
+        cursor = self.conexion.cursor()
+
+        query = """
+        SELECT id_partido, fecha_partido, estadio, competencia, anio_competencia, club_local, club_visitante
+        FROM v_partidos_resumen
+        WHERE id_club_local = ? OR id_club_visitante = ?
+        ORDER BY fecha_partido, id_partido;
+        """
+        cursor.execute(query, (id_club, id_club))
+
+        return [
+            PartidoResumen(
+                idPartido=row["id_partido"],
+                fecha=row["fecha_partido"],
+                estadio=row["estadio"],
+                competencia=row["competencia"],
+                anioCompetencia=row["anio_competencia"],
+                clubLocal=row["club_local"],
+                clubVisitante=row["club_visitante"],
+            )
+            for row in cursor.fetchall()
+        ]

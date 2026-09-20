@@ -436,3 +436,26 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             )
             for row in rows
         ]
+
+    def quitar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> bool:
+        """Funcion que se encarga de quitar a un jugador de una lista de buena fe
+
+        Args:
+            idJugador (int): ID del jugador a quitar.
+            idListaBuenaFe (int): ID de la lista de buena fe de la cual se lo quiere quitar.
+
+        Returns:
+            bool: True si el jugador estaba en la lista y se quito. False si no estaba en la lista
+            o si ocurre un error.
+        """
+        cursor = self.conexion.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM jugadorListaBuenaFe WHERE idJugador = ? AND idListaBuenaFe = ?;",
+                (idJugador, idListaBuenaFe),
+            )
+            self.conexion.commit()
+        except sqlite3.Error as e:
+            logger.error(f"Error al quitar jugador de la lista: {e}", exc_info=True)
+            return False
+        return cursor.rowcount > 0

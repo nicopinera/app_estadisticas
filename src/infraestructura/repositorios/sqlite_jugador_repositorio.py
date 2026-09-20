@@ -209,3 +209,77 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             return None
 
         return Club(nombre=row["nombre"], idClub=row["idClub"])
+
+    def historial_vinculos(self, id_jugador: int) -> list[JugadorClub]:
+        """
+        Funcion que se encarga de devolver todos los vinculos de un jugador con clubes.
+
+        Args:
+            id_jugador (int): ID del jugador del cual se quiere obtener el historial.
+
+        Returns:
+            list[JugadorClub]: Vinculos vigentes y cerrados, del mas antiguo al mas reciente
+            (lista vacia si el jugador nunca estuvo vinculado a un club).
+        """
+        cursor = self.conexion.cursor()
+
+        query = """
+        SELECT idJugador, idClub, fechaDesde, fechaHasta
+        FROM jugadorClub
+        WHERE idJugador = ?
+        ORDER BY fechaDesde, idClub;
+        """
+        cursor.execute(query, (id_jugador,))
+
+        return [
+            JugadorClub(
+                fechaDesde=row["fechaDesde"],
+                fechaHasta=row["fechaHasta"],
+                idJugador=row["idJugador"],
+                idClub=row["idClub"],
+            )
+            for row in cursor.fetchall()
+        ]
+
+    def cerrar_vinculo(self, id_jugador: int, fecha_hasta: str) -> JugadorClub | None:
+        """
+        Funcion que se encarga de cerrar el vinculo vigente de un jugador con su club, cargando su fechaHasta.
+
+        Args:
+            id_jugador (int): ID del jugador que deja su club.
+            fecha_hasta (str): Fecha de baja (AAAA-MM-DD). No puede ser anterior a la fecha de inicio del vinculo:
+                la base lo rechaza con un CHECK.
+
+        Returns:
+            JugadorClub | None: El vinculo ya cerrado, o None si el jugador no tenia un vinculo vigente
+            o si ocurre un error.
+        """
+        cursor = self.conexion.cursor()
+        try:
+            cursor.execute(
+                "SELECT idClub, fechaDesde FROM jugadorClub WHERE idJugador = ? AND fechaHasta IS NULL;",
+                (id_jugador,),
+            )
+            vigente = cursor.fetchone()
+            if vigente is None:
+                return None
+
+            cursor.execute(
+                "UPDATE jugadorClub SET fechaHasta = ? WHERE idJugador = ? AND idClub = ? AND fechaDesde = ?;",
+                (fecha_hasta, id_jugador, vigente["idClub"], vigente["fechaDesde"]),
+            )
+            self.conexion.commit()
+        except sqlite3.Error as e:
+            logger.error(f"Error al cerrar el vinculo del jugador: {e}", exc_info=True)
+            return None
+
+        try:
+            return JugadorClub(
+                fechaDesde=vigente["fechaDesde"],
+                fechaHasta=fecha_hasta,
+                idJugador=id_jugador,
+                idClub=vigente["idClub"],
+            )
+        except TypeError as e:
+            logger.critical(f"""Vinculo cerrado pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
