@@ -20,6 +20,9 @@ def ejecutar(args: argparse.Namespace, repo: JugadorRepositorio | None = None) -
     caso_uso = RegistrarJugadorUseCase(repo)
     try:
         jugador = caso_uso.ejecutar(dto)
-        print(f"Jugador creado: {jugador.nombre} {jugador.apellido} (id={jugador.idJugador})")
+        if jugador is None:
+            print("Error: no se pudo guardar el jugador")
+            return
+        print(f"Jugador creado: {jugador.nombre_completo} (id={jugador.id})")
     except DNIDuplicadoError as e:
         print(f"Error: {e}")

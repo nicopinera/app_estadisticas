@@ -79,13 +79,15 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         return self._row_to_entity(row)
 
     def buscar_por_club(self, idClub: int) -> list[Jugador]:
-        """Funcion que se encarga de buscar todos los jugadores de un club en la base de datos.
+        """Funcion que se encarga de buscar los jugadores actuales de un club en la base de datos.
+        Solo se consideran los vinculos vigentes (fechaHasta IS NULL): los jugadores que ya se
+        fueron del club no aparecen.
 
         Args:
             idClub (int): ID del club del cual se quieren buscar los jugadores.
 
         Returns:
-            list[Jugador]: Lista de jugadores del club.
+            list[Jugador]: Lista de jugadores con vinculo vigente en el club.
         """
         cursor = self.conexion.cursor()
 
@@ -93,7 +95,7 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
         SELECT j.idJugador,j.nombre,j.apellido,j.dni,j.anioNacimiento
         FROM jugadorClub jc
         JOIN jugador j ON j.idJugador = jc.idJugador
-        WHERE jc.idClub = ?;
+        WHERE jc.idClub = ? AND jc.fechaHasta IS NULL;
         """
         cursor.execute(query, (idClub,))
 

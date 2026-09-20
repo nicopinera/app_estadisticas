@@ -210,6 +210,63 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             pero no se pudo reconstruir el objeto de retorno: {e}""")
             raise
 
+    def inscribir_con_lista(
+        self, inscripcion: Inscripcion, fecha_presentacion: str
+    ) -> tuple[Inscripcion, ListaBuenaFe] | None:
+        """Funcion que se encarga de guardar una inscripcion y su lista de buena fe vacia (relacion 1:1)
+        en una unica transaccion atomica.
+
+        Utiliza el context manager de sqlite3, que realiza COMMIT automatico al salir sin error o
+        ROLLBACK ante cualquier excepcion. Si falla el guardado de la lista, la inscripcion tampoco
+        queda guardada (no pueden existir inscripciones huerfanas, sin su lista).
+
+        Args:
+            inscripcion (Inscripcion): Entidad Inscripcion a guardar (sin ID).
+            fecha_presentacion (str): Fecha de presentacion de la lista de buena fe.
+
+        Returns:
+            tuple[Inscripcion, ListaBuenaFe] | None: Retorna la inscripcion y su lista guardadas, ambas con su
+            ID asignado en la BD, o None si ocurre un error.
+        """
+        try:
+            with self.conexion:
+                cursor = self.conexion.cursor()
+                cursor.execute(
+                    "INSERT INTO inscripcion (idClub,idCategoria,idCompetencia) VALUES (?, ?, ?);",
+                    (inscripcion.idClub, inscripcion.idCategoria, inscripcion.idCompetencia),
+                )
+                idInscripcion = cursor.lastrowid
+                if idInscripcion is None:
+                    raise sqlite3.DatabaseError("SQLite no devolvio el id de la inscripcion recien insertada")
+
+                cursor.execute(
+                    "INSERT INTO listaBuenaFe (fechaPresentacion,idInscripcion) VALUES (?,?);",
+                    (fecha_presentacion, idInscripcion),
+                )
+                idListaBuenaFe = cursor.lastrowid
+        except sqlite3.Error as e:
+            logger.error(f"Error al inscribir con lista de buena fe: {e}", exc_info=True)
+            return None
+
+        try:
+            return (
+                Inscripcion(
+                    idClub=inscripcion.idClub,
+                    idCategoria=inscripcion.idCategoria,
+                    idCompetencia=inscripcion.idCompetencia,
+                    idInscripcion=idInscripcion,
+                ),
+                ListaBuenaFe(
+                    fechaPresentacion=fecha_presentacion,
+                    idInscripcion=idInscripcion,
+                    idListaBuenaFe=idListaBuenaFe,
+                ),
+            )
+        except TypeError as e:
+            logger.critical(f"""Inscripcion guardada (idInscripcion={idInscripcion})
+            pero no se pudo reconstruir el objeto de retorno: {e}""")
+            raise
+
     def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion | None:
         """Funcion que se encarga de devolver informacion de una inscripcion por ID
 
@@ -234,7 +291,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             idClub (int): ID del club del cual se desean obtener las inscripciones.
 
         Returns:
-            list[Inscripcion]: Lista de inscripciones del club especificado. 
+            list[Inscripcion]: Lista de inscripciones del club especificado.
             Retorna una lista vacía si no se encuentran inscripciones.
         """
         cursor = self.conexion.cursor()
@@ -262,7 +319,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
         Args:
             listaBF (ListaBuenaFe): Entidad ListaBuenaFe a guardar.
         Returns:
-            ListaBuenaFe | None: Retorna la lista de buena fe guardada con su ID asignado en la BD 
+            ListaBuenaFe | None: Retorna la lista de buena fe guardada con su ID asignado en la BD
             o None si ocurre un error.
         """
         cursor = self.conexion.cursor()
@@ -295,7 +352,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             idInscripcion (int): ID de la inscripcion de la cual se desea obtener la lista de buena fe.
 
         Returns:
-            ListaBuenaFe | None: Retorna la lista de buena fe 
+            ListaBuenaFe | None: Retorna la lista de buena fe
             correspondiente a la inscripcion especificada o None si no se encuentra.
         """
 
@@ -358,7 +415,7 @@ class SqliteCompetenciaRepositorio(CompetenciaRepositorio):
             idListaBuenaFe (int): ID de la lista de buena fe de la cual se desean obtener los jugadores.
 
         Returns:
-            list[JugadorListaBuenaFe]: Lista de entidades JugadorListaBuenaFe 
+            list[JugadorListaBuenaFe]: Lista de entidades JugadorListaBuenaFe
             correspondientes a los jugadores de la lista de buena fe.
         """
         cursor = self.conexion.cursor()
