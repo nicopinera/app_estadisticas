@@ -174,3 +174,24 @@ def test_inscribir_con_lista_es_atomica(db_conexion):
 
     assert resultado is None
     assert len(comp_rep.obtener_inscripciones_por_club(1)) == inscripciones_antes
+
+
+def test_quitar_jugador_lista(db_conexion):
+    """El seed deja la lista 1 con jugadores: se quita uno y ya no figura; quitarlo de nuevo devuelve False."""
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+    antes = comp_rep.obtener_jugadores_lista(1)
+    assert len(antes) > 1
+    a_quitar = antes[0].idJugador
+
+    assert comp_rep.quitar_jugador_lista(a_quitar, 1) is True
+
+    despues = [j.idJugador for j in comp_rep.obtener_jugadores_lista(1)]
+    assert a_quitar not in despues
+    assert len(despues) == len(antes) - 1
+    assert comp_rep.quitar_jugador_lista(a_quitar, 1) is False
+
+
+def test_quitar_jugador_lista_de_un_jugador_que_nunca_estuvo_devuelve_false(db_conexion):
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+
+    assert comp_rep.quitar_jugador_lista(999999, 1) is False

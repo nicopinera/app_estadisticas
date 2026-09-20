@@ -154,3 +154,55 @@ def test_buscar_por_club_excluye_vinculos_cerrados(db_conexion):
 
     assert actual.idJugador in ids
     assert ex.idJugador not in ids
+
+
+def test_historial_vinculos_de_un_jugador_sin_clubes_es_una_lista_vacia(db_conexion, crear_jugador):
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    jugador = jugador_rep.guardar(crear_jugador(dni=70000010))
+
+    assert jugador_rep.historial_vinculos(jugador.idJugador) == []
+
+
+def test_cerrar_vinculo_cierra_el_vigente_y_deja_al_jugador_sin_club_activo(db_conexion, crear_jugador):
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    jugador = jugador_rep.guardar(crear_jugador(dni=70000011))
+    jugador_rep.link_to_club(JugadorClub("2026-01-01", None, idJugador=jugador.idJugador, idClub=1))
+
+    cerrado = jugador_rep.cerrar_vinculo(jugador.idJugador, "2026-06-30")
+
+    assert cerrado == JugadorClub("2026-01-01", "2026-06-30", idJugador=jugador.idJugador, idClub=1)
+    assert jugador_rep.club_activo(jugador.idJugador) is None
+    assert jugador.idJugador not in [j.idJugador for j in jugador_rep.buscar_por_club(1)]
+
+
+def test_un_jugador_que_se_fue_de_un_club_puede_vincularse_a_otro_y_queda_el_historial(db_conexion, crear_jugador):
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    jugador = jugador_rep.guardar(crear_jugador(dni=70000012))
+    jugador_rep.link_to_club(JugadorClub("2020-01-01", None, idJugador=jugador.idJugador, idClub=1))
+    jugador_rep.cerrar_vinculo(jugador.idJugador, "2021-01-01")
+    jugador_rep.link_to_club(JugadorClub("2021-02-01", None, idJugador=jugador.idJugador, idClub=2))
+
+    historial = jugador_rep.historial_vinculos(jugador.idJugador)
+
+    assert historial == [
+        JugadorClub("2020-01-01", "2021-01-01", idJugador=jugador.idJugador, idClub=1),
+        JugadorClub("2021-02-01", None, idJugador=jugador.idJugador, idClub=2),
+    ]
+    assert jugador_rep.club_activo(jugador.idJugador).idClub == 2
+
+
+def test_cerrar_vinculo_de_un_jugador_sin_vinculo_vigente_devuelve_none(db_conexion, crear_jugador):
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    jugador = jugador_rep.guardar(crear_jugador(dni=70000013))
+
+    assert jugador_rep.cerrar_vinculo(jugador.idJugador, "2026-06-30") is None
+
+
+def test_cerrar_vinculo_con_fecha_anterior_al_inicio_lo_rechaza_la_base_y_sigue_vigente(db_conexion, crear_jugador):
+    """El CHECK (fechaHasta >= fechaDesde) del schema impide una baja anterior al inicio del vinculo."""
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    jugador = jugador_rep.guardar(crear_jugador(dni=70000014))
+    jugador_rep.link_to_club(JugadorClub("2026-01-01", None, idJugador=jugador.idJugador, idClub=1))
+
+    assert jugador_rep.cerrar_vinculo(jugador.idJugador, "2025-12-31") is None
+    assert jugador_rep.club_activo(jugador.idJugador).idClub == 1
