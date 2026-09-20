@@ -1,7 +1,7 @@
 from aplicacion.dtos.jugador_dto import CrearJugadorDTO, JugadorDTO
-from aplicacion.utils import id_persistido
 from dominio.entidades.jugador import Jugador
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
+from utils import id_persistido
 
 
 class RegistrarJugadorUseCase:
@@ -27,7 +27,7 @@ class RegistrarJugadorUseCase:
         if resultado is None:
             return None
         return JugadorDTO(
-            nombre_completo=f"{resultado.nombre} {resultado.apellido}",
+            nombre_completo=resultado.nombre_completo,
             id=id_persistido(resultado.idJugador, "Jugador"),
             anioNacimiento=resultado.anioNacimiento,
         )

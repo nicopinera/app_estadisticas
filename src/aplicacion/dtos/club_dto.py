@@ -23,3 +23,21 @@ class VincularJugadorClubDTO:
     idJugador: int
     idClub: int
     fechaDesde: str
+
+
+@dataclass
+class DesvincularJugadorDTO:
+    """entra a DesvincularJugadorDeClubUseCase"""
+
+    idJugador: int
+    fechaHasta: str
+
+
+@dataclass
+class VinculoDTO:
+    """Sale de VincularJugadorAClubUseCase (fechaHasta=None: vinculo vigente) y de DesvincularJugadorDeClubUseCase"""
+
+    idJugador: int
+    idClub: int
+    fechaDesde: str
+    fechaHasta: str | None

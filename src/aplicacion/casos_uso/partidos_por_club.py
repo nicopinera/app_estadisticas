@@ -1,5 +1,4 @@
-from aplicacion.dtos.partido_dto import PartidoDTO
-from aplicacion.utils import id_persistido
+from aplicacion.dtos.partido_dto import PartidoResumenDTO
 from dominio.repositorios.partido_repositorio import PartidoRepositorio
 
 
@@ -12,27 +11,26 @@ class ListarPartidosPorClubUseCase:
         """
         self.repo = repo
 
-    def ejecutar(self, idClub: int) -> list[PartidoDTO]:
+    def ejecutar(self, idClub: int) -> list[PartidoResumenDTO]:
         """
-        Funcion que permite listar todos los partidos en los que participo un club (como local o visitante)
+        Funcion que permite listar todos los partidos en los que participo un club (como local o visitante),
+        con los nombres de la competencia y de los clubes (viene de la vista `v_partidos_resumen`).
 
         Args:
             idClub (int): ID del club del cual se quieren listar los partidos
 
         Returns:
-            list[PartidoDTO]: Lista de partidos del club. Lista vacia si el club no tiene partidos.
+            list[PartidoResumenDTO]: Partidos del club, del mas antiguo al mas reciente. Lista vacia si no tiene.
         """
-        partidos = self.repo.buscar_por_club(idClub)
-        if not partidos:
-            return []
         return [
-            PartidoDTO(
-                idPartido=id_persistido(p.idPartido, "Partido"),
+            PartidoResumenDTO(
+                idPartido=p.idPartido,
                 fecha=p.fecha,
                 estadio=p.estadio,
-                idCompetencia=p.idCompetencia,
-                idClubLocal=p.idClubLocal,
-                idClubVisitante=p.idClubVisitante,
+                competencia=p.competencia,
+                anioCompetencia=p.anioCompetencia,
+                clubLocal=p.clubLocal,
+                clubVisitante=p.clubVisitante,
             )
-            for p in partidos
+            for p in self.repo.resumen_por_club(idClub)
         ]

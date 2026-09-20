@@ -2,10 +2,13 @@ from dataclasses import dataclass
 
 
 @dataclass
-class PartidoDTO:  # sale de ListarPartidosPorClubUseCase
+class PartidoResumenDTO:
+    """Sale de ListarPartidosPorClubUseCase: un partido con los NOMBRES de la competencia y de los clubes"""
+
     idPartido: int
     fecha: str
     estadio: str | None
-    idCompetencia: int
-    idClubLocal: int
-    idClubVisitante: int
+    competencia: str
+    anioCompetencia: int
+    clubLocal: str
+    clubVisitante: str
