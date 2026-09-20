@@ -1,28 +1,28 @@
 import argparse
 
-import config.rutas as r
 from aplicacion.casos_uso.registrar_jugador import RegistrarJugadorUseCase
 from aplicacion.dtos.jugador_dto import CrearJugadorDTO
-from dominio.exceptions import DNIDuplicadoError
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
-from infraestructura.persistencia.database_manager import SQLiteManager
+from infraestructura.persistencia.database_manager import abrir_conexion
 from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugadorRepositorio
+from utils import abortar
 
 
 def ejecutar(args: argparse.Namespace, repo: JugadorRepositorio | None = None) -> None:
+    """Comando `jugador add`: registra un jugador nuevo.
+
+    Args:
+        args (argparse.Namespace): Argumentos parseados (nombre, apellido, dni, anio).
+        repo (JugadorRepositorio | None): Repositorio a usar. En produccion no se pasa (se arma contra
+            SQLite real); en los tests se inyecta uno falso.
+    """
     if repo is None:
-        db = SQLiteManager(r.DB_FILE, r.SCHEMA_SQL, r.VISTA_SQL)
-        conexion = db.connect()
-        repo = SqliteJugadorRepositorio(conexion=conexion)
+        repo = SqliteJugadorRepositorio(conexion=abrir_conexion())
 
     dto = CrearJugadorDTO(nombre=args.nombre, apellido=args.apellido, dni=args.dni, anioNacimiento=args.anio)
 
-    caso_uso = RegistrarJugadorUseCase(repo)
-    try:
-        jugador = caso_uso.ejecutar(dto)
-        if jugador is None:
-            print("Error: no se pudo guardar el jugador")
-            return
-        print(f"Jugador creado: {jugador.nombre_completo} (id={jugador.id})")
-    except DNIDuplicadoError as e:
-        print(f"Error: {e}")
+    # DNIDuplicadoError no se atrapa aca: sube hasta main(), que la muestra sin traceback.
+    jugador = RegistrarJugadorUseCase(repo).ejecutar(dto)
+    if jugador is None:
+        abortar("no se pudo guardar el jugador")
+    print(f"Jugador creado: {jugador.nombre_completo} (id={jugador.id})")
