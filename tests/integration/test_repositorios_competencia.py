@@ -143,3 +143,34 @@ def test_obtener_jugadores_lista(db_conexion):
     assert jugadores_lista is not None
     assert len(jugadores_lista) > 0
     assert isinstance(jugadores_lista[0], JugadorListaBuenaFe)
+
+
+def test_inscribir_con_lista(db_conexion):
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+    nueva_compe = comp_rep.guardar_competencia(Competencia(nombre="Torneo Atomico", anio=2026, tipo="PROVINCIAL"))
+
+    resultado = comp_rep.inscribir_con_lista(
+        Inscripcion(idClub=1, idCategoria=1, idCompetencia=nueva_compe.idCompetencia), "2026-03-01"
+    )
+
+    assert resultado is not None
+    inscripcion, lista = resultado
+    assert inscripcion.idInscripcion is not None
+    assert lista.idListaBuenaFe is not None
+    assert lista.idInscripcion == inscripcion.idInscripcion
+    assert comp_rep.obtener_lista_por_inscripcion(inscripcion.idInscripcion).fechaPresentacion == "2026-03-01"
+
+
+def test_inscribir_con_lista_es_atomica(db_conexion):
+    """Si falla el guardado de la lista de buena fe, la inscripcion tampoco debe quedar guardada."""
+    comp_rep = SqliteCompetenciaRepositorio(db_conexion)
+    nueva_compe = comp_rep.guardar_competencia(Competencia(nombre="Torneo Rollback", anio=2026, tipo="PROVINCIAL"))
+    inscripciones_antes = len(comp_rep.obtener_inscripciones_por_club(1))
+
+    # fechaPresentacion es NOT NULL: la 2da insercion (la lista) falla despues de haberse insertado la inscripcion
+    resultado = comp_rep.inscribir_con_lista(
+        Inscripcion(idClub=1, idCategoria=1, idCompetencia=nueva_compe.idCompetencia), None
+    )
+
+    assert resultado is None
+    assert len(comp_rep.obtener_inscripciones_por_club(1)) == inscripciones_antes

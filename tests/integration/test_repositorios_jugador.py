@@ -8,7 +8,7 @@ from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugado
 
 
 def test_buscar_por_id(db_conexion):
-    """ Funcion que busca a un jugador por un determinado ID
+    """Funcion que busca a un jugador por un determinado ID
 
     Args:
         db_conexion (_type_): conexion a la base de datos
@@ -22,10 +22,10 @@ def test_buscar_por_id(db_conexion):
 
 
 def test_buscar_por_dni(db_conexion):
-    """ Funcion que busca a un jugador por su DNI
+    """Funcion que busca a un jugador por su DNI
 
     Args:
-        db_conexion (_type_): conexion a la base de datos 
+        db_conexion (_type_): conexion a la base de datos
     """
     jugador_rep = SqliteJugadorRepositorio(db_conexion)
     jugador_encontrado = jugador_rep.buscar_por_dni(12351689)
@@ -35,7 +35,7 @@ def test_buscar_por_dni(db_conexion):
 
 
 def test_buscar_por_club(db_conexion):
-    """ Funcion que busca a un jugador por su club
+    """Funcion que busca a un jugador por su club
 
     Args:
         db_conexion (_type_): conexion a la base de datos
@@ -65,10 +65,9 @@ def test_buscar_por_club(db_conexion):
     assert jugadores_encontrados[0].apellido == "Mona Jimenez"
     # esto es para corregir, estuve probando de varias formas y no funciona, es para revisar
 
- 
 
 def test_guardar(db_conexion):
-    """ Funcion que guarda a un jugador en la base de datos
+    """Funcion que guarda a un jugador en la base de datos
     Args:
         db_conexion (_type_): conexion a la base de datos
     """
@@ -87,7 +86,7 @@ def test_guardar(db_conexion):
 
 
 def test_link_to_club(db_conexion):
-    """ 
+    """
 
     Args:
         db_conexion (_type_): _description_
@@ -134,3 +133,24 @@ def test_guardar_jugador_dni_duplicado_lanza_excepcion(db_conexion):
 
     with pytest.raises(DNIDuplicadoError):
         jugador_rep.guardar(jugador_duplicado)
+
+
+def test_buscar_por_club_excluye_vinculos_cerrados(db_conexion):
+    """buscar_por_club devuelve solo jugadores actuales: el que ya se fue (fechaHasta cargada) no aparece."""
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    id_club = 1
+    actual = jugador_rep.guardar(Jugador(nombre="Actual", apellido="Vigente", dni=70000001, anioNacimiento=1995))
+    ex = jugador_rep.guardar(Jugador(nombre="Ex", apellido="Jugador", dni=70000002, anioNacimiento=1994))
+    jugador_rep.link_to_club(JugadorClub("2023-01-01", None, idJugador=actual.idJugador, idClub=id_club))
+    jugador_rep.link_to_club(JugadorClub("2020-01-01", None, idJugador=ex.idJugador, idClub=id_club))
+    # el repositorio todavia no tiene un metodo para cerrar un vinculo, se cierra directo en la BD
+    db_conexion.execute(
+        "UPDATE jugadorClub SET fechaHasta = ? WHERE idJugador = ? AND idClub = ?",
+        ("2022-12-31", ex.idJugador, id_club),
+    )
+    db_conexion.commit()
+
+    ids = [j.idJugador for j in jugador_rep.buscar_por_club(id_club)]
+
+    assert actual.idJugador in ids
+    assert ex.idJugador not in ids
