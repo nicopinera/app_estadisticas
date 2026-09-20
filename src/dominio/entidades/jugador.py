@@ -1,4 +1,10 @@
 from dataclasses import dataclass
+from datetime import date
+
+from dominio.exceptions import DatoInvalidoError
+
+# Un año de nacimiento valido es mayor a este valor (mismo criterio que el año de una Competencia)
+ANIO_MINIMO = 1900
 
 
 @dataclass
@@ -9,6 +15,11 @@ class Jugador:
     anioNacimiento: int
     idJugador: int | None = None
 
+    @property
+    def nombre_completo(self) -> str:
+        """Nombre y apellido juntos, como se muestran en los listados."""
+        return f"{self.nombre} {self.apellido}"
+
     def __post_init__(self) -> None:
         """
         Funcion que se encarga de validar los datos del jugador.
@@ -18,6 +29,8 @@ class Jugador:
             TypeError: Si el DNI no es un entero.
             TypeError: Si el año de nacimiento no es un entero.
             TypeError: Si el ID del jugador no es un entero o None.
+            DatoInvalidoError: Si el nombre o el apellido estan vacios, si el DNI no es positivo o si el año de
+                nacimiento no esta entre 1901 y el año actual.
         """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
@@ -29,6 +42,18 @@ class Jugador:
             raise TypeError(f"anioNacimiento debe ser int, recibido {type(self.anioNacimiento).__name__}")
         if self.idJugador is not None and not isinstance(self.idJugador, int):
             raise TypeError(f"idJugador debe ser int o None, recibido {type(self.idJugador).__name__}")
+        if not self.nombre.strip():
+            raise DatoInvalidoError("El nombre del jugador no puede estar vacio")
+        if not self.apellido.strip():
+            raise DatoInvalidoError("El apellido del jugador no puede estar vacio")
+        if self.dni <= 0:
+            raise DatoInvalidoError(f"El DNI debe ser un numero positivo - Valor actual: {self.dni}")
+        anio_actual = date.today().year
+        if not ANIO_MINIMO < self.anioNacimiento <= anio_actual:
+            raise DatoInvalidoError(
+                f"El año de nacimiento debe estar entre {ANIO_MINIMO + 1} y {anio_actual} - "
+                f"Valor actual: {self.anioNacimiento}"
+            )
 
 
 @dataclass

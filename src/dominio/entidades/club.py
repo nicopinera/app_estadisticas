@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from dominio.exceptions import DatoInvalidoError
+
 
 @dataclass
 class Club:
@@ -12,11 +14,14 @@ class Club:
         Raises:
             TypeError: Si el nombre no es una cadena de caracteres.
             TypeError: Si el ID del club no es un entero o None.
+            DatoInvalidoError: Si el nombre esta vacio (o son solo espacios).
         """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if self.idClub is not None and not isinstance(self.idClub, int):
             raise TypeError(f"idClub debe ser int o None, recibido {type(self.idClub).__name__}")
+        if not self.nombre.strip():
+            raise DatoInvalidoError("El nombre del club no puede estar vacio")
 
 
 @dataclass

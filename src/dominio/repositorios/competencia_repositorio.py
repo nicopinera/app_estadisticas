@@ -78,3 +78,8 @@ class CompetenciaRepositorio(ABC):
     def obtener_jugadores_lista(self, idListaBuenaFe: int) -> list[JugadorListaBuenaFe]:
         "Obtiene todos los jugadores de una lista de buena fe"
         pass
+
+    @abstractmethod
+    def quitar_jugador_lista(self, idJugador: int, idListaBuenaFe: int) -> bool:
+        "Quita a un jugador de una lista de buena fe. Devuelve True si lo quito, False si no estaba o si fallo"
+        pass

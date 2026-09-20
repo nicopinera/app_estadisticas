@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from dominio.exceptions import DatoInvalidoError
+
 
 @dataclass
 class Competencia:
@@ -15,7 +17,8 @@ class Competencia:
             TypeError: Si el año no es un entero.
             TypeError: Si el tipo no es una cadena de caracteres o None.
             TypeError: Si el ID de la competencia no es un entero o None.
-            ValueError: Si el año es menor o igual que 1900 (mismo criterio que el CHECK del schema).
+            DatoInvalidoError: Si el nombre esta vacio.
+            DatoInvalidoError: Si el año es menor o igual que 1900 (mismo criterio que el CHECK del schema).
         """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
@@ -25,8 +28,10 @@ class Competencia:
             raise TypeError(f"tipo debe ser str o None, recibido {type(self.tipo).__name__}")
         if self.idCompetencia is not None and not isinstance(self.idCompetencia, int):
             raise TypeError(f"idCompetencia debe ser int o None, recibido {type(self.idCompetencia).__name__}")
+        if not self.nombre.strip():
+            raise DatoInvalidoError("El nombre de la competencia no puede estar vacio")
         if self.anio <= 1900:
-            raise ValueError(f"Año debe ser mayor que 1900 - Valor actual: {self.anio}")
+            raise DatoInvalidoError(f"Año debe ser mayor que 1900 - Valor actual: {self.anio}")
 
 
 @dataclass
@@ -40,11 +45,14 @@ class Categoria:
         Raises:
             TypeError: Si el nombre no es una cadena de caracteres.
             TypeError: Si el ID de la categoria no es un entero o None.
+            DatoInvalidoError: Si el nombre esta vacio.
         """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
         if self.idCategoria is not None and not isinstance(self.idCategoria, int):
             raise TypeError(f"idCategoria debe ser int o None, recibido {type(self.idCategoria).__name__}")
+        if not self.nombre.strip():
+            raise DatoInvalidoError("El nombre de la categoria no puede estar vacio")
 
 
 @dataclass
