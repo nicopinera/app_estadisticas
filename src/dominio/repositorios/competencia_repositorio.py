@@ -43,6 +43,13 @@ class CompetenciaRepositorio(ABC):
         pass
 
     @abstractmethod
+    def inscribir_con_lista(
+        self, inscripcion: Inscripcion, fecha_presentacion: str
+    ) -> tuple[Inscripcion, ListaBuenaFe] | None:
+        "Guarda una inscripcion y su lista de buena fe vacia (1:1) en una unica transaccion atomica"
+        pass
+
+    @abstractmethod
     def buscar_inscripcion_por_id(self, idInscripcion: int) -> Inscripcion | None:
         "Devuelve informacion de una inscripcion por ID"
         pass

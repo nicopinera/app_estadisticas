@@ -19,7 +19,7 @@ class JugadorRepositorio(ABC):
 
     @abstractmethod
     def buscar_por_club(self, idClub: int) -> list[Jugador] | None:
-        "Busca todos los jugadores de un club"
+        "Busca los jugadores actuales de un club (vinculo vigente, sin fechaHasta)"
         pass
 
     @abstractmethod

@@ -19,6 +19,30 @@ class ClubNoEncontradoError(ErrorDeDominio):
     pass
 
 
+class JugadorNoEncontradoError(ErrorDeDominio):
+    """Se lanza cuando se quiere trabajar con un jugador inexistente"""
+
+    pass
+
+
+class CompetenciaNoEncontradaError(ErrorDeDominio):
+    """Se lanza cuando se quiere trabajar con una competencia inexistente"""
+
+    pass
+
+
+class CategoriaNoEncontradaError(ErrorDeDominio):
+    """Se lanza cuando se quiere trabajar con una categoria inexistente"""
+
+    pass
+
+
+class InscripcionDuplicadaError(ErrorDeDominio):
+    """Se lanza cuando un club ya esta inscripto en la misma competencia y categoria."""
+
+    pass
+
+
 class UsuarioNoEncontradoError(ErrorDeDominio):
     """Se lanza cuando se intenta usar un usuario inexistente"""
 

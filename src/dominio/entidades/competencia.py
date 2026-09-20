@@ -15,7 +15,7 @@ class Competencia:
             TypeError: Si el año no es un entero.
             TypeError: Si el tipo no es una cadena de caracteres o None.
             TypeError: Si el ID de la competencia no es un entero o None.
-            ValueError: Si el año es menor que 2000.
+            ValueError: Si el año es menor o igual que 1900 (mismo criterio que el CHECK del schema).
         """
         if not isinstance(self.nombre, str):
             raise TypeError(f"nombre debe ser str, recibido {type(self.nombre).__name__}")
@@ -25,8 +25,8 @@ class Competencia:
             raise TypeError(f"tipo debe ser str o None, recibido {type(self.tipo).__name__}")
         if self.idCompetencia is not None and not isinstance(self.idCompetencia, int):
             raise TypeError(f"idCompetencia debe ser int o None, recibido {type(self.idCompetencia).__name__}")
-        if self.anio <= 2000:
-            raise ValueError(f"Año no puede ser menor que 2000")
+        if self.anio <= 1900:
+            raise ValueError(f"Año debe ser mayor que 1900 - Valor actual: {self.anio}")
 
 
 @dataclass
