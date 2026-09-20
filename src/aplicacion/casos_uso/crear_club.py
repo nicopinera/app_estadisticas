@@ -1,4 +1,5 @@
 from aplicacion.dtos.club_dto import ClubDTO, CrearClubDTO
+from aplicacion.utils import id_persistido
 from dominio.entidades.club import Club
 from dominio.repositorios.club_repositorio import ClubRepositorio
 
@@ -8,11 +9,11 @@ class CrearClubUseCase:
         """
         Funcion que permite inicializar el caso de uso de crear un club
         Args:
-            repo (ClubRepositorio): _description_
+            repo (ClubRepositorio): Repositorio de clubes
         """
         self.repo = repo
 
-    def ejecutar(self, dto: CrearClubDTO):
+    def ejecutar(self, dto: CrearClubDTO) -> ClubDTO | None:
         """
         Funcion que permite crear un club en la base de datos
 
@@ -20,11 +21,10 @@ class CrearClubUseCase:
             dto (CrearClubDTO): DTO que contiene la informacion del club a crear
 
         Returns:
-            ClubDTO: DTO que contiene la informacion del club creado
+            ClubDTO | None: DTO con el club creado, o None si no se pudo guardar
         """
         club = Club(nombre=dto.nombre)
         resultado = self.repo.guardar(club=club)
         if resultado is None:
             return None
-        else:
-            return ClubDTO(idClub=resultado.idClub, nombre=resultado.nombre)
+        return ClubDTO(idClub=id_persistido(resultado.idClub, "Club"), nombre=resultado.nombre)
