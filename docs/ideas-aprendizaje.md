@@ -273,7 +273,7 @@ tipado arriba) → 7.4/7.5 (seguridad, un paso cada uno) → el resto según les
 
 ### 8.1 Qué hace hoy el CI
 
-Se dispara al abrir/actualizar un Pull Request, con cada `push` a `main` o `develop`, y manualmente (botón _Run workflow_). Ver 8.5. Tiene 7 jobs; los marcados con "matriz" se repiten una vez por cada versión de Python (3.11, 3.12, 3.13 y 3.14), o sea que una corrida completa son **19 ejecuciones**:
+Se dispara al abrir/actualizar un Pull Request, con cada `push` a `main` o `develop`, y manualmente (botón _Run workflow_). Ver 8.5. Tiene 7 jobs; los marcados con "matriz" se repiten una vez por cada versión de Python (3.11, 3.12, 3.13 y 3.14); Windows corre solo con la 3.13. Una corrida completa son **16 ejecuciones**:
 
 | Job             | Corre en | Qué hace                                                                                                                      | Espera a |
 | --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -282,7 +282,7 @@ Se dispara al abrir/actualizar un Pull Request, con cada `push` a `main` o `deve
 | `lint`          | Linux    | `ruff check --select E --select I .` con la versión de ruff de `uv.lock`                                                      | —        |
 | `static`        | Linux    | `mypy src/ --strict` con la versión de mypy de `uv.lock`, chequeando contra cada versión de Python (matriz)                   | —        |
 | `tests-linux`   | Linux    | `pytest` con cobertura **mínima de 85 %**; guarda el reporte HTML como _artifact_ (matriz)                                    | `lint`   |
-| `tests-windows` | Windows  | `pytest` con cobertura (matriz)                                                                                               | `lint`   |
+| `tests-windows` | Windows  | `pytest` con cobertura, solo con Python 3.13 (sin matriz)                                                                     | `lint`   |
 | `tests-docker`  | Linux    | Construye la imagen de `Dockerfile.test` con esa versión de Python y corre los tests adentro (matriz)                         | `lint`   |
 
 **Qué de la sección 7 ya está resuelto:** el chequeo de tipos (7.3, job `static`), el escaneo de dependencias (7.4, `check_dep`), el build de Docker (7.8, `tests-docker`) y, desde el 2026-09-20,
@@ -292,7 +292,7 @@ la cobertura mínima que bloquea de verdad (7.1, 85 % en Linux), la detección d
 **Cambios hechos el 2026-09-20 (migración a uv):** se eliminó `requerimientos.txt` (todo está en `pyproject.toml` + `uv.lock`), por lo que se actualizaron los pasos de instalación de las actions de tests y del job `check_dep`
 (ahora usan `astral-sh/setup-uv` y `uv sync --locked`). Eso trajo de regalo **caché de dependencias** (`enable-cache: true`, ver 8.8) y dependencias **exactamente reproducibles** (ver 8.10).
 
-**Cambios hechos el 2026-09-20 (segunda tanda):** una sola versión de ruff y mypy en pre-commit y CI (8.4); la versión de Python como parámetro de las actions y matriz 3.11 a 3.14 (8.3); disparo también con `push` (8.5);
+**Cambios hechos el 2026-09-20 (segunda tanda):** una sola versión de ruff y mypy en pre-commit y CI (8.4); la versión de Python como parámetro de las actions y matriz 3.11 a 3.14 en Linux, mypy y Docker, con Windows solo en 3.13 (8.3); disparo también con `push` (8.5);
 `concurrency`, `permissions` y `timeout-minutes` (8.6); reporte de cobertura guardado y umbral de 85 % en Linux (8.7); Dependabot (8.11) y gitleaks (8.12).
 Al revisar el workflow se corrigieron además **tres referencias que no funcionaban** (se detallan en el informe de sesión, Bloque H):
 
@@ -357,7 +357,7 @@ runs:
         enable-cache: true
 ```
 
-1. En `MainAction.yml`, los jobs `static`, `tests-linux`, `tests-windows` y `tests-docker` se repiten con una **matriz** (3.11 a 3.14) y le pasan a la action la versión de cada vuelta:
+1. En `MainAction.yml`, los jobs `static`, `tests-linux` y `tests-docker` se repiten con una **matriz** (3.11 a 3.14) y le pasan a la action la versión de cada vuelta (`tests-windows` no usa matriz: le pasa fijo `python-version: "3.13"`):
 
 ```yaml
 tests-linux:
@@ -376,8 +376,9 @@ tests-linux:
    - **mypy:** además de instalar esa versión de Python, se le pasa `--python-version`, que pisa el `python_version = "3.11"` de `pyproject.toml`: los tipos se chequean contra la versión de cada vuelta.
    - **Docker:** `Dockerfile.test` tiene `ARG PYTHON_VERSION=3.11` y la action hace `docker build --build-arg PYTHON_VERSION=...`. A mano: `make docker_test PYTHON_VERSION=3.13`.
    - **ruff (`lint`):** no usa matriz, porque su resultado no depende de la versión de Python que lo ejecuta. Corre una sola vez.
+   - **Windows:** una sola versión (3.13), sin matriz. Sirve para detectar problemas propios del sistema operativo (rutas, saltos de línea, SQLite); lo que depende de la versión de Python ya se prueba en Linux. Además, en un repositorio privado los minutos de Windows cuestan el doble.
 
-**Para agregar una versión nueva** (por ejemplo 3.15): sumarla a la lista `python-version` de los **4 jobs** (la lista está repetida en cada uno).
+**Para agregar una versión nueva** (por ejemplo 3.15): sumarla a la lista `python-version` de los **3 jobs con matriz** (`static`, `tests-linux` y `tests-docker`; la lista está repetida en cada uno).
 
 **Cómo comprobar.** En la pestaña _Actions_ de un PR aparecen las ejecuciones `static (3.11)` … `tests-docker (3.14)`. Localmente: `make docker_test PYTHON_VERSION=3.14`.
 
@@ -560,7 +561,7 @@ para habilitar el botón _Merge_. Eso se llama _required status checks_ (dentro 
 
 **Por qué importa.** Sin esta regla, cualquiera puede mergear un PR con los tests rotos.
 
-**Por qué un job agregador.** La regla necesita los **nombres exactos** de cada job, y esos nombres cambian (y ya cambiaron: con la matriz de 8.3 los jobs se llaman `tests-linux (3.11)`, `tests-linux (3.12)`…; son 19 nombres distintos).
+**Por qué un job agregador.** La regla necesita los **nombres exactos** de cada job, y esos nombres cambian (y ya cambiaron: con la matriz de 8.3 los jobs se llaman `tests-linux (3.11)`, `tests-linux (3.12)`…; son 16 nombres distintos).
 Un job final que **espera a todos** y falla si alguno falló permite registrar **un solo nombre** en la regla, que no cambia nunca.
 
 **Qué hacer, paso a paso.**

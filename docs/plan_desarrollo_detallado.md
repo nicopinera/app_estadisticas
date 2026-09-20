@@ -947,7 +947,7 @@ test/
 
 ```text
 .github/workflows/MainAction.yml  ✅ existe (jobs: check_dep [pip-audit], gitleaks, lint [ruff], static [mypy],
-                                     tests-linux, tests-windows, tests-docker; matriz de Python 3.11–3.14;
+                                     tests-linux, tests-windows, tests-docker; matriz de Python 3.11–3.14 (Windows solo 3.13);
                                      se dispara en PR, push a main/develop y manual;
                                      con concurrency, permissions y timeout-minutes)
 .github/actions/style/{ruff,mypy}/action.yml                   ✅ existen (versión de ruff/mypy = la de pyproject.toml/uv.lock)
@@ -980,7 +980,7 @@ docs/info_modulo/11-flujo-de-trabajo-git.md  ❌ no existe
 
 > **Estado real y lo que falta:** ver `docs/ideas-aprendizaje.md` sección 8 (informe de CI). Ya
 > aplicado (2026-09-20): `mypy`, `pip-audit`, build de Docker, una sola versión de ruff/mypy
-> (`pyproject.toml`) en CI y pre-commit, matriz de Python 3.11–3.14, disparo en `push`,
+> (`pyproject.toml`) en CI y pre-commit, matriz de Python 3.11–3.14 (Windows solo 3.13), disparo en `push`,
 > `concurrency`/`permissions`/`timeout-minutes`, cobertura mínima de 85 % con reporte guardado
 > (Linux), Dependabot y `gitleaks`. Pendiente: job agregador + _required status checks_ (8.9),
 > `ruff format --check` (8.2), smoke test de la CLI (8.14) y fijar actions por hash (8.13).
@@ -1832,7 +1832,7 @@ Confirmado hoy, con lectura completa de cada archivo, no solo con `mypy`/`pytest
   repositorios.
 - **CI evolucionó bastante desde la última auditoría:** ahora corre `pip-audit`, `gitleaks`,
   `mypy --strict`, `ruff` (lint) y tests en Linux/Windows/Docker con una matriz de Python 3.11 a
-  3.14 (`Dockerfile.test` + `.dockerignore` ya armados y correctos), y Dependabot vigila las
+  3.14 (Windows solo con 3.13; `Dockerfile.test` + `.dockerignore` ya armados y correctos), y Dependabot vigila las
   dependencias. Ruff y mypy usan en todos lados (CI, pre-commit y local) la versión de
   `pyproject.toml`. Ver `docs/ideas-aprendizaje.md` sección 8 para el informe detallado de qué
   falta. Las dependencias ya están fijadas en `pyproject.toml` + `uv.lock` (se eliminó
@@ -1935,6 +1935,6 @@ agregó a cada US está en las propias US-202, US-203, US-301 y US-303 (Hito 2 y
   consistentemente.
 - ✅ `mypy --strict` en verde (0 errores) y suite completa en verde (53 tests).
 - ✅ Pipeline CI real: `pip-audit`, `gitleaks`, `ruff` (lint), `mypy --strict` y tests en
-  Linux/Windows/Docker con matriz de Python 3.11–3.14 (cobertura ≥ 85 % en Linux). Falta el job
+  Linux/Windows/Docker con matriz de Python 3.11–3.14 (Windows solo con 3.13; cobertura ≥ 85 % en Linux). Falta el job
   agregador con _required status checks_ (ver `docs/ideas-aprendizaje.md`, 8.9).
 - ✅ Suite de tests dividida por repositorio (`test_repositorios_*.py`), más fácil de mantener que el archivo único anterior — aunque dos de esos archivos todavía están vacíos (ver arriba).

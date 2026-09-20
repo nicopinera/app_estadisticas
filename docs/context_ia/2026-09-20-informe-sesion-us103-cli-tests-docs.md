@@ -43,7 +43,7 @@ una suite de tests ordenada y sin repetición, dependencias reproducibles con `u
 - **Dependencias fijadas** con `uv`: `pyproject.toml` + `uv.lock`, auditadas contra vulnerabilidades. Se eliminó `requerimientos.txt`.
 - **Tests:** de un puñado de tests de repositorios a una suite de casi **400 tests** (unitarios, de integración y de punta a punta), con cobertura ≈ 91 %.
 - **Documentación:** 7 guías movidas a `docs/info_modulo/` y completadas, PRD actualizado, `RUNBOOK.md` y `README.md` nuevos, informe de revisión del CI.
-- **CI/CD:** una sola versión de ruff y mypy (CI, pre-commit y local), tests y tipos en Python 3.11 a 3.14, cobertura mínima de 85 % con reporte descargable, `concurrency`/`permissions`/`timeout-minutes`, Dependabot y gitleaks; se corrigieron además 3 referencias del workflow que no existían ([Bloque H](#bloque-h--cicd-versiones-unificadas-matriz-de-python-y-seguridad)).
+- **CI/CD:** una sola versión de ruff y mypy (CI, pre-commit y local), tests (Linux y Docker) y tipos en Python 3.11 a 3.14 (Windows con 3.13), cobertura mínima de 85 % con reporte descargable, `concurrency`/`permissions`/`timeout-minutes`, Dependabot y gitleaks; se corrigieron además 3 referencias del workflow que no existían ([Bloque H](#bloque-h--cicd-versiones-unificadas-matriz-de-python-y-seguridad)).
 
 **Qué tenés que hacer vos al traer estos cambios (una sola vez):**
 
@@ -423,8 +423,8 @@ También se corrigieron los nombres de los pasos de la action de mypy ("Instalar
 ### H.2 La versión de Python como parámetro, y matriz 3.11 a 3.14
 
 - Las 5 actions propias (`style/ruff`, `style/mypy`, `coverage/linux`, `coverage/windows`, `coverage/docker`) tienen el parámetro `python-version` (por defecto `"3.11"`, la mínima que promete `requires-python`).
-- En `MainAction.yml`, los jobs `static` (mypy), `tests-linux`, `tests-windows` y `tests-docker` usan una **matriz** con `["3.11", "3.12", "3.13", "3.14"]` y `fail-fast: false` (si una versión falla, las demás igual terminan y se ven todos los resultados).
-  `lint` (ruff) no usa matriz: su resultado no depende de la versión de Python. Una corrida completa son **19 ejecuciones** (7 jobs; 4 de ellos × 4 versiones).
+- En `MainAction.yml`, los jobs `static` (mypy), `tests-linux` y `tests-docker` usan una **matriz** con `["3.11", "3.12", "3.13", "3.14"]` y `fail-fast: false` (si una versión falla, las demás igual terminan y se ven todos los resultados).
+  `lint` (ruff) no usa matriz: su resultado no depende de la versión de Python. `tests-windows` tampoco: corre **solo con Python 3.13** (alcanza para detectar problemas propios del sistema operativo —rutas, saltos de línea, SQLite—; las diferencias entre versiones de Python ya se cubren en Linux, y en un repositorio privado los minutos de Windows cuestan el doble). Una corrida completa son **16 ejecuciones** (7 jobs; 3 de ellos × 4 versiones).
 - **mypy:** se le pasa `--python-version`, que pisa el `python_version = "3.11"` de `pyproject.toml`, para chequear los tipos contra la versión de cada vuelta.
 - **Docker:** `Dockerfile.test` pasó de `FROM python:3.13-slim` a `ARG PYTHON_VERSION=3.11` + `FROM python:${PYTHON_VERSION}-slim`; la action hace `docker build --build-arg PYTHON_VERSION=...`.
   El `Makefile` tiene `PYTHON_VERSION ?= 3.11`, así que a mano se usa `make docker_test PYTHON_VERSION=3.13`.
@@ -473,21 +473,21 @@ Al verificar cada action contra GitHub (`git ls-remote`, `action.yml`) aparecier
 - **pre-commit:** `validate-config` correcto; sobre una copia, los hooks `ruff check` y `ruff format` pasan y ejecutan `ruff 0.16.8` (la de `pyproject.toml`).
 - **gitleaks** sobre todo el historial (Docker): 218 commits, sin filtraciones.
 
-**No se pudo verificar (hay que mirarlo en la primera corrida real):** la ejecución en los runners de GitHub (nada se subió), la matriz de **Windows**, el comportamiento de `gitleaks-action@v3` y de `gh-action-pip-audit@v1.1.0` (solo se comprobó que existen y sus parámetros),
+**No se pudo verificar (hay que mirarlo en la primera corrida real):** la ejecución en los runners de GitHub (nada se subió), el job de **Windows** (Python 3.13), el comportamiento de `gitleaks-action@v3` y de `gh-action-pip-audit@v1.1.0` (solo se comprobó que existen y sus parámetros),
 y que GitHub acepte el `dependabot.yml` (si tuviera un error, aparece en _Insights → Dependency graph → Dependabot_).
 
 ### Qué tenés que hacer al bajar estos cambios
 
 1. Tener **`uv`** instalado y, si querés los hooks, `uv tool install pre-commit` + `pre-commit install` (RUNBOOK, sección 7).
-2. Al abrir el primer PR, mirar que corran las **19 ejecuciones** y, si alguna falla, leer el log: es la primera vez que este workflow corre de verdad.
+2. Al abrir el primer PR, mirar que corran las **16 ejecuciones** y, si alguna falla, leer el log: es la primera vez que este workflow corre de verdad.
 3. En GitHub, activar **Dependabot alerts** y **security updates** (_Settings → Code security_): es un ajuste de la cuenta, no se puede hacer desde el repositorio.
 4. Cuando se decida, crear el **job agregador y las _required status checks_** (sección 8.9 del informe de CI): con la matriz, los nombres de los jobs cambiaron.
 
 ### Decisiones que conviene confirmar
 
-1. **Incluir Python 3.14** en la matriz (si no se quiere, se saca de la lista de los 4 jobs).
+1. **Incluir Python 3.14** en la matriz (si no se quiere, se saca de la lista de los 3 jobs con matriz).
 2. **El umbral de 85 %** (medido ≈ 91 %; el PRD pide 80 %).
-3. **Costo de minutos:** los tests de Windows y Docker también se repiten 4 veces. En un repositorio **público** es gratis; en uno privado los minutos de Windows cuentan doble.
+3. **Costo de minutos:** los tests de Linux y de Docker se repiten 4 veces; Windows corre una sola (3.13). En un repositorio **público** es gratis; en uno privado los minutos de Windows cuentan doble (por eso Windows va con una sola versión).
 4. **Dependabot sin `target-branch`:** los PR de actualización van a `main`. Si el flujo del equipo integra en `develop`, hay que agregarlo.
 5. **Reglas de ruff que no coinciden:** el CI y el `Makefile` corren `ruff check --select E --select I` (todas las reglas `E`), mientras que `pyproject.toml` selecciona solo `E501` e `I` y pre-commit usa esa configuración. El CI es un poco más estricto que pre-commit. No se tocó (fuera del pedido); conviene unificarlo.
 

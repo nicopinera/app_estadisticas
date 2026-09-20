@@ -128,14 +128,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+  # Windows corre con una sola version (3.13, sin matriz): alcanza para detectar problemas propios del
+  # sistema operativo (rutas, saltos de linea, SQLite). Las demas versiones de Python se prueban en Linux.
   tests-windows:
     runs-on: windows-latest
     needs: lint
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout repository
@@ -144,4 +142,4 @@ jobs:
       - name: Run tests and coverage on Windows
         uses: ./.github/actions/coverage/windows
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"

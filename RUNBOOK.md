@@ -505,7 +505,7 @@ uv run mypy src/ --strict --explicit-package-bases   # revisión de tipos       
 ```
 
 Estos mismos chequeos se ejecutan automáticamente en GitHub (`.github/workflows/MainAction.yml`) en cada Pull Request y en cada `push` a `main` o `develop`: lint, tipos, tests en Linux, Windows y Docker,
-auditoría de dependencias (`pip-audit`) y detección de secretos (`gitleaks`). Los tests, los tipos y Docker se repiten con **Python 3.11, 3.12, 3.13 y 3.14**.
+auditoría de dependencias (`pip-audit`) y detección de secretos (`gitleaks`). Los tests de Linux, los tipos (mypy) y Docker se repiten con **Python 3.11, 3.12, 3.13 y 3.14**; Windows corre solo con la 3.13.
 En Linux la cobertura mínima es **85 %** y el reporte HTML queda para descargar (pestaña _Actions_ → la corrida → sección _Artifacts_). Además, [Dependabot](.github/dependabot.yml) abre PR cuando hay versiones nuevas de las dependencias.
 
 ### Hooks de pre-commit (opcional)
