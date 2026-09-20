@@ -556,7 +556,7 @@ y se neutraliza `inicializar_db` para **no tocar nunca la base real**.
 
 ## 10. Cobertura (`coverage`)
 
-`make run_test` corre `pytest -v --cov=src --cov-report=html`, que genera un reporte HTML navegable en `reportes_cobertura/html/index.html`. El mínimo (`fail_under`) está en `.coveragerc`. Ideas para leerlo bien:
+`make run_test` corre `pytest -v --cov=src --cov-report=html`, que genera un reporte HTML navegable en `reportes_cobertura/html/index.html`. El piso mínimo (`fail_under = 60`) está en `.coveragerc`; el job de Linux del CI exige además **85 %** (parámetro `cobertura-minima` de `.github/actions/coverage/linux/action.yml`) y guarda el reporte HTML como _artifact_. Ideas para leerlo bien:
 
 - **El % global importa menos que las líneas rojas específicas**: un 85% con las ramas de error sin cubrir es peor que un 80% donde solo falta un `print` cosmético.
 - Prestar atención a que estén cubiertas **las dos ramas** de cada caso de uso: la del camino feliz y la del `raise` de la excepción de dominio.

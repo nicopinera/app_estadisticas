@@ -18,9 +18,12 @@ que tenga Docker instalado, sin importar qué versión de Python tenga esa máqu
 Define, paso a paso, cómo se construye la imagen. Cada instrucción crea una **capa** que Docker guarda en caché:
 
 ```dockerfile
-FROM python:3.13-slim
+ARG PYTHON_VERSION=3.11
+FROM python:${PYTHON_VERSION}-slim
 ```
 **Imagen base:** ya trae Python instalado, sin todo el peso de una distribución Linux completa (por eso `slim`).
+La versión de Python es un **argumento de construcción** (`ARG`): por defecto es la 3.11 (la mínima que soporta el proyecto) y se cambia al construir con `--build-arg PYTHON_VERSION=3.13`.
+Así el CI prueba **la misma imagen** con 3.11, 3.12, 3.13 y 3.14. (Un `ARG` declarado *antes* del `FROM` es la forma de parametrizar la imagen base.)
 
 ```dockerfile
 COPY --from=ghcr.io/astral-sh/uv:0.12.9 /uv /usr/local/bin/uv
@@ -64,7 +67,7 @@ docker build -f Dockerfile.test -t app-estadisticas-tests .
 docker run --rm app-estadisticas-tests
 ```
 
-(o `make docker_test`, que hace ambos). `docker build` lee el `Dockerfile.test` y arma la imagen (una vez, o cada vez que cambian las dependencias).
+(o `make docker_test`, que hace ambos; para otra versión de Python: `make docker_test PYTHON_VERSION=3.13`, que agrega `--build-arg PYTHON_VERSION=3.13` al `docker build`). `docker build` lee el `Dockerfile.test` y arma la imagen (una vez, o cada vez que cambian las dependencias).
 `docker run --rm` levanta un contenedor a partir de esa imagen, corre el comando por defecto (los tests) y `--rm` lo borra al terminar para no acumular contenedores muertos.
 
 Para correr **otro comando** dentro del contenedor (por ejemplo solo los unitarios), se agrega al final:

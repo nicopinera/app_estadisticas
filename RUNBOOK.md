@@ -504,7 +504,19 @@ uv run mypy src/ --strict --explicit-package-bases   # revisión de tipos       
 # Vulnerabilidades conocidas en las dependencias: ver el comando de la sección 9
 ```
 
-Estos mismos chequeos (lint, tipos, tests en Linux/Windows/Docker y auditoría de dependencias) se ejecutan automáticamente en cada Pull Request (`.github/workflows/MainAction.yml`).
+Estos mismos chequeos se ejecutan automáticamente en GitHub (`.github/workflows/MainAction.yml`) en cada Pull Request y en cada `push` a `main` o `develop`: lint, tipos, tests en Linux, Windows y Docker,
+auditoría de dependencias (`pip-audit`) y detección de secretos (`gitleaks`). Los tests, los tipos y Docker se repiten con **Python 3.11, 3.12, 3.13 y 3.14**.
+En Linux la cobertura mínima es **85 %** y el reporte HTML queda para descargar (pestaña _Actions_ → la corrida → sección _Artifacts_). Además, [Dependabot](.github/dependabot.yml) abre PR cuando hay versiones nuevas de las dependencias.
+
+### Hooks de pre-commit (opcional)
+
+Con [pre-commit](https://pre-commit.com/), ruff revisa y formatea los archivos **al hacer `git commit`**. Los hooks de ruff se ejecutan con `uv run`, o sea que usan la **misma versión que fija `pyproject.toml`** (y que usa el CI): hace falta tener `uv` instalado (sección 1).
+
+```bash
+uv tool install pre-commit     # una sola vez
+pre-commit install             # activa los hooks en este repositorio
+make pre_commit                # (opcional) corre los hooks sobre todo el proyecto: puede modificar archivos, revisá el git diff
+```
 
 ---
 
@@ -517,6 +529,14 @@ make docker_test
 # equivale a:
 docker build -f Dockerfile.test -t app-estadisticas-tests .
 docker run --rm app-estadisticas-tests
+```
+
+La imagen usa Python 3.11 por defecto. Para probar con otra versión (el CI prueba de la 3.11 a la 3.14):
+
+```bash
+make docker_test PYTHON_VERSION=3.13
+# equivale a:
+docker build -f Dockerfile.test --build-arg PYTHON_VERSION=3.13 -t app-estadisticas-tests .
 ```
 
 ---
@@ -549,6 +569,7 @@ El resultado esperado es `No known vulnerabilities found`. Después de agregar o
 | `uv: command not found` | uv no está instalado o la terminal no se reinició | Instalar uv (sección 1) y abrir una terminal nueva |
 | `ModuleNotFoundError: tabulate` (o `pandas`, `pytest`…) | Se está usando otro Python, no el entorno del proyecto | Ejecutar siempre con `uv run ...`, y `uv sync` si falta instalar |
 | `AttributeError: module 'config.rutas' has no attribute 'LOG_DIR'` | Hay un paquete `config` de terceros instalado en tu Python global que tapa al del proyecto | Usar `uv run ...` (el entorno del proyecto no lo tiene) |
+| `error: failed to remove file ... .venv\lib64` (o el entorno deja de andar al alternar entre Windows y WSL) | La carpeta del proyecto la usan Windows **y** WSL, y cada sistema necesita su **propio** entorno virtual: uno intenta recrear el `.venv` del otro y lo deja a medias | Que uno de los dos use un entorno fuera del proyecto: en WSL, `export UV_PROJECT_ENVIRONMENT=~/.venvs/app_estadisticas` (por ejemplo en `~/.bashrc`) y después `uv sync`. Para reparar un `.venv` roto, borrarlo **desde el mismo sistema que lo creó** y correr `uv sync` |
 | `Error: no se pudo guardar el club` | El nombre del club ya existe | Elegir otro nombre |
 | `Error: No existe una categoria con idCategoria=1` | La base no tiene categorías todavía | Crear una con `categoria add` (ver sección 4) o cargar el seed |
 | `Error: ... no tiene un vinculo vigente con el club de la inscripcion` | Al habilitar en la lista a un jugador que no juega en ese club | Vincularlo antes con `jugador link` (o revisar que sea el club correcto con `inscripcion list`) |

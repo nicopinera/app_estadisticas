@@ -946,10 +946,17 @@ test/
 - **Archivos a crear/existentes:**
 
 ```text
-.github/workflows/linter.yml    ✅ existe (ruff, reglas E + I)
-.github/workflows/test.yml      ✅ existe (pytest + cobertura, matriz Linux/Windows)
+.github/workflows/MainAction.yml  ✅ existe (jobs: check_dep [pip-audit], gitleaks, lint [ruff], static [mypy],
+                                     tests-linux, tests-windows, tests-docker; matriz de Python 3.11–3.14;
+                                     se dispara en PR, push a main/develop y manual;
+                                     con concurrency, permissions y timeout-minutes)
+.github/actions/style/{ruff,mypy}/action.yml                   ✅ existen (versión de ruff/mypy = la de pyproject.toml/uv.lock)
+.github/actions/coverage/{linux,windows,docker}/action.yml     ✅ existen (todas reciben `python-version`;
+                                     la de Linux exige cobertura ≥ 85 % y guarda el reporte HTML)
+.github/dependabot.yml          ✅ existe (uv, github-actions y docker; semanal)
 pytest.ini                      ✅ existe (pythonpath=src, testpaths=tests)
-.pre-commit-config.yaml         ✅ existe (check-yaml, end-of-file-fixer, trailing-whitespace, black)
+.pre-commit-config.yaml         ✅ existe (check-yaml, end-of-file-fixer, trailing-whitespace y ruff check/format
+                                     ejecutados con `uv run`: misma versión de ruff que el CI)
 pyproject.toml                  ✅ existe (dependencias con versión fija + config de ruff/mypy; uv.lock; sin requerimientos.txt)
 Makefile                        ✅ existe (instalar_dependencias [uv sync], run_test, run_linter_ruf, corregir_linter, pre_commit, docker_test, static_check)
 docs/catalogo-criticidad.md     ❌ no existe — ver sección 14
@@ -957,22 +964,26 @@ docs/info_modulo/11-flujo-de-trabajo-git.md  ❌ no existe
 ```
 
 - **Criterios de Aceptación:**
-  - **AC1.** `make test`/`run_test` ejecuta la suite completa y **debería** fallar si la
-    cobertura es < 80% en módulos no críticos — hoy no lo hace (ver sección 20).
+  - **AC1.** `make run_test` ejecuta la suite completa y falla si la cobertura baja del piso de
+    `.coveragerc` (`fail_under = 60`). El job de Linux del CI exige además **85 %** (parámetro
+    `cobertura-minima`; cumple el ≥ 80 % pedido) y guarda el reporte HTML como _artifact_.
   - **AC2.** `make lint`/`run_linter_ruf` falla ante cualquier infracción de estilo.
-  - **AC3.** El pipeline CI falla el PR ante test fallido, cobertura insuficiente o error de
-    linting.
-  - **AC4.** `pre-commit install` configura hooks locales en un único comando.
+  - **AC3.** El pipeline CI falla el PR ante test fallido, cobertura insuficiente (Linux), error
+    de linting o de tipos, dependencias con vulnerabilidades conocidas o secretos en el historial.
+  - **AC4.** `pre-commit install` configura hooks locales en un único comando (los hooks de ruff
+    se ejecutan con `uv run`: usan la versión fijada en `pyproject.toml`, la misma del CI).
   - **AC5.** `docs/catalogo-criticidad.md` inicializado con al menos los módulos de autenticación
     y persistencia.
 - **Testing Mínimo:** manual — push a rama feature dispara el workflow; error de lint
   intencional hace fallar CI; cobertura por debajo del umbral hace fallar CI con mensaje
   explicativo.
 
-> **Estado real y propuestas de ampliación:** ver `docs/ideas-aprendizaje.md` sección 7
-> ("Completar el pipeline de CI") para 8 mejoras concretas ya identificadas (cobertura que
-> bloquee de verdad, `mypy`, `ruff format --check`, `pip-audit`, `gitleaks`, Dependabot, build de
-> Docker en CI). No repetido acá para no duplicar contenido.
+> **Estado real y lo que falta:** ver `docs/ideas-aprendizaje.md` sección 8 (informe de CI). Ya
+> aplicado (2026-09-20): `mypy`, `pip-audit`, build de Docker, una sola versión de ruff/mypy
+> (`pyproject.toml`) en CI y pre-commit, matriz de Python 3.11–3.14, disparo en `push`,
+> `concurrency`/`permissions`/`timeout-minutes`, cobertura mínima de 85 % con reporte guardado
+> (Linux), Dependabot y `gitleaks`. Pendiente: job agregador + _required status checks_ (8.9),
+> `ruff format --check` (8.2), smoke test de la CLI (8.14) y fijar actions por hash (8.13).
 
 ---
 
@@ -1819,11 +1830,13 @@ Confirmado hoy, con lectura completa de cada archivo, no solo con `mypy`/`pytest
 - El typo `SquliteJugadorRepositorio` está corregido (`SqliteJugadorRepositorio`).
 - Cobertura de tests: ya no hay archivos de test vacíos — la suite completa (53 tests) cubre los 5
   repositorios.
-- **CI evolucionó bastante desde la última auditoría:** ahora corre `pip-audit`, `mypy --strict`,
-  `ruff` (lint + format), y tests en Linux/Windows/Docker (`Dockerfile.test` + `.dockerignore` ya
-  armados y correctos). Ver `docs/ideas-aprendizaje.md` sección 8 para el informe detallado de qué le falta
-  (`gitleaks`, Dependabot, etc.). Las dependencias ya están fijadas en `pyproject.toml` + `uv.lock`
-  (se eliminó `requerimientos.txt`) y auditadas con `pip-audit`.
+- **CI evolucionó bastante desde la última auditoría:** ahora corre `pip-audit`, `gitleaks`,
+  `mypy --strict`, `ruff` (lint) y tests en Linux/Windows/Docker con una matriz de Python 3.11 a
+  3.14 (`Dockerfile.test` + `.dockerignore` ya armados y correctos), y Dependabot vigila las
+  dependencias. Ruff y mypy usan en todos lados (CI, pre-commit y local) la versión de
+  `pyproject.toml`. Ver `docs/ideas-aprendizaje.md` sección 8 para el informe detallado de qué
+  falta. Las dependencias ya están fijadas en `pyproject.toml` + `uv.lock` (se eliminó
+  `requerimientos.txt`) y auditadas con `pip-audit`.
 
 ### Todavía vigente — vistas SQL
 
@@ -1921,6 +1934,7 @@ agregó a cada US está en las propias US-202, US-203, US-301 y US-303 (Hito 2 y
 - ✅ Los 5 repositorios SQLite funcionales y testeados, con manejo de errores logueado
   consistentemente.
 - ✅ `mypy --strict` en verde (0 errores) y suite completa en verde (53 tests).
-- ✅ Pipeline CI real y completo: `pip-audit`, `ruff` (lint + format), `mypy --strict`, tests en
-  Linux/Windows/Docker.
+- ✅ Pipeline CI real: `pip-audit`, `gitleaks`, `ruff` (lint), `mypy --strict` y tests en
+  Linux/Windows/Docker con matriz de Python 3.11–3.14 (cobertura ≥ 85 % en Linux). Falta el job
+  agregador con _required status checks_ (ver `docs/ideas-aprendizaje.md`, 8.9).
 - ✅ Suite de tests dividida por repositorio (`test_repositorios_*.py`), más fácil de mantener que el archivo único anterior — aunque dos de esos archivos todavía están vacíos (ver arriba).

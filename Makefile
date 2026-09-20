@@ -16,8 +16,11 @@ corregir_linter:
 pre_commit:
 	uvx pre-commit run --all-files
 
+# Version de Python de la imagen Docker. Uso: make docker_test PYTHON_VERSION=3.13
+PYTHON_VERSION ?= 3.11
+
 docker_test:
-	docker build -f Dockerfile.test -t app-estadisticas-tests .
+	docker build -f Dockerfile.test --build-arg PYTHON_VERSION=$(PYTHON_VERSION) -t app-estadisticas-tests .
 	docker run --rm app-estadisticas-tests
 
 static_check:

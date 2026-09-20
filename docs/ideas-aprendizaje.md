@@ -251,7 +251,7 @@ tipado arriba) → 7.4/7.5 (seguridad, un paso cada uno) → el resto según les
 
 > **Estado al 2026-09-20.** Esta sección reemplaza en la práctica a la 7, que se escribió cuando el CI tenía solo dos workflows sueltos (`linter.yml` y `test.yml`).
 > Hoy hay un único workflow, `MainAction.yml`, bastante más completo. Acá está descrito **qué hace hoy**, **qué le falta** y, para cada faltante, **qué es, por qué importa y cómo agregarlo paso a paso**,
-> pensado para alguien que nunca tocó un CI. Ninguna de estas mejoras está aplicada todavía: son recomendaciones (excepto lo indicado como _"ya hecho"_).
+> pensado para alguien que nunca tocó un CI. Las mejoras marcadas como _"ya hecho"_ ya están aplicadas (el 2026-09-20); el resto son recomendaciones.
 
 ### 8.0 Vocabulario básico (leer primero si es la primera vez)
 
@@ -273,23 +273,34 @@ tipado arriba) → 7.4/7.5 (seguridad, un paso cada uno) → el resto según les
 
 ### 8.1 Qué hace hoy el CI
 
-Se dispara **solo** al abrir/actualizar un Pull Request y manualmente (botón _Run workflow_). Tiene 6 jobs:
+Se dispara al abrir/actualizar un Pull Request, con cada `push` a `main` o `develop`, y manualmente (botón _Run workflow_). Ver 8.5. Tiene 7 jobs; los marcados con "matriz" se repiten una vez por cada versión de Python (3.11, 3.12, 3.13 y 3.14), o sea que una corrida completa son **19 ejecuciones**:
 
-| Job             | Corre en | Qué hace                                                                                                      | Espera a |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------- | -------- |
-| `check_dep`     | Linux    | Exporta las versiones fijadas de `uv.lock` y las revisa con **pip-audit** buscando vulnerabilidades conocidas | —        |
-| `lint`          | Linux    | `ruff check --select E --select I .` (estilo de código e imports ordenados)                                   | —        |
-| `static`        | Linux    | `mypy src/ --strict` (revisión estática de tipos)                                                             | —        |
-| `tests-linux`   | Linux    | `pytest` con cobertura, Python 3.11                                                                           | `lint`   |
-| `tests-windows` | Windows  | Lo mismo en Windows                                                                                           | `lint`   |
-| `tests-docker`  | Linux    | Construye la imagen de `Dockerfile.test` y corre los tests adentro                                            | `lint`   |
+| Job             | Corre en | Qué hace                                                                                                                      | Espera a |
+| --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `check_dep`     | Linux    | Exporta las versiones fijadas de `uv.lock` y las revisa con **pip-audit** buscando vulnerabilidades conocidas                 | —        |
+| `gitleaks`      | Linux    | Escanea **todo el historial** de git buscando secretos (contraseñas, tokens). Ver 8.12                                        | —        |
+| `lint`          | Linux    | `ruff check --select E --select I .` con la versión de ruff de `uv.lock`                                                      | —        |
+| `static`        | Linux    | `mypy src/ --strict` con la versión de mypy de `uv.lock`, chequeando contra cada versión de Python (matriz)                   | —        |
+| `tests-linux`   | Linux    | `pytest` con cobertura **mínima de 85 %**; guarda el reporte HTML como _artifact_ (matriz)                                    | `lint`   |
+| `tests-windows` | Windows  | `pytest` con cobertura (matriz)                                                                                               | `lint`   |
+| `tests-docker`  | Linux    | Construye la imagen de `Dockerfile.test` con esa versión de Python y corre los tests adentro (matriz)                         | `lint`   |
 
-**Qué de la sección 7 ya está resuelto:** el chequeo de tipos (7.3, job `static`), el escaneo de dependencias (7.4, `check_dep`) y el build de Docker (7.8, `tests-docker`).
-La cobertura mínima (7.1) también bloquea: `.coveragerc` define `fail_under = 60` y `pytest-cov` lo respeta, así que si la cobertura baja de 60 % el job de tests falla
-(hoy está en ~89 %; el PRD, US-108, pide 80 %, ver 8.7). **Siguen pendientes:** el chequeo de formato (7.2), la detección de secretos (7.5) y la actualización automática de dependencias (7.7).
+**Qué de la sección 7 ya está resuelto:** el chequeo de tipos (7.3, job `static`), el escaneo de dependencias (7.4, `check_dep`), el build de Docker (7.8, `tests-docker`) y, desde el 2026-09-20,
+la cobertura mínima que bloquea de verdad (7.1, 85 % en Linux), la detección de secretos (7.5, `gitleaks`) y la actualización automática de dependencias (7.7, Dependabot).
+**Sigue pendiente:** el chequeo de formato (7.2), ver 8.2.
 
 **Cambios hechos el 2026-09-20 (migración a uv):** se eliminó `requerimientos.txt` (todo está en `pyproject.toml` + `uv.lock`), por lo que se actualizaron los pasos de instalación de las actions de tests y del job `check_dep`
 (ahora usan `astral-sh/setup-uv` y `uv sync --locked`). Eso trajo de regalo **caché de dependencias** (`enable-cache: true`, ver 8.8) y dependencias **exactamente reproducibles** (ver 8.10).
+
+**Cambios hechos el 2026-09-20 (segunda tanda):** una sola versión de ruff y mypy en pre-commit y CI (8.4); la versión de Python como parámetro de las actions y matriz 3.11 a 3.14 (8.3); disparo también con `push` (8.5);
+`concurrency`, `permissions` y `timeout-minutes` (8.6); reporte de cobertura guardado y umbral de 85 % en Linux (8.7); Dependabot (8.11) y gitleaks (8.12).
+Al revisar el workflow se corrigieron además **tres referencias que no funcionaban** (se detallan en el informe de sesión, Bloque H):
+
+- `astral-sh/setup-uv@v10` **no existe**: esa action ya no publica etiquetas móviles de versión mayor, hay que indicar la versión exacta (`@v10.1.0`).
+- `pypa/pip-audit-action@v1.6.0` **no existe**: la action real se llama `pypa/gh-action-pip-audit` (`@v1.1.0`).
+- `actions/checkout@v4` corre sobre Node 20, que GitHub retiró de sus máquinas el 2026-09-16: se pasó a `@v7` (Node 24).
+
+**Ojo:** todo esto se probó **en la máquina local** (ver el informe), no en GitHub: la primera corrida real es la prueba definitiva.
 
 ---
 
@@ -300,7 +311,7 @@ para que todo el equipo escriba "igual" y los cambios del PR muestren solo difer
 
 **Por qué importa.** Sin este chequeo, cada persona formatea distinto y los PR se llenan de cambios de espacios que tapan lo importante.
 
-**Qué hay hoy.** El archivo `.pre-commit-config.yaml` corre el formateador de ruff **en la máquina de cada persona, al hacer commit** (si instaló _pre-commit_), pero el CI no lo verifica: si alguien commitea sin pre-commit, nadie se entera.
+**Qué hay hoy.** El archivo `.pre-commit-config.yaml` corre el formateador de ruff **en la máquina de cada persona, al hacer commit** (si instaló _pre-commit_), pero el CI no lo verifica: si alguien commitea sin pre-commit, nadie se entera. (Desde el 2026-09-20 esos hooks usan la misma versión de ruff que el CI: ver 8.4.)
 Hoy hay archivos sin formatear en el repo (por ejemplo `src/infraestructura/repositorios/sqlite_club_repositorio.py`, por espacios sobrantes al final de líneas de docstring).
 
 **Qué hacer, paso a paso.**
@@ -311,140 +322,120 @@ Hoy hay archivos sin formatear en el repo (por ejemplo `src/infraestructura/repo
 ```yaml
 - name: Verificar formato
   shell: bash
-  run: ruff format --check .
+  run: uv run --no-sync ruff format --check .
 ```
 
-1. **Unificar versiones de ruff** (importante): `pyproject.toml` fija `ruff==0.16.8`, pero `.pre-commit-config.yaml` usa `rev: v0.6.9` y el CI instala la última. Tres versiones distintas pueden formatear **distinto** y pelearse entre sí.
-   Ver 8.4 para dejar una sola fuente de versión.
+1. **Unificar versiones de ruff:** _ya hecho_ (ver 8.4). Pre-commit, el CI y tu máquina usan la versión de `pyproject.toml`/`uv.lock`, así que ya no pueden formatear distinto.
 
 **Cómo comprobar que funcionó.** Deformá a propósito un archivo (agregá espacios de más), hacé un PR de prueba y confirmá que el job `lint` falla con "would reformat".
 
 ---
 
-### 8.3 Versiones de Python: probar con más de una
+### 8.3 Versiones de Python: probar con más de una (_ya hecho_)
 
 **Qué es.** Un programa puede funcionar en Python 3.13 y romperse en 3.11 (o al revés), porque el lenguaje cambia entre versiones. Una **matriz** (_matrix strategy_) hace que GitHub repita el mismo job con distintos valores.
 
-**Por qué importa.** `pyproject.toml` promete `requires-python = ">=3.11"`: es decir, que anda en 3.11, 3.12, 3.13… pero solo se prueba en **algunas** versiones.
+**Por qué importa.** `pyproject.toml` promete `requires-python = ">=3.11"`: es decir, que anda en 3.11, 3.12, 3.13… pero antes solo se probaba en **algunas** versiones (tests en 3.11; lint, mypy y Docker en 3.13; `mypy` configurado para 3.11).
 
-**Qué hay hoy (inconsistente).**
+**Qué se hizo.**
 
-| Dónde                                         | Versión de Python |
-| --------------------------------------------- | ----------------- |
-| Tests en Linux y Windows                      | 3.11              |
-| Lint (ruff) y mypy                            | 3.13              |
-| Imagen Docker de tests                        | 3.13              |
-| `mypy` en `pyproject.toml` (`python_version`) | 3.11              |
-
-**Qué hacer, paso a paso.**
-
-1. Hacer que la action de tests reciba la versión como parámetro (`.github/actions/coverage/linux/action.yml`):
+1. Todas las actions (`style/ruff`, `style/mypy`, `coverage/linux`, `coverage/windows` y `coverage/docker`) reciben la versión como **parámetro** `python-version`. Si no se les pasa nada, usan `"3.11"` (la mínima que promete el proyecto):
 
 ```yaml
 inputs:
   python-version:
-    description: "Versión de Python a usar"
-    required: true
+    description: "Versión de Python con la que se corren los tests (ej. 3.12)"
+    required: false
+    default: "3.11"
 
 runs:
   using: "composite"
   steps:
-    - uses: astral-sh/setup-uv@v10
+    - uses: astral-sh/setup-uv@v10.1.0
       with:
         python-version: ${{ inputs.python-version }}
         enable-cache: true
-    # ... resto igual
 ```
 
-1. En el workflow, repetir el job con una matriz:
+1. En `MainAction.yml`, los jobs `static`, `tests-linux`, `tests-windows` y `tests-docker` se repiten con una **matriz** (3.11 a 3.14) y le pasan a la action la versión de cada vuelta:
 
 ```yaml
 tests-linux:
-  runs-on: ubuntu-latest
-  needs: lint
   strategy:
-    fail-fast: false # si falla la 3.11, igual sigue probando la 3.13 (así ves todo junto)
+    fail-fast: false # si falla la 3.11, igual sigue probando las demás (así ves todo junto)
     matrix:
-      python-version: ["3.11", "3.13"]
+      python-version: ["3.11", "3.12", "3.13", "3.14"]
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - uses: ./.github/actions/coverage/linux
       with:
         python-version: ${{ matrix.python-version }}
 ```
 
-**Cómo comprobar.** En la pestaña _Actions_ del PR van a aparecer dos ejecuciones: `tests-linux (3.11)` y `tests-linux (3.13)`.
+1. Detalles por herramienta:
+   - **mypy:** además de instalar esa versión de Python, se le pasa `--python-version`, que pisa el `python_version = "3.11"` de `pyproject.toml`: los tipos se chequean contra la versión de cada vuelta.
+   - **Docker:** `Dockerfile.test` tiene `ARG PYTHON_VERSION=3.11` y la action hace `docker build --build-arg PYTHON_VERSION=...`. A mano: `make docker_test PYTHON_VERSION=3.13`.
+   - **ruff (`lint`):** no usa matriz, porque su resultado no depende de la versión de Python que lo ejecuta. Corre una sola vez.
+
+**Para agregar una versión nueva** (por ejemplo 3.15): sumarla a la lista `python-version` de los **4 jobs** (la lista está repetida en cada uno).
+
+**Cómo comprobar.** En la pestaña _Actions_ de un PR aparecen las ejecuciones `static (3.11)` … `tests-docker (3.14)`. Localmente: `make docker_test PYTHON_VERSION=3.14`.
 
 > **Ojo:** al usar una matriz, los nombres de los jobs cambian (llevan la versión entre paréntesis). Por eso conviene el job agregador de 8.9, para no tener que registrar cada nombre en las reglas de GitHub.
 
 ---
 
-### 8.4 Herramientas de calidad sin versión fija (y `mypy` sin las dependencias)
+### 8.4 Una sola versión de ruff y mypy (_ya hecho_; queda un detalle)
 
-**Qué es.** Las actions de `ruff` y `mypy` hacen `pip install ruff` y `pip install mypy` **sin indicar versión**: instalan **la última que exista ese día**.
+**Qué es.** Antes había **tres** versiones de ruff en juego: la de `pyproject.toml` (`0.16.8`), la de `.pre-commit-config.yaml` (`v0.6.9`) y la del CI, que hacía `pip install ruff` **sin versión** (la última que existiera ese día). Con mypy pasaba lo mismo entre `pyproject.toml` y el CI.
 
 **Por qué importa.** Un día publican una versión nueva de ruff con reglas o formato distintos y el CI empieza a fallar **sin que nadie haya cambiado el código** (o peor: pasa en el CI y falla en tu máquina, que tiene otra versión).
-Además, el job de `mypy` instala solo mypy, no las librerías del proyecto: hoy funciona porque el código no importa `pandas` todavía, pero **va a fallar** cuando entre la importación de Excel (US-201).
+Además, el job de `mypy` instalaba solo mypy, no las librerías del proyecto: funcionaba porque el código no importa `pandas` todavía, pero **iba a fallar** cuando entre la importación de Excel (US-201).
 
-**Qué hay hoy.** `pyproject.toml` fija `ruff==0.16.8` y `mypy==2.3.1`, pero el CI ignora esas versiones. Además:
+**Qué se hizo.** La **única fuente de verdad** es `pyproject.toml` (que `uv.lock` traduce a versiones exactas), y todos la leen:
 
-- Los pasos de la action de mypy se llaman "Instalar Ruff" y "Ejecutar Ruff" (copiados de la de ruff): confunde al leer los logs.
-- Los jobs `check_dep`, `lint` y `static` hacen `checkout` con `submodules: recursive`, o sea que **clonan el repositorio de documentación** (el submódulo) en cada corrida sin necesitarlo.
+| Quién                      | Cómo obtiene la versión                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Tu máquina                 | `uv sync` (instala lo del lockfile) y `uv run ruff ...` / `uv run mypy ...`                               |
+| CI: action de ruff         | `uv sync --locked --only-group dev` (solo las herramientas de desarrollo) y `uv run --no-sync ruff ...`   |
+| CI: action de mypy         | `uv sync --locked` (todo el proyecto, mypy necesita las librerías) y `uv run --no-sync mypy ...`          |
+| pre-commit                 | Hooks **locales** que ejecutan `uv run --locked ruff check --fix` y `uv run --locked ruff format`         |
 
-**Qué hacer, paso a paso.** Que el CI use **exactamente lo que dice `uv.lock`**, la misma fuente que usa tu máquina:
-
-```yaml
-# .github/actions/style/ruff/action.yml
-runs:
-  using: "composite"
-  steps:
-    - uses: astral-sh/setup-uv@v10
-      with:
-        enable-cache: true
-    - name: Instalar dependencias (versiones exactas de uv.lock)
-      shell: bash
-      run: uv sync --locked
-    - name: Ruff (estilo e imports)
-      shell: bash
-      run: uv run ruff check --select E --select I .
-    - name: Ruff (formato)
-      shell: bash
-      run: uv run ruff format --check .
-```
+Los hooks de pre-commit dejaron de usar el repositorio `ruff-pre-commit` (que pide un `rev:` escrito a mano y hay que acordarse de subir): ahora son `repo: local` con `language: system`, es decir, ejecutan **el ruff de tu entorno de uv**.
 
 ```yaml
-# .github/actions/style/mypy/action.yml (mismo esquema)
-- name: Mypy
-  shell: bash
-  run: uv run mypy src/ --strict --explicit-package-bases
+- repo: local
+  hooks:
+    - id: ruff-check
+      name: ruff check
+      entry: uv run --locked ruff check --fix
+      language: system
+      types_or: [python, pyi]
+      require_serial: true
 ```
 
-Y en `MainAction.yml`, sacar `submodules: recursive` de los jobs `check_dep`, `lint` y `static` (no lo necesitan).
-Para `.pre-commit-config.yaml`, actualizar `rev:` de `ruff-pre-commit` a `v0.16.8` (o desinstalar pre-commit y confiar en el CI).
+**Consecuencia práctica:** para subir la versión de ruff o mypy se cambia **un solo lugar** (`pyproject.toml`), se corre `uv lock` y se commitean `pyproject.toml` y `uv.lock`. CI, pre-commit y tu máquina se actualizan juntos
+(y Dependabot, ver 8.11, propone ese cambio solo). **Costo:** para usar pre-commit hace falta tener `uv` instalado (el RUNBOOK explica cómo).
 
-**Cómo comprobar.** En los logs de cada job, buscar la línea que dice qué versión de ruff/mypy corrió: tiene que coincidir con `pyproject.toml`.
+También se corrigieron los pasos de la action de mypy, que se llamaban "Instalar Ruff" y "Ejecutar Ruff" (copiados de la de ruff).
+
+**Qué queda pendiente.** Los jobs `check_dep`, `lint` y `static` siguen haciendo `checkout` con `submodules: recursive`, o sea que **clonan el repositorio de documentación** (el submódulo) en cada corrida sin necesitarlo.
+Se puede sacar esa línea de cada uno (es un cambio de 2 líneas por job; no se hizo porque no fue parte del pedido).
+
+**Cómo comprobar.** En el log del paso de instalación de cada job aparecen las líneas `+ ruff==0.16.8` y `+ mypy==2.3.1`, que tienen que coincidir con `pyproject.toml`. En tu máquina: `uv run ruff --version`.
 
 ---
 
-### 8.5 Cuándo se dispara el CI (`on:`)
+### 8.5 Cuándo se dispara el CI (`on:`) (_ya hecho_)
 
 **Qué es.** La clave `on:` del workflow define **qué eventos lo disparan**. Los dos más comunes:
 
 - `pull_request`: cuando se abre, se actualiza o se reabre un PR. Prueba el cambio **propuesto**, antes de aprobarlo.
 - `push`: cuando se sube código a una rama. Con `branches: [main]`, prueba lo que **ya quedó** en esa rama.
 
-**Por qué importa.** Hoy solo corre en `pull_request` y a mano. Si alguien sube directo a `main`/`develop` (o si el merge combina dos PR que por separado estaban bien pero juntos se rompen), **nadie corre el CI**.
+**Por qué importa.** Antes solo corría en `pull_request` y a mano. Si alguien sube directo a `main`/`develop` (o si el merge combina dos PR que por separado estaban bien pero juntos se rompen), **nadie corría el CI**.
 
-**Qué hay hoy.**
-
-```yaml
-on:
-  workflow_dispatch:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-```
-
-**Qué hacer.** Agregar `push` a las ramas importantes:
+**Qué se hizo.**
 
 ```yaml
 on:
@@ -455,11 +446,13 @@ on:
     branches: [main, develop]
 ```
 
+No hay corridas duplicadas: un push a una rama con PR abierto dispara `pull_request`, y el `push` solo se dispara para `main` y `develop` (por ejemplo, al mergear un PR).
+
 **Cómo comprobar.** Hacer un merge a `develop` y ver que aparece una ejecución nueva con el evento `push`.
 
 ---
 
-### 8.6 `concurrency`, `permissions` y `timeout-minutes`
+### 8.6 `concurrency`, `permissions` y `timeout-minutes` (_ya hecho_)
 
 Tres líneas de configuración que **no cambian qué se prueba** pero hacen al CI más barato, más seguro y menos frágil.
 
@@ -470,9 +463,11 @@ Tres líneas de configuración que **no cambian qué se prueba** pero hacen al C
 
 ```yaml
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 ```
+
+El grupo es "este workflow + este PR" (o, si no es un PR, la rama). Se cancela **solo en Pull Requests**: en `main` y `develop` se deja terminar cada corrida, para tener el resultado de cada commit mergeado.
 
 **b) `permissions` — mínimo privilegio.**
 
@@ -484,48 +479,66 @@ permissions:
   contents: read
 ```
 
+Está al nivel del workflow, así que aplica a todos los jobs. El job `gitleaks` declara además el suyo (`contents: read` + `pull-requests: read`), porque necesita leer el PR para saber qué commits escanear; lo que un job declara **reemplaza** al general.
+
 **c) `timeout-minutes` — que un job colgado no se quede para siempre.**
 
 - **Qué es:** el tiempo máximo que puede correr un job antes de que GitHub lo mate.
 - **Por qué importa:** por defecto es **6 horas**. Un test que se cuelga (una espera infinita) consumiría los minutos del mes.
 
-```yaml
-jobs:
-  tests-linux:
-    timeout-minutes: 15
-```
+| Job                                    | `timeout-minutes` |
+| -------------------------------------- | ----------------- |
+| `check_dep`, `gitleaks`, `lint`, `static` | 10             |
+| `tests-linux`                          | 15                |
+| `tests-windows`, `tests-docker`        | 20                |
 
-**Dónde va todo:** `concurrency` y `permissions` al nivel del workflow (junto a `on:`); `timeout-minutes` en cada job.
+Los tests tardan segundos; los topes son holgados a propósito (Windows y Docker tardan más en arrancar).
+
 **Cómo comprobar:** hacer dos `push` seguidos a un PR y ver que la primera ejecución aparece como "Cancelled".
 
 ---
 
-### 8.7 Guardar el reporte de cobertura y subir el umbral
+### 8.7 Guardar el reporte de cobertura y subir el umbral (_ya hecho_, solo en Linux)
 
 **Qué es.** La _cobertura_ mide qué porcentaje de las líneas del código ejecutaron los tests. `pytest --cov-report=html` genera un sitio web con el detalle (qué líneas quedaron sin probar).
 
-**Por qué importa (dos problemas).**
+**Por qué importaba (dos problemas).**
 
-1. **El reporte se genera y se tira.** Cada job crea el HTML en la máquina del CI y, al terminar el job, la máquina se destruye: nadie puede verlo. Un _artifact_ lo guarda para descargarlo.
-2. **El umbral.** `.coveragerc` exige `fail_under = 60`, pero el PRD (US-108) pide **80 %** y hoy la cobertura real ronda el **89 %**: el piso está muy por debajo de lo que ya se logra, así que
-   la cobertura podría caer 25 puntos sin que el CI proteste.
+1. **El reporte se generaba y se tiraba.** Cada job crea el HTML en la máquina del CI y, al terminar el job, la máquina se destruye: nadie podía verlo. Un _artifact_ lo guarda para descargarlo.
+2. **El umbral era muy bajo.** `.coveragerc` exige `fail_under = 60`, pero el PRD (US-108) pide **80 %** y la cobertura real ronda el **91 %**: la cobertura podía caer 30 puntos sin que el CI protestara.
 
-**Qué hacer, paso a paso.**
+**Qué se hizo** (en `.github/actions/coverage/linux/action.yml`; **Windows y Docker quedan como estaban**):
 
-1. Subir el umbral en `.coveragerc`: `fail_under = 80` (o 85, para dejar margen).
-2. Agregar el guardado del reporte al final de la action de tests (`.github/actions/coverage/linux/action.yml`):
+1. **Umbral de 85 %**, exigido con `--cov-fail-under` (el flag pisa el `fail_under = 60` de `.coveragerc`, que queda como piso base para tu máquina, Windows y Docker). El valor es un parámetro de la action (`cobertura-minima`, por defecto `85`):
 
 ```yaml
-- name: Guardar reporte de cobertura
-  if: always() # también si los tests fallaron
+inputs:
+  cobertura-minima:
+    description: "Porcentaje minimo de cobertura: si baja de este valor el job falla"
+    default: "85"
+# ...
+run: uv run --locked pytest -v --cov=src --cov-report=term --cov-report=html --cov-fail-under="$COBERTURA_MINIMA"
+```
+
+1. **Guardar el reporte HTML** como _artifact_, incluso si un test o la cobertura fallaron (que es cuando más sirve verlo):
+
+```yaml
+- name: Guardar reporte de cobertura (HTML)
+  if: ${{ !cancelled() }}
   uses: actions/upload-artifact@v7
   with:
-    name: cobertura-linux
+    name: reporte-cobertura-linux-py${{ inputs.python-version }}
     path: reportes_cobertura/html/ # la ruta que define .coveragerc
+    if-no-files-found: error
     retention-days: 14
 ```
 
-**Cómo comprobar.** En la página de la ejecución (pestaña _Actions_ → la corrida → sección _Artifacts_ al final) aparece `cobertura-linux` para descargar; se abre `index.html`.
+Como `tests-linux` corre con 4 versiones de Python, se guardan **4 reportes** (`reporte-cobertura-linux-py3.11` … `py3.14`); el nombre incluye la versión porque dos artifacts no pueden llamarse igual dentro de una misma corrida.
+También se agregó `--cov-report=term` para que el porcentaje aparezca en el log del job.
+
+**Por qué 85 y no 80 o 90.** Medido localmente: 91,2 % (Windows, Python 3.13) y 90,8 % (Linux, Python 3.14). El PRD pide 80 %; 85 % deja ~6 puntos de margen para que una diferencia entre versiones de Python no rompa el CI sin motivo.
+
+**Cómo comprobar.** En la página de la ejecución (pestaña _Actions_ → la corrida → sección _Artifacts_ al final) aparecen los reportes para descargar; se abre `index.html`. Para probar el umbral, subir `cobertura-minima` a `99` en un PR de prueba: el job tiene que fallar con "Required test coverage of 99% not reached".
 
 ---
 
@@ -536,7 +549,7 @@ jobs:
 **Qué hay hoy.** Las actions de tests ya usan `astral-sh/setup-uv` con `enable-cache: true`: uv guarda su caché de paquetes y la reutiliza mientras no cambie `uv.lock`. **No hay nada que hacer**: se agregó al migrar de `pip` a `uv`.
 Antes, las actions usaban `cache: "pip"`, que por defecto busca archivos con nombres estándar como `requirements.txt`; el del proyecto se llamaba `requerimientos.txt`, o sea que el caché no estaba atado al archivo correcto.
 
-Falta replicarlo en las actions de `lint` y `static` cuando se migren a uv (8.4).
+Desde la segunda tanda (8.4) también lo usan las actions de `lint` y `static`.
 
 ---
 
@@ -547,7 +560,7 @@ para habilitar el botón _Merge_. Eso se llama _required status checks_ (dentro 
 
 **Por qué importa.** Sin esta regla, cualquiera puede mergear un PR con los tests rotos.
 
-**Por qué un job agregador.** La regla necesita los **nombres exactos** de cada job, y esos nombres cambian (por ejemplo, con la matriz de 8.3 pasan a ser `tests-linux (3.11)`, `tests-linux (3.13)`…).
+**Por qué un job agregador.** La regla necesita los **nombres exactos** de cada job, y esos nombres cambian (y ya cambiaron: con la matriz de 8.3 los jobs se llaman `tests-linux (3.11)`, `tests-linux (3.12)`…; son 19 nombres distintos).
 Un job final que **espera a todos** y falla si alguno falló permite registrar **un solo nombre** en la regla, que no cambia nunca.
 
 **Qué hacer, paso a paso.**
@@ -558,7 +571,7 @@ Un job final que **espera a todos** y falla si alguno falló permite registrar *
 ci-ok:
   name: CI OK
   if: always() # corre siempre, aunque otro job haya fallado
-  needs: [check_dep, lint, static, tests-linux, tests-windows, tests-docker]
+  needs: [check_dep, gitleaks, lint, static, tests-linux, tests-windows, tests-docker]
   runs-on: ubuntu-latest
   steps:
     - name: Fallar si algún job falló o se canceló
@@ -601,58 +614,70 @@ uvx pip-audit -r requirements-audit.txt --no-deps --disable-pip
 
 ---
 
-### 8.11 Actualización automática de dependencias: Dependabot
+### 8.11 Actualización automática de dependencias: Dependabot (_ya hecho_)
 
 **Qué es.** Con versiones fijas las librerías **no se actualizan solas**, lo cual es bueno para la estabilidad pero significa que uno se olvida y queda con versiones viejas (y con vulnerabilidades nuevas sin parchear).
 **Dependabot** es un robot de GitHub que revisa periódicamente y **abre un PR** por cada actualización disponible. El CI corre sobre ese PR y, si todo pasa, alcanza con aprobarlo.
 
-**Qué hacer, paso a paso.** Crear el archivo `.github/dependabot.yml` (no es un workflow: es configuración que GitHub lee directamente):
+**Qué se hizo.** Se creó `.github/dependabot.yml` (no es un workflow: es configuración que GitHub lee directamente). Vigila **tres** cosas, una vez por semana (los lunes):
 
-```yaml
-version: 2
-updates:
-  - package-ecosystem: "uv" # las dependencias de pyproject.toml / uv.lock
-    directory: "/"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "github-actions" # las versiones de las actions usadas en los workflows
-    directory: "/"
-    schedule:
-      interval: "weekly"
-```
+| Ecosistema       | Qué vigila                                                                               | Cómo agrupa los PR                                              |
+| ---------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `uv`             | Las dependencias de `pyproject.toml` y `uv.lock`                                         | `pytest`, `pytest-cov`, `ruff` y `mypy` juntos en un solo PR    |
+| `github-actions` | Las actions de los workflows y de las actions propias (`/.github/actions/*/*`)           | Todas juntas en un solo PR                                      |
+| `docker`         | La imagen base y la versión de `uv` de `Dockerfile.test`                                 | Un PR por cada una                                              |
 
-Después, en GitHub: **Settings → Code security → Dependabot** y activar _Dependabot alerts_ y _security updates_.
+Todos los PR llevan un prefijo en el título (`chore(deps)`, `chore(ci)`, `chore(docker)`) y hay un máximo de 5 PR abiertos por ecosistema.
 
-**Cómo comprobar.** En la pestaña _Insights → Dependency graph → Dependabot_ aparece el estado; en unos días llegan los primeros PR con título "Bump ...".
+**Por qué esto cierra el círculo con 8.4:** como `pyproject.toml` fija versiones exactas, un PR de Dependabot cambia esa versión y regenera `uv.lock`. Al mergearlo, **ruff y mypy suben a la vez** en el CI, en pre-commit y en tu máquina.
+
+**Qué falta hacer a mano** (son ajustes de la cuenta, no se pueden hacer desde el repositorio): en GitHub, **Settings → Code security** y activar _Dependabot alerts_ y _Dependabot security updates_.
+
+**Limitaciones.** El `rev: v4.6.0` de `pre-commit-hooks` en `.pre-commit-config.yaml` no está vigilado (hay que subirlo a mano de vez en cuando). Los PR van a la rama principal del repositorio (`main`); si el equipo prefiere que vayan a `develop`, se agrega `target-branch: "develop"` a cada bloque.
+
+**Cómo comprobar.** En la pestaña _Insights → Dependency graph → Dependabot_ aparece el estado de cada ecosistema (si el archivo tuviera un error, se muestra ahí); en unos días llegan los primeros PR con título "chore(deps): Bump ...".
 
 ---
 
-### 8.12 Detección de secretos: gitleaks
+### 8.12 Detección de secretos: gitleaks (_ya hecho_)
 
 **Qué es.** Un "secreto" es una contraseña, un token o una clave que **nunca** debería estar en el repositorio. Se suben por accidente (un `.env`, una clave pegada en un archivo de prueba) y, una vez en el historial de git, **quedan ahí** aunque se borren después.
 **gitleaks** escanea los commits buscando patrones típicos de secretos.
 
 **Por qué importa acá.** El proyecto va a manejar credenciales (hashes de contraseñas, la sesión local, quizás claves de un servicio externo).
 
-**Qué hacer, paso a paso.** Agregar un job a `MainAction.yml`:
+**Qué se hizo.** Se agregó el job `gitleaks` a `MainAction.yml`:
 
 ```yaml
-secretos:
+gitleaks:
   runs-on: ubuntu-latest
+  timeout-minutes: 10
+  permissions:
+    contents: read
+    pull-requests: read
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # baja TODO el historial: gitleaks necesita ver los commits del PR
-    - uses: gitleaks/gitleaks-action@v2
+    - uses: gitleaks/gitleaks-action@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_ENABLE_COMMENTS: false
 ```
 
-> Si el repositorio pertenece a una **organización** (y no a una cuenta personal), la action pide además una licencia gratuita (`GITLEAKS_LICENSE`, se saca en el sitio de gitleaks).
+- **Sin licencia:** el repositorio es de una cuenta personal (`nicopinera`). Si algún día pasa a una **organización**, la action pide además una licencia gratuita (`GITLEAKS_LICENSE`, se saca en el sitio de gitleaks).
+- **`GITLEAKS_ENABLE_COMMENTS: false`:** la action puede comentar en el PR, pero para eso necesitaría permiso de **escritura**. Se prefirió no dárselo: el resultado queda en el resumen del job y en un archivo (SARIF) adjunto.
+- Corre en paralelo con los demás jobs: no bloquea ni espera a nadie.
 
-Y sumar `secretos` a la lista `needs:` del job agregador de 8.9.
+**Resultado del escaneo de hoy.** Se corrió gitleaks sobre todo el historial en la máquina local (por Docker): `218 commits scanned … no leaks found`. Para repetirlo:
+
+```bash
+docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest git /repo --redact
+```
 
 **Qué hacer si encuentra algo.** No alcanza con borrar el archivo: hay que **revocar/cambiar el secreto** (ya se considera filtrado) y recién después limpiarlo del repositorio.
+
+**Pendiente:** sumar `gitleaks` a la lista `needs:` del job agregador de 8.9 cuando se cree.
 
 ---
 
@@ -661,7 +686,7 @@ Y sumar `secretos` a la lista `needs:` del job agregador de 8.9.
 **Qué es.** `uses: actions/checkout@v4` apunta a una **etiqueta** (`v4`), y una etiqueta **se puede mover**: si alguien toma el control de esa action, puede cambiar lo que hay detrás de `v4` y tu CI ejecutaría código ajeno con acceso a tu repositorio.
 Fijar por **hash de commit** (`@<40 caracteres>`) apunta a una versión concreta e inmutable.
 
-**Por qué importa.** Es una de las formas más comunes de ataque a proyectos de software (ataques a la _cadena de suministro_). Las actions oficiales de GitHub y de Astral son de bajo riesgo, pero `pypa/pip-audit-action` y `gitleaks/gitleaks-action` son de terceros.
+**Por qué importa.** Es una de las formas más comunes de ataque a proyectos de software (ataques a la _cadena de suministro_). Las actions oficiales de GitHub y de Astral son de bajo riesgo, pero `pypa/gh-action-pip-audit` y `gitleaks/gitleaks-action` son de terceros.
 
 **Qué hacer.**
 
@@ -706,22 +731,19 @@ Prioridad baja: hacerlo solo para las actions de terceros es un buen punto medio
 
 ### 8.16 Resumen y orden sugerido
 
-| #    | Mejora                                                                                             | Impacto                                       | Esfuerzo                   | Sugerido                   |
-| ---- | -------------------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------- | -------------------------- |
-| 8.9  | Job agregador + _required status checks_                                                           | **Alto**: el CI pasa de "avisar" a "proteger" | Bajo (un job y unos clics) | **1º**                     |
-| 8.4  | Usar `uv.lock` también en `lint`/`static` (versiones fijas, mypy con dependencias, sin submódulos) | Alto: evita fallos "fantasma"                 | Bajo                       | **2º**                     |
-| 8.2  | `ruff format --check` (+ unificar la versión de pre-commit)                                        | Medio                                         | Bajo                       | **3º**                     |
-| 8.5  | Disparar también con `push` a `main`/`develop`                                                     | Medio                                         | Muy bajo (3 líneas)        | 4º                         |
-| 8.6  | `concurrency`, `permissions`, `timeout-minutes`                                                    | Medio (costo y seguridad)                     | Muy bajo                   | 5º                         |
-| 8.7  | Guardar el reporte de cobertura y subir el umbral a 80 %                                           | Medio                                         | Bajo                       | 6º                         |
-| 8.12 | gitleaks (secretos)                                                                                | Alto cuando llegue el login (US-104)          | Bajo                       | 7º (antes de la US-104)    |
-| 8.11 | Dependabot                                                                                         | Medio a largo plazo                           | Muy bajo                   | 8º                         |
-| 8.3  | Matriz de versiones de Python                                                                      | Medio                                         | Bajo                       | 9º                         |
-| 8.14 | Smoke test de la CLI                                                                               | Bajo                                          | Muy bajo                   | 10º                        |
-| 8.13 | Fijar actions por hash                                                                             | Bajo–medio                                    | Medio                      | 11º (junto con Dependabot) |
-| 8.15 | CD / empaquetado                                                                                   | —                                             | Alto                       | Con la US-404              |
+**Pendiente:**
 
-**Ya hecho:** 8.8 (caché con uv) y 8.10 (versiones fijas, lockfile y auditoría de vulnerabilidades).
+| #    | Mejora                                                                     | Impacto                                       | Esfuerzo                   | Sugerido                   |
+| ---- | -------------------------------------------------------------------------- | --------------------------------------------- | -------------------------- | -------------------------- |
+| 8.9  | Job agregador + _required status checks_ (incluye sumar `gitleaks`)        | **Alto**: el CI pasa de "avisar" a "proteger" | Bajo (un job y unos clics) | **1º**                     |
+| 8.2  | `ruff format --check`                                                      | Medio                                         | Bajo                       | **2º**                     |
+| 8.4  | Sacar `submodules: recursive` de `check_dep`, `lint` y `static`            | Bajo (velocidad)                              | Muy bajo                   | 3º                         |
+| 8.14 | Smoke test de la CLI                                                       | Bajo                                          | Muy bajo                   | 4º                         |
+| 8.13 | Fijar actions por hash (Dependabot ya está y lo facilita)                  | Bajo–medio                                    | Medio                      | 5º                         |
+| 8.15 | CD / empaquetado                                                           | —                                             | Alto                       | Con la US-404              |
+
+**Ya hecho:** 8.3 (parámetro y matriz de Python), 8.4 (una sola versión de ruff y mypy), 8.5 (disparo en `push`), 8.6 (`concurrency`, `permissions`, `timeout-minutes`), 8.7 (reporte y umbral de cobertura en Linux),
+8.8 (caché con uv), 8.10 (versiones fijas, lockfile y auditoría), 8.11 (Dependabot) y 8.12 (gitleaks).
 
 **Cómo aplicarlas sin romper nada:** de a una por vez, cada una en su propio PR. Es normal que el CI falle la primera vez que se agrega un chequeo nuevo (por ejemplo, `ruff format --check` va a marcar los archivos que hoy no están formateados):
 conviene arreglar eso en el mismo PR y no desactivar el chequeo.

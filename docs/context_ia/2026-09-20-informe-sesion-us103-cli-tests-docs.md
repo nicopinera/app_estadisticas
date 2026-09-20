@@ -4,7 +4,7 @@
 > pero cada bloque se entiende solo. No hace falta haber leído nada antes; los términos técnicos se explican la primera vez que aparecen y hay un glosario al final.
 >
 > **Rama:** `feature/us103`. **Autor de la sesión:** Nico, trabajando con un asistente de IA (Claude). Los cambios de la **parte 1** (2026-09-19/20 de madrugada) ya están commiteados
-> (`63da850`, `114d011`, `d3e532a`, `e7fb0f3`, `7ab7bb6`, `9264d1d`). Los de la **parte 2** (2026-09-20, Bloques B a G) están en el árbol de trabajo **sin commitear** al momento de escribir esto.
+> (`63da850`, `114d011`, `d3e532a`, `e7fb0f3`, `7ab7bb6`, `9264d1d`). Los de la **parte 2** (2026-09-20, Bloques B a H) están en el árbol de trabajo **sin commitear** al momento de escribir esto.
 
 ## Índice
 
@@ -17,6 +17,7 @@
 6. [Bloque E — Documentación](#6-bloque-e--documentación)
 6 bis. [Bloque F — Ampliación de la US-103: categorías, consultas y lista de buena fe](#bloque-f--ampliación-de-la-us-103-categorías-consultas-y-lista-de-buena-fe)
 6 ter. [Bloque G — Auditoría de cierre de la US-103](#bloque-g--auditoría-de-cierre-de-la-us-103)
+6 quater. [Bloque H — CI/CD: versiones unificadas, matriz de Python y seguridad](#bloque-h--cicd-versiones-unificadas-matriz-de-python-y-seguridad)
 7. [Bugs encontrados y corregidos](#7-bugs-encontrados-y-corregidos)
 8. [Decisiones de diseño y por qué se tomaron](#8-decisiones-de-diseño-y-por-qué-se-tomaron)
 9. [Incidentes de la sesión (transparencia)](#9-incidentes-de-la-sesión-transparencia)
@@ -42,6 +43,7 @@ una suite de tests ordenada y sin repetición, dependencias reproducibles con `u
 - **Dependencias fijadas** con `uv`: `pyproject.toml` + `uv.lock`, auditadas contra vulnerabilidades. Se eliminó `requerimientos.txt`.
 - **Tests:** de un puñado de tests de repositorios a una suite de casi **400 tests** (unitarios, de integración y de punta a punta), con cobertura ≈ 91 %.
 - **Documentación:** 7 guías movidas a `docs/info_modulo/` y completadas, PRD actualizado, `RUNBOOK.md` y `README.md` nuevos, informe de revisión del CI.
+- **CI/CD:** una sola versión de ruff y mypy (CI, pre-commit y local), tests y tipos en Python 3.11 a 3.14, cobertura mínima de 85 % con reporte descargable, `concurrency`/`permissions`/`timeout-minutes`, Dependabot y gitleaks; se corrigieron además 3 referencias del workflow que no existían ([Bloque H](#bloque-h--cicd-versiones-unificadas-matriz-de-python-y-seguridad)).
 
 **Qué tenés que hacer vos al traer estos cambios (una sola vez):**
 
@@ -149,8 +151,8 @@ Todo lo que instalaba con `pip install -r requerimientos.txt` se adaptó para qu
 | `.github/actions/coverage/linux/action.yml` y `.../windows/action.yml` | Instalan con `astral-sh/setup-uv` + `uv sync --locked` (y de regalo, caché de dependencias) |
 | `.github/workflows/MainAction.yml` | El job `check_dep` exporta `uv.lock` a un archivo de requisitos y se lo pasa a `pip-audit` |
 
-> **Importante:** estos son los **únicos** cambios hechos en `.github/`. Las mejoras de CI que se detectaron (formato, matriz de Python, permisos, etc.) **no se aplicaron**: quedaron como informe
-> en [`docs/ideas-aprendizaje.md`](../ideas-aprendizaje.md), sección 8, para decidirlas en equipo.
+> **Importante:** en esta primera tanda estos fueron los **únicos** cambios hechos en `.github/`. Las mejoras de CI que se detectaron quedaron como informe en [`docs/ideas-aprendizaje.md`](../ideas-aprendizaje.md), sección 8;
+> varias se aplicaron después (ver el [Bloque H](#bloque-h--cicd-versiones-unificadas-matriz-de-python-y-seguridad)).
 
 ---
 
@@ -394,6 +396,107 @@ Salieron cuatro huecos reales (más una decisión que ya estaba pendiente: poder
 
 ---
 
+## Bloque H — CI/CD: versiones unificadas, matriz de Python y seguridad
+
+### Por qué se hizo
+
+El informe de CI de [`docs/ideas-aprendizaje.md`](../ideas-aprendizaje.md) (sección 8) describía mejoras que habían quedado **solo como recomendación**. Nico pidió aplicar una parte:
+unificar la versión de ruff y mypy, pasar la versión de Python como parámetro a las actions para probar en más de una, corregir los disparadores (`on:`), agregar `concurrency`, `permissions` y `timeout-minutes`,
+guardar el reporte de cobertura y subir el umbral (solo en Linux), Dependabot y gitleaks. La explicación didáctica de cada concepto está en esa sección 8; acá va **qué se cambió y por qué**.
+
+### H.1 Una sola versión de ruff y mypy
+
+**El problema:** había tres versiones de ruff dando vueltas — `0.16.8` en `pyproject.toml`, `v0.6.9` en `.pre-commit-config.yaml` y "la última" en el CI (que hacía `pip install ruff` sin versión). Distintas versiones pueden formatear o avisar distinto:
+el código podía pasar el CI y fallar en la máquina de alguien, o al revés. Con mypy pasaba lo mismo entre `pyproject.toml` y el CI.
+
+**La solución:** la única fuente de verdad es `pyproject.toml` (traducido a versiones exactas por `uv.lock`) y todos la leen a través de `uv`:
+
+| Quién | Cómo obtiene la versión |
+| --- | --- |
+| Action de ruff (`style/ruff`) | `uv sync --locked --only-group dev` (solo las herramientas de desarrollo) y `uv run --no-sync ruff ...` |
+| Action de mypy (`style/mypy`) | `uv sync --locked` (todo el proyecto: mypy necesita las librerías para resolver imports) y `uv run --no-sync mypy ...` |
+| pre-commit | Hooks `repo: local` con `language: system` que ejecutan `uv run --locked ruff check --fix` y `uv run --locked ruff format` |
+
+**Consecuencia:** subir la versión de ruff o mypy es cambiar **un solo lugar** (`pyproject.toml` + `uv lock`). **Costo:** para usar pre-commit hace falta `uv` instalado. Las reglas de ruff no se tocaron.
+También se corrigieron los nombres de los pasos de la action de mypy ("Instalar Ruff" / "Ejecutar Ruff", copiados de la de ruff).
+
+### H.2 La versión de Python como parámetro, y matriz 3.11 a 3.14
+
+- Las 5 actions propias (`style/ruff`, `style/mypy`, `coverage/linux`, `coverage/windows`, `coverage/docker`) tienen el parámetro `python-version` (por defecto `"3.11"`, la mínima que promete `requires-python`).
+- En `MainAction.yml`, los jobs `static` (mypy), `tests-linux`, `tests-windows` y `tests-docker` usan una **matriz** con `["3.11", "3.12", "3.13", "3.14"]` y `fail-fast: false` (si una versión falla, las demás igual terminan y se ven todos los resultados).
+  `lint` (ruff) no usa matriz: su resultado no depende de la versión de Python. Una corrida completa son **19 ejecuciones** (7 jobs; 4 de ellos × 4 versiones).
+- **mypy:** se le pasa `--python-version`, que pisa el `python_version = "3.11"` de `pyproject.toml`, para chequear los tipos contra la versión de cada vuelta.
+- **Docker:** `Dockerfile.test` pasó de `FROM python:3.13-slim` a `ARG PYTHON_VERSION=3.11` + `FROM python:${PYTHON_VERSION}-slim`; la action hace `docker build --build-arg PYTHON_VERSION=...`.
+  El `Makefile` tiene `PYTHON_VERSION ?= 3.11`, así que a mano se usa `make docker_test PYTHON_VERSION=3.13`.
+
+### H.3 Disparadores, `concurrency`, `permissions` y `timeout-minutes`
+
+- **`on:`** ahora es `workflow_dispatch` + `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) + **`push` a `main` y `develop`** (antes no corría al mergear).
+- **`concurrency`:** una sola corrida por PR o por rama; si llega un push nuevo se **cancela la anterior, pero solo en Pull Requests** (en `main`/`develop` cada corrida termina, para conservar el resultado de cada commit).
+- **`permissions: contents: read`** para todo el workflow (mínimo privilegio del `GITHUB_TOKEN`). El job `gitleaks` declara el suyo, con `pull-requests: read` además.
+- **`timeout-minutes`** en cada job: 10 (`check_dep`, `gitleaks`, `lint`, `static`), 15 (`tests-linux`), 20 (`tests-windows`, `tests-docker`).
+
+### H.4 Cobertura: reporte guardado y umbral de 85 % (solo Linux)
+
+- La action de Linux exige **85 %** con `--cov-fail-under` (parámetro `cobertura-minima`). El flag pisa el `fail_under = 60` de `.coveragerc`, que se dejó **como piso base** para tu máquina, Windows y Docker (por eso el pedido "solo Linux").
+- Guarda el reporte HTML (`reportes_cobertura/html/`) con `actions/upload-artifact`, incluso si algo falla (`if: ${{ !cancelled() }}`), durante 14 días. Hay un reporte por versión de Python (`reporte-cobertura-linux-py3.11` …), porque dos artifacts no pueden tener el mismo nombre.
+- Se agregó `--cov-report=term` para que el porcentaje también se vea en el log.
+- **Por qué 85 %:** medido 91,2 % (Windows, Python 3.13) y 90,8 % (Linux, Python 3.14). El PRD pide 80 %; 85 % deja margen para que una diferencia entre versiones no rompa el CI sin motivo.
+
+### H.5 Dependabot
+
+Nuevo `.github/dependabot.yml`: cada lunes revisa **`uv`** (`pyproject.toml` + `uv.lock`; `pytest`, `pytest-cov`, `ruff` y `mypy` en un solo PR), **`github-actions`** (workflows y actions propias, todas en un PR) y **`docker`** (`Dockerfile.test`).
+Como las versiones están fijadas con `==`, cada PR cambia la versión y regenera el lockfile: ruff y mypy suben a la vez en CI, pre-commit y local. Los PR van a `main` (sin `target-branch`).
+
+### H.6 gitleaks
+
+Nuevo job `gitleaks` (`gitleaks/gitleaks-action@v3`, con `fetch-depth: 0` para ver todo el historial). El repositorio es de una cuenta personal, así que **no necesita licencia** (sí la necesitaría si pasara a una organización).
+Se desactivaron los comentarios automáticos en el PR (`GITLEAKS_ENABLE_COMMENTS: false`) para no darle permiso de escritura; el resultado queda en el resumen del job.
+Se corrió gitleaks sobre todo el historial en local: **218 commits escaneados, 0 filtraciones**.
+
+### H.7 Tres referencias del CI que no funcionaban (corregidas)
+
+Al verificar cada action contra GitHub (`git ls-remote`, `action.yml`) aparecieron tres problemas que habrían roto el CI en la primera corrida:
+
+1. **`astral-sh/setup-uv@v10` no existe.** Esa action dejó de publicar etiquetas móviles de versión mayor; solo existen las exactas (`v10.1.0`). Lo había escrito la sesión anterior (Bloque B) sin verificarlo. Ahora es `@v10.1.0` en el workflow y en las 5 actions (Dependabot la mantiene al día).
+2. **`pypa/pip-audit-action@v1.6.0` no existe.** El repositorio real es `pypa/gh-action-pip-audit` (última versión `v1.1.0`). Venía así **desde antes de esta sesión**: el job `check_dep` nunca pudo arrancar.
+3. **`actions/checkout@v4` corre sobre Node 20**, que según el aviso de GitHub se retiró de sus máquinas el 2026-09-16. Se pasó a `@v7` (Node 24), igual que `upload-artifact@v7` y `gitleaks-action@v3`.
+
+### H.8 Cómo se verificó — y qué NO se pudo verificar
+
+**Verificado en la máquina local (nada se subió a GitHub):**
+
+- **`actionlint`** sobre todos los workflows y actions locales: sin errores. Se comprobó además que **sí detecta** problemas (se rompió a propósito el nombre de un parámetro y lo marcó).
+- Los pasos de las actions se emularon a mano, con un entorno aislado por versión y sobre una **copia** del proyecto: ruff limpio y, para Python 3.11, 3.12 y 3.13, mypy sin errores + `pytest` con **399 tests en verde, 91,23 % de cobertura** (≥ 85) y reporte HTML generado.
+- **Python 3.14:** el instalador de `uv` falló en esta máquina (error local, no del proyecto), así que se verificó de otra forma: mypy con `--python-version 3.14` sin errores y la **imagen Docker con Python 3.14.7 real**: 399 tests en verde, 90,79 % de cobertura.
+- **Docker:** se comprobó que sin `--build-arg` la imagen usa Python 3.11.16 y con `--build-arg PYTHON_VERSION=3.14` usa 3.14.7.
+- **pre-commit:** `validate-config` correcto; sobre una copia, los hooks `ruff check` y `ruff format` pasan y ejecutan `ruff 0.16.8` (la de `pyproject.toml`).
+- **gitleaks** sobre todo el historial (Docker): 218 commits, sin filtraciones.
+
+**No se pudo verificar (hay que mirarlo en la primera corrida real):** la ejecución en los runners de GitHub (nada se subió), la matriz de **Windows**, el comportamiento de `gitleaks-action@v3` y de `gh-action-pip-audit@v1.1.0` (solo se comprobó que existen y sus parámetros),
+y que GitHub acepte el `dependabot.yml` (si tuviera un error, aparece en _Insights → Dependency graph → Dependabot_).
+
+### Qué tenés que hacer al bajar estos cambios
+
+1. Tener **`uv`** instalado y, si querés los hooks, `uv tool install pre-commit` + `pre-commit install` (RUNBOOK, sección 7).
+2. Al abrir el primer PR, mirar que corran las **19 ejecuciones** y, si alguna falla, leer el log: es la primera vez que este workflow corre de verdad.
+3. En GitHub, activar **Dependabot alerts** y **security updates** (_Settings → Code security_): es un ajuste de la cuenta, no se puede hacer desde el repositorio.
+4. Cuando se decida, crear el **job agregador y las _required status checks_** (sección 8.9 del informe de CI): con la matriz, los nombres de los jobs cambiaron.
+
+### Decisiones que conviene confirmar
+
+1. **Incluir Python 3.14** en la matriz (si no se quiere, se saca de la lista de los 4 jobs).
+2. **El umbral de 85 %** (medido ≈ 91 %; el PRD pide 80 %).
+3. **Costo de minutos:** los tests de Windows y Docker también se repiten 4 veces. En un repositorio **público** es gratis; en uno privado los minutos de Windows cuentan doble.
+4. **Dependabot sin `target-branch`:** los PR de actualización van a `main`. Si el flujo del equipo integra en `develop`, hay que agregarlo.
+5. **Reglas de ruff que no coinciden:** el CI y el `Makefile` corren `ruff check --select E --select I` (todas las reglas `E`), mientras que `pyproject.toml` selecciona solo `E501` e `I` y pre-commit usa esa configuración. El CI es un poco más estricto que pre-commit. No se tocó (fuera del pedido); conviene unificarlo.
+
+### Lo que se dejó afuera a propósito
+
+Job agregador y _required status checks_ (8.9), `ruff format --check` (8.2), smoke test de la CLI (8.14), fijar actions por hash (8.13), sacar `submodules: recursive` de `check_dep`/`lint`/`static` (8.4) y agregar mypy o gitleaks a pre-commit: no se pidieron y quedaron documentados en la sección 8.
+
+---
+
 ## 7. Bugs encontrados y corregidos
 
 | # | Bug | Gravedad | Cómo apareció | Corrección | Test que lo protege |
@@ -411,6 +514,9 @@ Salieron cuatro huecos reales (más una decisión que ya estaba pendiente: poder
 | 12 | **Un jugador que se vinculaba a un club nunca podía pasar a otro**: nada cerraba el vínculo (`fechaHasta` no se escribía en ningún lado) | 🟠 Alta | Auditoría de la US-103 | `jugador unlink` + regla de no superposición (Bloque G.2) | `test_desvincular_*`, `test_un_jugador_puede_cambiar_de_club_...` |
 | 13 | Se aceptaban nombres vacíos, DNI negativos y años de nacimiento imposibles | 🟡 Media | Auditoría de la US-103 | `DatoInvalidoError` en las entidades (Bloque G.3) | `test_entidades_valores.py`, casos de error del E2E |
 | 14 | `partido list` mostraba ids en lugar de nombres, aunque el PRD pedía usar la vista | 🟡 Media | Auditoría de la US-103 | `resumen_por_club` sobre `v_partidos_resumen` (Bloque G.4) | `test_resumen_por_club_*`, `test_partido_list_muestra_los_nombres_...` |
+| 15 | **`astral-sh/setup-uv@v10` no existe** (esa action ya no publica etiquetas móviles): todo job que instalaba uv habría fallado al arrancar | 🔴 Crítica | Al verificar las versiones de las actions contra GitHub (Bloque H.7) | Versión exacta `@v10.1.0` en el workflow y en las 5 actions | Primera corrida real en GitHub; `actionlint`; Dependabot la mantiene al día |
+| 16 | **`pypa/pip-audit-action@v1.6.0` no existe** (el repositorio real es `pypa/gh-action-pip-audit`): el job `check_dep` nunca pudo correr. Venía de antes de la sesión | 🟠 Alta | Idem | `pypa/gh-action-pip-audit@v1.1.0` | Idem |
+| 17 | **`actions/checkout@v4` usa Node 20**, retirado de los runners de GitHub el 2026-09-16 | 🟠 Alta | Al revisar el `using:` de cada action | `actions/checkout@v7` (Node 24) | Idem |
 | 11 | Un paquete `config` de terceros, instalado en el Python global, **tapaba** al `src/config` del proyecto (`AttributeError: ... 'LOG_DIR'`) | 🟡 Media (entorno) | Al correr pytest con el Python global | No hay cambio de código: usando el entorno de `uv` no ocurre. Está documentado en el RUNBOOK | — |
 
 ---
@@ -450,6 +556,11 @@ Cosas que salieron mal durante el trabajo y cómo se resolvieron, para que nadie
 5. **Cambió el hash de `estadisticas.db`** entre dos momentos de la sesión (las tablas siguen **vacías**, sin ningún dato). La explicación probable: al modificar la vista `v_partidos_resumen`, cualquier arranque de la app que abre
    la base real la recrea con la definición nueva (las vistas se recrean en cada arranque, por diseño), y eso reescribe el archivo. Se comprobó que la suite de tests **no** la toca (el hash queda igual antes y después de correrla)
    y que las pruebas de la CLI se hicieron sobre copias. Si querés estar seguro, abrila con un visor de SQLite: no tiene filas.
+6. **El `.venv` del proyecto quedó roto (y era de Linux).** Al correr `uv run pytest` desde Windows para medir la cobertura, `uv` encontró un `.venv` creado por otra máquina (uv 0.12.17, Python 3.12.3, `home = /usr/bin`: casi seguro
+   desde **WSL**), decidió recrearlo, borró casi todo su contenido y se detuvo con `Acceso denegado` al llegar al enlace `lib64`. Quedó solo `pyvenv.cfg` y `lib64`. **No se perdió ningún dato** (es un entorno regenerable e ignorado por git),
+   pero **hay que volver a correr `uv sync` desde el sistema donde se usaba (WSL)**. *Lección aplicada:* no se vuelve a ejecutar `uv` dentro de la carpeta real; el resto de las pruebas de CI se hicieron sobre una **copia** del proyecto con
+   entornos propios. El RUNBOOK (sección 10) explica cómo evitarlo (un entorno por sistema con `UV_PROJECT_ENVIRONMENT`).
+7. **Se creó la carpeta `C:\c\...` por error** con los entornos temporales de esas pruebas: `uv` no traduce las rutas estilo Git Bash (`/c/Users/...`) y las tomó como `C:\c\Users\...`. Se comprobó que solo contenía esos entornos y se borró.
 
 ---
 
@@ -457,7 +568,7 @@ Cosas que salieron mal durante el trabajo y cómo se resolvieron, para que nadie
 
 **No se hizo (a propósito):**
 
-- **No se aplicó ninguna mejora de CI** salvo adaptar la instalación a `uv` (ver Bloque B). El informe con lo que falta está en `docs/ideas-aprendizaje.md`, sección 8.
+- **Mejoras de CI:** se aplicaron las del Bloque H. Quedan como recomendación (`docs/ideas-aprendizaje.md`, sección 8): job agregador + _required status checks_, `ruff format --check`, smoke test, fijar actions por hash y CD.
 - **No se tocó el submódulo** `docs/documentacion_app_estadistica/` (está desactualizado; el PRD vigente es `docs/plan_desarrollo_detallado.md`).
 - **`sphinx` y `sphinx-rtd-theme` se sacaron** de las dependencias de desarrollo (decisión de Nico) porque no había `conf.py` ni uso en el repo.
 - **No se hicieron commits** de la parte 2.
@@ -472,7 +583,7 @@ Cosas que salieron mal durante el trabajo y cómo se resolvieron, para que nadie
 | No se pueden cargar partidos ni estadísticas | Es la US-105 | US-105 |
 | Un club con nombre repetido da un mensaje genérico (`no se pudo guardar el club`) | El repositorio devuelve `None` ante cualquier error de SQLite | Un `ClubDuplicadoError` sería una mejora chica |
 | No hay un comando para ver **todos los clubes por los que pasó** un jugador | `jugador list` muestra solo los vínculos vigentes de un club | Falta un caso de uso `jugador historial` (el repositorio ya expone el dato) |
-| `.pre-commit-config.yaml` usa ruff `v0.6.9` y el proyecto fija `0.16.8` | Versiones desalineadas | Informe de CI, sección 8.2 y 8.4 |
+| El CI nuevo (matriz de Python, gitleaks, Dependabot, cobertura 85 %) **solo se probó en local**, no en GitHub | No se subió nada | La primera corrida real (ver Bloque H.8) |
 
 ---
 
@@ -492,16 +603,19 @@ uvx pip-audit -r requirements-audit.txt --no-deps --disable-pip   # "No known vu
 **Resultados obtenidos el 2026-09-20:** suite completa en verde (399 tests), cobertura ≈ 91 %, mypy y ruff sin errores, imagen Docker construida y con los tests pasando adentro, auditoría sin vulnerabilidades,
 y el YAML de los workflows de CI válido. Además se probó la CLI **de verdad** (los 16 comandos, en camino feliz y de error) sobre una copia del proyecto.
 
+**Verificación del Bloque H (CI):** `actionlint` sin errores en workflows y actions; para Python 3.11, 3.12 y 3.13, mypy limpio y 399 tests en verde con 91,23 % de cobertura (mínimo 85 %); Python 3.14 con mypy (`--python-version 3.14`) y con una imagen
+Docker real (399 tests, 90,79 %); gitleaks sobre 218 commits sin filtraciones; hooks de pre-commit válidos y con `ruff 0.16.8`. La ejecución en GitHub **no** se pudo probar (ver Bloque H.8).
+
 ---
 
 ## 12. Próximos pasos sugeridos
 
 1. **Revisar y commitear la parte 2** (sugerencia de commits separados: dependencias/uv, CLI, tests, documentación).
-2. **Aplicar el CI recomendado** empezando por lo de mayor impacto y menor esfuerzo (job agregador + *required checks*, luego versiones fijas en `lint`/`static`): `docs/ideas-aprendizaje.md`, sección 8.16.
+2. **Subir el CI y mirar la primera corrida** (Bloque H.8); después, lo que falta del informe de CI: job agregador + *required checks* (8.9) y `ruff format --check` (8.2): `docs/ideas-aprendizaje.md`, sección 8.16.
 3. **US-104** (login y sesión): desbloquea `club select`, vincular clubes con usuarios y dejar de usar `--id-usuario`.
 4. Al arrancar la **US-105**, definir contra qué lista se valida el boxscore cuando el partido no guarda la categoría (ver Bloque F). Confirmar además las decisiones del Bloque G (superposición de vínculos y rango del año de nacimiento).
 5. **US-105/106:** carga de partidos, formularios interactivos y `partido boxscore` (los nombres en `partido list` ya están).
-6. Decidir en equipo qué hacer con el `rev` de ruff en `pre-commit`. (`docs/index.md` ya se limpió: sin referencias a MkDocs.)
+6. Activar Dependabot alerts/security updates en GitHub y confirmar las decisiones del Bloque H (Python 3.14 en la matriz, umbral de 85 %, `target-branch` de Dependabot, reglas de ruff del CI vs. `pyproject.toml`).
 
 ---
 
@@ -526,8 +640,8 @@ y el YAML de los workflows de CI válido. Además se probó la CLI **de verdad**
 
 **Dependencias e infraestructura de proyecto**
 
-`pyproject.toml` (modificado), `uv.lock` (nuevo), `requerimientos.txt` (**eliminado**), `Dockerfile.test`, `.dockerignore`, `Makefile`,
-`.github/actions/coverage/{linux,windows}/action.yml`, `.github/workflows/MainAction.yml` (solo líneas de instalación).
+`pyproject.toml` (modificado), `uv.lock` (nuevo), `requerimientos.txt` (**eliminado**), `Dockerfile.test` (`ARG PYTHON_VERSION`), `.dockerignore`, `Makefile` (`PYTHON_VERSION`), `.coveragerc` (comentario),
+`.pre-commit-config.yaml` (ruff con `uv run`), `.github/workflows/MainAction.yml` (Bloque B: instalación; Bloque H: reescrito), `.github/actions/{coverage/{linux,windows,docker},style/{ruff,mypy}}/action.yml` y **`.github/dependabot.yml`** (nuevo).
 
 **Documentación**
 
