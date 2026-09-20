@@ -1,6 +1,6 @@
 from aplicacion.dtos.club_dto import ClubDTO
-from aplicacion.utils import id_persistido
 from dominio.repositorios.club_repositorio import ClubRepositorio
+from utils import id_persistido
 
 
 class ListarClubesUsuarioUseCase:

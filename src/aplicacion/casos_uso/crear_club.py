@@ -1,7 +1,7 @@
 from aplicacion.dtos.club_dto import ClubDTO, CrearClubDTO
-from aplicacion.utils import id_persistido
 from dominio.entidades.club import Club
 from dominio.repositorios.club_repositorio import ClubRepositorio
+from utils import id_persistido
 
 
 class CrearClubUseCase:

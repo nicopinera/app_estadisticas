@@ -1,7 +1,7 @@
 from aplicacion.dtos.competencia_dto import CompetenciaDTO, CrearCompetenciaDTO
-from aplicacion.utils import id_persistido
 from dominio.entidades.competencia import Competencia
 from dominio.repositorios.competencia_repositorio import CompetenciaRepositorio
+from utils import id_persistido
 
 
 class CrearCompetenciaUseCase:

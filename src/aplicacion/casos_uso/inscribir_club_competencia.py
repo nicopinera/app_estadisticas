@@ -1,5 +1,4 @@
 from aplicacion.dtos.competencia_dto import InscribirClubDTO, InscripcionDTO
-from aplicacion.utils import id_persistido
 from dominio.entidades.competencia import Inscripcion
 from dominio.exceptions import (
     CategoriaNoEncontradaError,
@@ -9,6 +8,7 @@ from dominio.exceptions import (
 )
 from dominio.repositorios.club_repositorio import ClubRepositorio
 from dominio.repositorios.competencia_repositorio import CompetenciaRepositorio
+from utils import id_persistido
 
 
 class InscribirClubEnCompetenciaUseCase:

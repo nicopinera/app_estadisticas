@@ -1,6 +1,6 @@
 from aplicacion.dtos.jugador_dto import JugadorDTO
-from aplicacion.utils import id_persistido
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
+from utils import id_persistido
 
 
 class ListarJugadoresClubUseCase:
@@ -21,7 +21,7 @@ class ListarJugadoresClubUseCase:
         lista_jugadores = self.repo.buscar_por_club(idClub=idClub) or []
         return [
             JugadorDTO(
-                nombre_completo=f"{j.nombre} {j.apellido}",
+                nombre_completo=j.nombre_completo,
                 id=id_persistido(j.idJugador, "Jugador"),
                 anioNacimiento=j.anioNacimiento,
             )
