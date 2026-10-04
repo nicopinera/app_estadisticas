@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 import config.rutas as r
 
 
-def crear_carpeta_logs():
+def crear_carpeta_logs() -> None:
     """Crea el directorio de logs si no existe.
 
     Utiliza :data:`config.rutas.LOG_DIR` como ruta destino. La operación es
@@ -17,7 +17,7 @@ def crear_carpeta_logs():
     os.makedirs(r.LOG_DIR, exist_ok=True)
 
 
-def configuracion_log():
+def configuracion_log() -> logging.Logger:
     """Configura el logger raíz de la aplicación.
 
     Instala un :class:`~logging.handlers.RotatingFileHandler` sobre el logger
@@ -63,7 +63,7 @@ def configuracion_log():
     return logger
 
 
-def get_logger(name=None):
+def get_logger(name: str | None = None) -> logging.Logger:
     """Devuelve un logger listo para usar en cualquier módulo.
 
     Llama internamente a :func:`configuracion_log` para garantizar que el

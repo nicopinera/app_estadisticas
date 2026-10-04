@@ -1,16 +1,6 @@
 BEGIN TRANSACTION;
-DROP TABLE IF EXISTS jugadorPartido;
-DROP TABLE IF EXISTS partido;
-DROP TABLE IF EXISTS jugadorListaBuenaFe;
-DROP TABLE IF EXISTS listaBuenaFe;
-DROP TABLE IF EXISTS inscripcion;
-DROP TABLE IF EXISTS jugadorClub;
-DROP TABLE IF EXISTS categoria;
-DROP TABLE IF EXISTS competencia;
-DROP TABLE IF EXISTS jugador;
-DROP TABLE IF EXISTS usuarioClub;
-DROP TABLE IF EXISTS club;
-DROP TABLE IF EXISTS usuario;
+-- Este script se ejecuta en cada arranque de la app (ver main.inicializar_db): NO debe borrar tablas.
+-- Todas las tablas se crean con IF NOT EXISTS, asi el script es idempotente y conserva los datos.
 -- Creacion de esquema de base de datos
 -- create schema if not exists appbasquet;
 -- Tabla usuario
@@ -56,6 +46,9 @@ CREATE TABLE IF NOT EXISTS jugadorClub (
     FOREIGN KEY (idJugador) REFERENCES jugador (idJugador) ON DELETE CASCADE on UPDATE CASCADE,
     FOREIGN KEY (idClub) REFERENCES club (idClub) ON DELETE CASCADE on UPDATE CASCADE
 ) STRICT;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_jugadorclub_activo_por_jugador
+ON jugadorClub (idJugador)
+WHERE fechaHasta IS NULL;
 -- Tabla competencia
 CREATE TABLE IF NOT EXISTS competencia (
     idCompetencia integer PRIMARY KEY AUTOINCREMENT,

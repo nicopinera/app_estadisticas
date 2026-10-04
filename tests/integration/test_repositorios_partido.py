@@ -1,12 +1,17 @@
-import random
-
 import pytest
 
-from dominio.entidades.partido import JugadorPartido, Partido
 from infraestructura.repositorios.sqlite_partido_repositorio import SqlitePartidoRepositorio
+
+# `crear_partido` y `crear_boxscore` son fabricas de datos validos (ver tests/conftest.py):
+# cada test pisa solo el campo que quiere romper, por ejemplo crear_boxscore(idJugador=40000).
 
 
 def test_buscar_por_club(db_conexion):
+    """Funcion que Busca partidos por club
+
+    Args:
+        db_conexion (): conexion a la base de datos
+    """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     juego_encontrado = juego_rep.buscar_por_club(1)
     assert juego_encontrado is not None
@@ -14,204 +19,77 @@ def test_buscar_por_club(db_conexion):
 
 
 def test_buscar_por_id(db_conexion):
+    """Funcion que Busca partidos por id
+
+    Args:
+        db_conexion (_type_): conexion a la base de datos
+    """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
     juego_encontrado = juego_rep.buscar_por_id(1)
     assert juego_encontrado is not None
     assert juego_encontrado.idPartido == 1
 
 
-def test_guardar_partido(db_conexion):
+def test_guardar_partido(db_conexion, crear_partido):
+    """Funcion que guarda partido en la Base de Datos
+
+    Args:
+        db_conexion (_type_): Conexion a la base de datos
+    """
     juego_rep = SqlitePartidoRepositorio(db_conexion)
-    partido_aux = Partido(
-        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=2, idCompetencia=1
-    )
-    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
+
+    nuevo_juego = juego_rep.guardar_partido(partido=crear_partido())
+
     assert nuevo_juego is not None
     assert nuevo_juego.idPartido is not None
     assert nuevo_juego.fecha == "2023-01-01"
 
-    partido_aux = Partido(
-        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=12, idClubVisitante=2, idCompetencia=1
-    )
-    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
-    assert nuevo_juego is None
 
-    partido_aux = Partido(
-        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=304, idCompetencia=1
-    )
-    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
-    assert nuevo_juego is None
-
-    partido_aux = Partido(
-        estadio="Estadio Principal", fecha="2023-01-01", idClubLocal=1, idClubVisitante=2, idCompetencia=205
-    )
-    nuevo_juego = juego_rep.guardar_partido(partido=partido_aux)
-    assert nuevo_juego is None
-
-
-def test_guardar_boxscore(db_conexion):
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({"idClubLocal": 12}, id="club-local-inexistente"),
+        pytest.param({"idClubVisitante": 304}, id="club-visitante-inexistente"),
+        pytest.param({"idCompetencia": 205}, id="competencia-inexistente"),
+    ],
+)
+def test_guardar_partido_con_referencia_inexistente_devuelve_none(db_conexion, crear_partido, overrides):
     juego_rep = SqlitePartidoRepositorio(db_conexion)
-    aux_boxscore = JugadorPartido(
-        idJugador=1,
-        idPartido=2,
-        idClub=1,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(5, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(5, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
-        rebotesDef=4,
-        rebotesOf=2,
-        asistencias=5,
-        recuperos=3,
-        perdidas=2,
-        taponesRecibidos=1,
-        taponesRealizados=2,
-        faltasRecibidas=4,
-        faltasCometidas=3,
-    )
-    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
+
+    assert juego_rep.guardar_partido(partido=crear_partido(**overrides)) is None
+
+
+def test_guardar_boxscore(db_conexion, crear_boxscore):
+    juego_rep = SqlitePartidoRepositorio(db_conexion)
+
+    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=crear_boxscore())
+
     assert nuevo_boxscore is not None
 
-    aux_boxscore = JugadorPartido(
-        idJugador=40000,
-        idPartido=1,
-        idClub=1,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(1, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(1, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
-        rebotesDef=4,
-        rebotesOf=2,
-        asistencias=5,
-        recuperos=3,
-        perdidas=2,
-        taponesRecibidos=1,
-        taponesRealizados=2,
-        faltasRecibidas=4,
-        faltasCometidas=3,
-    )
-    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
-    assert nuevo_boxscore is None
 
-    aux_boxscore = JugadorPartido(
-        idJugador=1,
-        idPartido=300,
-        idClub=1,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(5, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(5, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
-        rebotesDef=4,
-        rebotesOf=2,
-        asistencias=5,
-        recuperos=3,
-        perdidas=2,
-        taponesRecibidos=1,
-        taponesRealizados=2,
-        faltasRecibidas=4,
-        faltasCometidas=3,
-    )
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({"idJugador": 40000, "idPartido": 1}, id="jugador-inexistente"),
+        pytest.param({"idPartido": 300}, id="partido-inexistente"),
+        pytest.param({"idPartido": 1, "idClub": 400}, id="club-inexistente"),
+    ],
+)
+def test_guardar_boxscore_con_referencia_inexistente_devuelve_none(db_conexion, crear_boxscore, overrides):
+    juego_rep = SqlitePartidoRepositorio(db_conexion)
 
-    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
-    assert nuevo_boxscore is None
-    aux_boxscore = JugadorPartido(
-        idJugador=1,
-        idPartido=1,
-        idClub=400,
-        minutosJugados=random.randint(0, 40),
-        puntos=random.randint(1, 25),
-        t2c=random.randint(1, 2),
-        t2l=random.randint(5, 10),
-        t3c=random.randint(1, 2),
-        t3l=random.randint(5, 10),
-        t1c=random.randint(1, 2),
-        t1l=random.randint(5, 10),
-        rebotesDef=4,
-        rebotesOf=2,
-        asistencias=5,
-        recuperos=3,
-        perdidas=2,
-        taponesRecibidos=1,
-        taponesRealizados=2,
-        faltasRecibidas=4,
-        faltasCometidas=3,
-    )
-
-    nuevo_boxscore = juego_rep.guardar_boxscore(boxscore=aux_boxscore)
-    assert nuevo_boxscore is None
+    assert juego_rep.guardar_boxscore(boxscore=crear_boxscore(**overrides)) is None
 
 
-def test_save_with_boxscore_rollback_no_deja_partido_huerfano(db_conexion):
+def test_save_with_boxscore_rollback_no_deja_partido_huerfano(db_conexion, crear_partido, crear_boxscore):
     """US-102 AC4: ante un boxscore con FK inválida, la transacción entera se revierte."""
     juego_rep = SqlitePartidoRepositorio(db_conexion)
 
-    partido = Partido(
-        estadio="Estadio Test Rollback",
-        fecha="2026-01-01",
-        idClubLocal=1,
-        idClubVisitante=2,
-        idCompetencia=1,
-    )
-
-    # Fila válida
-    fila_ok = JugadorPartido(
-        idJugador=1,
-        idPartido=0,  # será sobreescrito por save_with_boxscore
-        idClub=1,
-        minutosJugados=30,
-        puntos=10,
-        t2c=2,
-        t2l=5,
-        t3c=1,
-        t3l=3,
-        t1c=2,
-        t1l=4,
-        rebotesDef=3,
-        rebotesOf=1,
-        asistencias=2,
-        recuperos=1,
-        perdidas=1,
-        taponesRecibidos=0,
-        taponesRealizados=1,
-        faltasRecibidas=2,
-        faltasCometidas=1,
-    )
-
+    partido = crear_partido(estadio="Estadio Test Rollback", fecha="2026-01-01")
+    # idPartido=0: save_with_boxscore lo reemplaza por el id real del partido que inserta
+    fila_ok = crear_boxscore(idPartido=0)
     # Fila con idJugador inexistente → viola FK → provoca rollback
-    fila_invalida = JugadorPartido(
-        idJugador=999999,  # FK inválida: jugador no existe
-        idPartido=0,
-        idClub=1,
-        minutosJugados=25,
-        puntos=8,
-        t2c=1,
-        t2l=3,
-        t3c=0,
-        t3l=2,
-        t1c=2,
-        t1l=4,
-        rebotesDef=2,
-        rebotesOf=1,
-        asistencias=3,
-        recuperos=0,
-        perdidas=2,
-        taponesRecibidos=1,
-        taponesRealizados=0,
-        faltasRecibidas=1,
-        faltasCometidas=2,
-    )
+    fila_invalida = crear_boxscore(idPartido=0, idJugador=999999)
 
     resultado = juego_rep.save_with_boxscore(partido, [fila_ok, fila_invalida])
 
@@ -223,3 +101,23 @@ def test_save_with_boxscore_rollback_no_deja_partido_huerfano(db_conexion):
     cursor.execute("SELECT COUNT(*) FROM partido WHERE fecha = '2026-01-01' AND estadio = 'Estadio Test Rollback'")
     count = cursor.fetchone()[0]
     assert count == 0
+
+
+def test_resumen_por_club_trae_los_nombres_desde_la_vista(db_conexion):
+    """El seed tiene 2 partidos entre los clubes 1 (Atenas) y 2 (Universitario)."""
+    juego_rep = SqlitePartidoRepositorio(db_conexion)
+
+    resumen = juego_rep.resumen_por_club(1)
+
+    assert [p.idPartido for p in resumen] == [1, 2]  # del mas antiguo al mas reciente
+    assert resumen[0].clubLocal == "Atenas"
+    assert resumen[0].clubVisitante == "Universitario"
+    assert resumen[0].competencia == "PROVINCIAL U21"
+    assert resumen[0].anioCompetencia == 2026
+    # el club aparece igual si jugo de visitante
+    assert resumen[1].clubLocal == "Universitario"
+    assert resumen[1].clubVisitante == "Atenas"
+
+
+def test_resumen_por_club_de_un_club_sin_partidos_es_una_lista_vacia(db_conexion):
+    assert SqlitePartidoRepositorio(db_conexion).resumen_por_club(999) == []

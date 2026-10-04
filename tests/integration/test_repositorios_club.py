@@ -1,7 +1,3 @@
-import sqlite3
-
-import pytest
-
 from dominio.entidades.club import Club, UsuarioClub
 from infraestructura.repositorios.sqlite_club_repositorio import (
     SqliteClubRepositorio,
@@ -56,10 +52,9 @@ def test_guardar(db_conexion):
     club_guardado = club_rep.guardar(club_a_guardar)
 
     assert club_a_guardar.nombre == club_guardado.nombre
+    assert club_guardado.idClub is not None
 
-    with pytest.raises(TypeError):
-        club_a_guardar = Club(nombre=None)
-        club_guardado = club_rep.guardar(club=club_a_guardar)
+    # La validacion de tipos de Club(nombre=None) es de la entidad: se prueba en tests/unit/test_entidades.py
 
 
 def test_link_user_club(db_conexion):

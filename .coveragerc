@@ -12,6 +12,8 @@ directory = reportes_cobertura/html/
 [report]
 precision = 2
 show_missing = True
+# Piso base (local, Windows y Docker). El job de Linux del CI exige mas: ver
+# "cobertura-minima" en .github/actions/coverage/linux/action.yml
 fail_under = 60
 branch = True
 exclude_lines =

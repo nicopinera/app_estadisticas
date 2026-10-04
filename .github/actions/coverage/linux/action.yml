@@ -1,0 +1,42 @@
+name: "Test Linux"
+description: "Corre tests y coverage en Linux, exige una cobertura minima y guarda el reporte HTML"
+
+inputs:
+  python-version:
+    description: "Version de Python con la que se corren los tests (ej. 3.12)"
+    required: false
+    default: "3.11"
+  cobertura-minima:
+    description: "Porcentaje minimo de cobertura: si baja de este valor el job falla"
+    required: false
+    default: "85"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Instalar uv y Python ${{ inputs.python-version }}
+      uses: astral-sh/setup-uv@v10.1.0
+      with:
+        python-version: ${{ inputs.python-version }}
+        enable-cache: true
+
+    - name: Instalar dependencias
+      shell: bash
+      run: uv sync --locked
+
+    - name: Ejecutar pytest con coverage (minimo ${{ inputs.cobertura-minima }}%)
+      shell: bash
+      env:
+        COBERTURA_MINIMA: ${{ inputs.cobertura-minima }}
+      run: |
+        uv run --locked pytest -v --cov=src --cov-report=term --cov-report=html --cov-fail-under="$COBERTURA_MINIMA"
+
+    # !cancelled(): se guarda aunque falle un test o la cobertura, que es cuando mas sirve verlo
+    - name: Guardar reporte de cobertura (HTML)
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: reporte-cobertura-linux-py${{ inputs.python-version }}
+        path: reportes_cobertura/html/
+        if-no-files-found: error
+        retention-days: 14
