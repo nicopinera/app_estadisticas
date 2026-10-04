@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from dominio.entidades.jugador import Jugador, JugadorClub
-from dominio.exceptions import DNIDuplicadoError
+from dominio.exceptions import DNIDuplicadoError, VinculoActivoExistenteError
 from infraestructura.repositorios.sqlite_jugador_repositorio import SqliteJugadorRepositorio
 
 
@@ -117,6 +117,15 @@ def test_club_activo(db_conexion):
     club_activo = jugador_rep.club_activo(jugador_guardado.idJugador)
     assert club_activo is not None
     assert club_activo.idClub == id_club
+
+
+def test_link_to_club_si_ya_tiene_vinculo_activo_lanza_error_de_dominio(db_conexion, crear_jugador):
+    jugador_rep = SqliteJugadorRepositorio(db_conexion)
+    jugador = jugador_rep.guardar(crear_jugador(dni=70000020))
+    jugador_rep.link_to_club(JugadorClub("2026-01-01", None, idJugador=jugador.idJugador, idClub=1))
+
+    with pytest.raises(VinculoActivoExistenteError):
+        jugador_rep.link_to_club(JugadorClub("2026-02-01", None, idJugador=jugador.idJugador, idClub=2))
 
 
 def test_guardar_jugador_dni_duplicado_lanza_excepcion(db_conexion):

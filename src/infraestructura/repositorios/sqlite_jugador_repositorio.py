@@ -2,7 +2,7 @@ import sqlite3
 
 from dominio.entidades.club import Club
 from dominio.entidades.jugador import Jugador, JugadorClub
-from dominio.exceptions import DNIDuplicadoError
+from dominio.exceptions import DNIDuplicadoError, VinculoActivoExistenteError
 from dominio.repositorios.jugador_repositorio import JugadorRepositorio
 from infraestructura.logger import get_logger
 
@@ -170,6 +170,13 @@ class SqliteJugadorRepositorio(JugadorRepositorio):
             query = "INSERT INTO jugadorClub (idJugador, idClub, fechaDesde) VALUES (?, ?, ?)"
             cursor.execute(query, (jc.idJugador, jc.idClub, jc.fechaDesde))
             self.conexion.commit()
+        except sqlite3.IntegrityError as e:
+            if str(e) == "UNIQUE constraint failed: jugadorClub.idJugador":
+                raise VinculoActivoExistenteError(
+                    f"El jugador (idJugador={jc.idJugador}), ya tiene un club activo"
+                ) from e
+            logger.error(f"Error al linkear jugador con club: {e}", exc_info=True)
+            return None
         except sqlite3.Error as e:
             logger.error(f"Error al linkear jugador con club: {e}", exc_info=True)
             return None
